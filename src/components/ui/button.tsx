@@ -9,12 +9,14 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-primary text-primary-fg shadow-card hover:bg-[color-mix(in_oklch,var(--primary)_88%,black)]",
+        primary:
+          "bg-primary text-primary-fg shadow-card hover:bg-[color-mix(in_oklch,var(--primary)_88%,black)]",
         secondary: "bg-surface-2 text-text hover:bg-[color-mix(in_oklch,var(--surface-2)_85%,var(--text))]",
         outline: "border border-border bg-surface text-text hover:bg-surface-2",
         ghost: "text-text hover:bg-surface-2",
-        danger: "bg-danger text-white hover:bg-[color-mix(in_oklch,var(--danger)_88%,black)]",
-        success: "bg-success text-white hover:bg-[color-mix(in_oklch,var(--success)_88%,black)]",
+        danger: "bg-danger-strong text-white hover:bg-[color-mix(in_oklch,var(--danger-strong)_88%,black)]",
+        success:
+          "bg-success-strong text-white hover:bg-[color-mix(in_oklch,var(--success-strong)_88%,black)]",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
@@ -29,7 +31,8 @@ export const buttonVariants = cva(
   },
 );
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+export interface ButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   loading?: boolean;
 }

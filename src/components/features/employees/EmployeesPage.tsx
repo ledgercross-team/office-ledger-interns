@@ -11,7 +11,11 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs as Tabs,
+  FilterTabsList as TabsList,
+  FilterTab as TabsTrigger,
+} from "@/components/ui/tabs";
 import { Avatar, Checkbox } from "@/components/ui/misc";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
@@ -512,7 +516,7 @@ function EmployeesPage({
       },
       {
         id: "actions",
-        header: "",
+        header: () => <span className="sr-only">Actions</span>,
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) =>

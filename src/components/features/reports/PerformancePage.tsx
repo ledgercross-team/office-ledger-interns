@@ -24,7 +24,7 @@ import { Field } from "@/components/ui/field";
 import { Input, Select } from "@/components/ui/input";
 import { Avatar, Tip } from "@/components/ui/misc";
 import { StatTile, EmptyState } from "@/components/layout/StatTile";
-import { Sparkline } from "../charts/charts";
+import { Sparkline } from "../charts/sparkline";
 import { fmtDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 

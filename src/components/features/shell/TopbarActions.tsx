@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { actions } from "astro:actions";
 import { navigate } from "astro:transitions/client";
 import { toast } from "sonner";
@@ -34,7 +34,7 @@ import { Avatar, Switch } from "@/components/ui/misc";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { AppToaster, onLiveNotification, startLive, withQuery } from "../query";
-import CommandPalette from "./CommandPalette";
+const CommandPalette = lazy(() => import("./CommandPalette"));
 import type { NavItem } from "@/lib/nav";
 import type { ThemeMode } from "@/lib/auth-types";
 
@@ -62,7 +62,7 @@ function CountBadge({ n, label }: { n: number; label: string }) {
   if (!n) return null;
   return (
     <span
-      className="tabular bg-danger absolute -end-0.5 -top-0.5 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[0.65rem] font-semibold text-white"
+      className="tabular bg-danger-strong absolute -end-0.5 -top-0.5 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[0.65rem] font-semibold text-white"
       aria-label={label}
     >
       {n > 99 ? "99+" : n}
@@ -319,6 +319,10 @@ function TopbarActions(props: Props) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [annOpen, setAnnOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteLoaded, setPaletteLoaded] = useState(false);
+  useEffect(() => {
+    if (paletteOpen) setPaletteLoaded(true);
+  }, [paletteOpen]);
   const { data: counts } = useQuery({
     queryKey: ["shell", "counts"],
     queryFn: () => actions.shell.counts.orThrow(),
@@ -436,8 +440,8 @@ function TopbarActions(props: Props) {
           <button
             type="button"
             className="focus-visible:outline-ring ms-1 rounded-full focus-visible:outline-2"
-            aria-label="Account menu"
           >
+            <span className="sr-only">Account menu</span>
             <Avatar name={user.name} image={user.image} size="sm" />
           </button>
         </MenuTrigger>
@@ -473,13 +477,17 @@ function TopbarActions(props: Props) {
       </Menu>
       <NotificationsDrawer open={notifOpen} onOpenChange={setNotifOpen} />
       <AnnouncementsDrawer open={annOpen} onOpenChange={setAnnOpen} canPost={props.canPost} />
-      <CommandPalette
-        open={paletteOpen}
-        onOpenChange={setPaletteOpen}
-        nav={props.nav}
-        canCheckIn={props.canCheckIn}
-        canRequestLeave={props.canRequestLeave}
-      />
+      {paletteLoaded && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            open={paletteOpen}
+            onOpenChange={setPaletteOpen}
+            nav={props.nav}
+            canCheckIn={props.canCheckIn}
+            canRequestLeave={props.canRequestLeave}
+          />
+        </Suspense>
+      )}
       <AppToaster />
     </div>
   );

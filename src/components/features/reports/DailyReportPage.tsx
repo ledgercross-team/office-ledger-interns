@@ -31,7 +31,11 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs as Tabs,
+  FilterTabsList as TabsList,
+  FilterTab as TabsTrigger,
+} from "@/components/ui/tabs";
 import { StatTile } from "@/components/layout/StatTile";
 import { addDaysISO, fmtDate, fmtDateTime, fmtMinutes, fmtTime } from "@/lib/dates";
 
@@ -281,12 +285,12 @@ function DailyReportPage({ initial, workspace }: { initial: DailyReportData; wor
                   { k: "Meetings", v: `${o.meetings} scheduled`, icon: CalendarDays },
                   { k: "Holidays", v: `${o.holidays} active this month`, icon: PartyPopper },
                 ].map((x) => (
-                  <div key={x.k} className="flex items-start gap-3">
-                    <x.icon className="text-muted mt-0.5 size-4 shrink-0" aria-hidden />
-                    <div>
-                      <dt className="text-muted text-xs">{x.k}</dt>
-                      <dd className="tabular font-semibold">{x.v}</dd>
-                    </div>
+                  <div key={x.k} className="grid grid-cols-[1rem_1fr] gap-x-3">
+                    <dt className="text-muted contents text-xs">
+                      <x.icon className="text-muted row-span-2 mt-0.5 size-4" aria-hidden />
+                      <span>{x.k}</span>
+                    </dt>
+                    <dd className="tabular col-start-2 font-semibold">{x.v}</dd>
                   </div>
                 ))}
               </dl>

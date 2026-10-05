@@ -101,13 +101,17 @@ function TaskCardView({
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <button
-          type="button"
-          onClick={onOpen}
-          className="hover:text-primary text-start text-sm leading-snug font-medium"
-        >
-          {t.title}
-        </button>
+        {onOpen ? (
+          <button
+            type="button"
+            onClick={onOpen}
+            className="hover:text-primary min-h-6 py-0.5 text-start text-sm leading-snug font-medium"
+          >
+            {t.title}
+          </button>
+        ) : (
+          <span className="py-0.5 text-sm leading-snug font-medium">{t.title}</span>
+        )}
         <PriorityChip priority={t.priority} />
       </div>
       {(t.labels.length > 0 || t.department) && (
@@ -162,19 +166,25 @@ function SortableCard({ t, today, onOpen }: { t: TaskCard; today: string; onOpen
     data: { status: t.status },
   });
   return (
-    <li
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn("touch-manipulation", isDragging && "opacity-40")}
-      {...attributes}
-      {...listeners}
-      aria-roledescription="Draggable task"
-      onKeyDown={(e) => {
-        if (e.key === "Enter") onOpen();
-        listeners?.onKeyDown?.(e);
-      }}
-    >
-      <TaskCardView t={t} today={today} onOpen={onOpen} />
+    <li>
+      <div
+        ref={setNodeRef}
+        style={{ transform: CSS.Transform.toString(transform), transition }}
+        className={cn(
+          "[&:hover_span]:text-primary cursor-pointer touch-manipulation rounded-xl",
+          isDragging && "opacity-40",
+        )}
+        {...attributes}
+        {...listeners}
+        aria-roledescription="Draggable task"
+        onClick={onOpen}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onOpen();
+          listeners?.onKeyDown?.(e);
+        }}
+      >
+        <TaskCardView t={t} today={today} />
+      </div>
     </li>
   );
 }

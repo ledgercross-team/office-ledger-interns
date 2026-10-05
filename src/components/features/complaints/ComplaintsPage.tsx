@@ -24,7 +24,11 @@ import { Dialog, DialogContent, SheetContent } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { Switch } from "@/components/ui/misc";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  FilterTabs as Tabs,
+  FilterTabsList as TabsList,
+  FilterTab as TabsTrigger,
+} from "@/components/ui/tabs";
 import { StatTile, EmptyState } from "@/components/layout/StatTile";
 import { fmtDateTime } from "@/lib/dates";
 import { cn } from "@/lib/cn";

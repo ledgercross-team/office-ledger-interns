@@ -4,6 +4,7 @@ import http from "node:http";
 import { statSync } from "node:fs";
 import { join, normalize } from "node:path";
 import sirv from "sirv";
+import compression from "compression";
 import { handler as ssrHandler } from "./dist/server/entry.mjs";
 import { securityHeaders } from "./server/security-headers.mjs";
 
@@ -35,12 +36,19 @@ function isStatic(url = "/") {
   }
 }
 
+// gzip/brotli for HTML, CSS, JS and JSON; Server-Sent Events are never buffered.
+const compress = compression({
+  filter: (req, res) => !String(req.url).startsWith("/api/stream") && compression.filter(req, res),
+});
+
 const server = http.createServer((req, res) => {
   for (const [k, v] of Object.entries(securityHeaders())) {
     if (!res.hasHeader(k)) res.setHeader(k, v);
   }
-  if (isStatic(req.url)) assets(req, res, () => ssrHandler(req, res));
-  else ssrHandler(req, res);
+  compress(req, res, () => {
+    if (isStatic(req.url)) assets(req, res, () => ssrHandler(req, res));
+    else ssrHandler(req, res);
+  });
 });
 server.on("clientError", (_err, socket) => socket.destroy());
 

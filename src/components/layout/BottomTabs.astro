@@ -12,32 +12,43 @@ const path = Astro.url.pathname;
 const tabs: { label: string; href: string; icon: NavIcon }[] = [
   { label: "Dashboard", href: "/app", icon: "dashboard" },
   { label: "Attendance", href: "/app/attendance", icon: "attendance" },
-  showInbox ? { label: "Inbox", href: "/app/inbox", icon: "inbox" } : { label: "Leave", href: "/app/leave", icon: "leave" },
+  showInbox
+    ? { label: "Inbox", href: "/app/inbox", icon: "inbox" }
+    : { label: "Leave", href: "/app/leave", icon: "leave" },
   { label: "Tasks", href: "/app/tasks", icon: "tasks" },
   { label: "Profile", href: "/app/me", icon: "profile" },
 ];
 ---
 
-<nav data-bottom-tabs class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden" aria-label="Quick navigation">
+<nav
+  data-bottom-tabs
+  class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
+  aria-label="Quick navigation"
+>
   <ul class="grid grid-cols-5">
-    {
-      tabs.map((t) => {
-        const Icon = NAV_ICONS[t.icon];
-        const active = isActive(t.href, path);
-        return (
-          <li>
-            <a href={t.href} aria-current={active ? "page" : undefined} class="relative flex flex-col items-center gap-0.5 py-2 text-[0.7rem] font-medium text-muted aria-[current=page]:text-primary">
-              <Icon className="size-5" aria-hidden="true" />
-              {t.label}
-              {t.icon === "inbox" && inboxCount > 0 && (
-                <span data-inbox-count class="tabular absolute start-1/2 top-1 ms-2 rounded-full bg-danger px-1 text-[0.6rem] font-semibold text-white">
-                  {inboxCount}
-                </span>
-              )}
-            </a>
-          </li>
-        );
-      })
-    }
+    {tabs.map((t) => {
+      const Icon = NAV_ICONS[t.icon];
+      const active = isActive(t.href, path);
+      return (
+        <li>
+          <a
+            href={t.href}
+            aria-current={active ? "page" : undefined}
+            class="relative flex flex-col items-center gap-0.5 py-2 text-[0.7rem] font-medium text-muted aria-[current=page]:text-primary"
+          >
+            <Icon className="size-5" aria-hidden="true" />
+            {t.label}
+            {t.icon === "inbox" && inboxCount > 0 && (
+              <span
+                data-inbox-count
+                class="tabular absolute start-1/2 top-1 ms-2 rounded-full bg-danger-strong px-1 text-[0.6rem] font-semibold text-white"
+              >
+                {inboxCount}
+              </span>
+            )}
+          </a>
+        </li>
+      );
+    })}
   </ul>
 </nav>

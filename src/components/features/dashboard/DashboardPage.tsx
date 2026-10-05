@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { actions } from "astro:actions";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -36,7 +36,12 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, Progress } from "@/components/ui/misc";
 import { PriorityChip, StatusPill } from "@/components/ui/status";
 import { StatTile, EmptyState } from "@/components/layout/StatTile";
-import { MixDonut, MomentumChart } from "../charts/charts";
+// Recharts is ~380 KB; load it after the dashboard shell has rendered.
+const MomentumChart = lazy(() => import("../charts/charts").then((m) => ({ default: m.MomentumChart })));
+const MixDonut = lazy(() => import("../charts/charts").then((m) => ({ default: m.MixDonut })));
+const ChartSkeleton = ({ h = 220 }: { h?: number }) => (
+  <div className="skeleton" style={{ height: h }} aria-hidden />
+);
 import { fmtDate, fmtMinutes, fmtTime } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 
@@ -429,22 +434,26 @@ function OrgDashboard({ d, workspace }: { d: Org; workspace: string }) {
                     </button>
                   ))}
                 </div>
-                <MomentumChart data={points.filter((x) => x.isWorkday)} series={series} />
+                <Suspense fallback={<ChartSkeleton />}>
+                  <MomentumChart data={points.filter((x) => x.isWorkday)} series={series} />
+                </Suspense>
                 <p className="text-muted text-xs">Working days only; weekends and holidays are skipped.</p>
               </CardBody>
             </Card>
             <Card>
               <CardHeader title="Operations mix" description="Today" />
               <CardBody>
-                <MixDonut
-                  values={{
-                    present: Math.max(0, a.present - a.late - a.remote),
-                    late: a.late,
-                    remote: a.remote,
-                    onLeave: a.onLeave,
-                    absent: a.absent,
-                  }}
-                />
+                <Suspense fallback={<ChartSkeleton h={240} />}>
+                  <MixDonut
+                    values={{
+                      present: Math.max(0, a.present - a.late - a.remote),
+                      late: a.late,
+                      remote: a.remote,
+                      onLeave: a.onLeave,
+                      absent: a.absent,
+                    }}
+                  />
+                </Suspense>
               </CardBody>
             </Card>
           </div>
