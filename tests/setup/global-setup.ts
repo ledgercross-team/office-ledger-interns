@@ -4,10 +4,11 @@
  * - Locally without docker: starts an embedded Postgres on port 54329.
  */
 import postgres from "postgres";
+import type { TestProject } from "vitest/node";
 
 let stop: (() => Promise<void>) | undefined;
 
-export async function setup() {
+export async function setup(project: TestProject) {
   let adminUrl = process.env.TEST_DATABASE_URL;
   if (!adminUrl) {
     const { default: EmbeddedPostgres } = await import("embedded-postgres");
@@ -33,8 +34,15 @@ export async function setup() {
   process.env.DATABASE_URL = url.toString();
   const { runMigrations } = await import("../../src/db/migrate-lib");
   await runMigrations(url.toString());
+  project.provide("databaseUrl", url.toString());
 }
 
 export async function teardown() {
   await stop?.();
+}
+
+declare module "vitest" {
+  export interface ProvidedContext {
+    databaseUrl: string;
+  }
 }
