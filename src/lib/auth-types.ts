@@ -29,4 +29,7 @@ export interface WorkspaceContext {
   status: MemberStatus;
   employeeCode: string | null;
   departmentId: string | null;
+  /** False until the owner completes the first-run wizard. */
+  onboarded: boolean;
+  locale: string;
 }

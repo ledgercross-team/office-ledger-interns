@@ -31,3 +31,16 @@ Defaults and judgement calls made while building Office Ledger v2. Newest phase 
 - **RLS**: policies on every table with `workspace_id`, applied to the `ledger_app` role. Request code calls `withWorkspace()` which does `set local role ledger_app` + `set_config('app.workspace_id')`. The connecting owner role (auth, jobs, seed) is unrestricted. Views use `security_invoker`.
 - **`fn_now()`** reads `app.now` when set so resolver tests can pin the clock.
 - **Seed** is deterministic (fixed PRNG); demo password `Ledger#2026`, invite code `LEDGER-7Q4K`, timezone Asia/Dhaka, weekend Fri+Sat.
+
+## Phase 3 – Auth, roles, middleware
+
+- **Own membership model instead of Better Auth's organization plugin**: the brief's `memberships` table carries HR fields (employee code, department, manager, status workflow) that the plugin doesn't model. Better Auth handles identity (users, sessions, accounts, verification, 2FA); `src/lib/context.ts` resolves the active workspace per request.
+- **Active workspace** is stored on `users.active_workspace_id` (workspace switcher updates it).
+- **Argon2id** via `@node-rs/argon2` (m=19 MiB, t=2, p=1) plugged into Better Auth's `password.hash/verify`. Better Auth's built-in default is scrypt, so the brief's "(Better Auth default)" note was corrected.
+- **Account lockout**: 5 consecutive failed email sign-ins lock the account for 15 minutes. Implemented in the `/api/auth/[...all]` wrapper (with per-IP rate limiting), and the error stays generic ("Invalid email or password").
+- **Email verification** is configurable (`REQUIRE_EMAIL_VERIFICATION`, default off in dev so demo logins work); verification and reset emails are always sent.
+- **Session cookies**: prefix `ledger.`, HttpOnly, SameSite=Lax, Secure in production; 14-day sessions with a 60 s signed cookie cache. Astro's `security.checkOrigin` covers CSRF for actions/forms.
+- **CSP nonce**: middleware generates a per-request nonce and adds it to every `<script>` in SSR HTML; `'strict-dynamic'` lets island chunks and View Transitions load. Dev mode adds `'unsafe-eval'` + `ws:` for Vite HMR only.
+- **Invite codes** look like `WORKSPACE-7Q4K` (no ambiguous characters). Join requests via code are `pending`; email invite links (7-day expiry) activate the membership immediately with the pre-assigned role/department because an owner/manager issued them.
+- **Route guard order**: signed out → sign-in; no/revoked membership → `/auth/join`; pending → `/auth/pending`; owner of a not-yet-onboarded workspace → `/auth/setup`; role not allowed → 403 page (rewrite, same URL).
+- **Managers can only manage employees** (not owners or other managers) and cannot review their own or other managers' requests; only owners decide holiday proposals.

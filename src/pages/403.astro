@@ -1,0 +1,18 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { Button } from "@/components/ui/button";
+import { ShieldAlert } from "lucide-react";
+Astro.response.status = 403;
+---
+
+<BaseLayout title="Access denied" noindex>
+  <main id="main" class="grid min-h-dvh place-items-center px-4">
+    <div class="max-w-md text-center">
+      <span class="mx-auto grid size-14 place-items-center rounded-2xl bg-warning-soft text-warning-text"><ShieldAlert className="size-7" aria-hidden="true" /></span>
+      <p class="eyebrow mt-6">Error 403</p>
+      <h1 class="mt-1 text-2xl font-semibold">You don't have access to this page</h1>
+      <p class="mt-2 text-sm text-muted">Your role in this workspace doesn't include it. Ask an owner if you think that's wrong.</p>
+      <Button asChild className="mt-6"><a href="/app">Back to dashboard</a></Button>
+    </div>
+  </main>
+</BaseLayout>

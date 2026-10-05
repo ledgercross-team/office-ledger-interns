@@ -1,0 +1,11 @@
+---
+import AuthLayout from "@/layouts/AuthLayout.astro";
+import SetupWizard from "@/components/features/auth/SetupWizard";
+const { user, ctx } = Astro.locals;
+if (!user) return Astro.redirect("/auth/sign-in?next=/auth/setup");
+const finishing = ctx?.role === "owner" && !ctx.onboarded;
+---
+
+<AuthLayout title="Set up your workspace" heading={finishing ? "Finish setting up" : "Set up your workspace"} subheading="Three quick steps. Everything can be changed later in Settings." wide>
+  <SetupWizard client:only="react" initialName={finishing ? ctx?.workspaceName : ""} />
+</AuthLayout>

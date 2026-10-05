@@ -1,0 +1,8 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+const { ctx, user } = Astro.locals;
+---
+
+<BaseLayout title="Dashboard" noindex>
+  <main class="p-6">Hello {user?.name} · {ctx?.workspaceName} · {ctx?.role}</main>
+</BaseLayout>

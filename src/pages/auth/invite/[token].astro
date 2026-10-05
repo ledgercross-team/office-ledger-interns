@@ -1,0 +1,30 @@
+---
+import { eq } from "drizzle-orm";
+import AuthLayout from "@/layouts/AuthLayout.astro";
+import { AcceptInvite } from "@/components/features/auth/forms";
+import { Button } from "@/components/ui/button";
+import { db } from "@/db";
+import { invites, workspaces } from "@/db/schema";
+const { token } = Astro.params;
+const [row] = token
+  ? await db.select({ inv: invites, ws: { name: workspaces.name } }).from(invites).innerJoin(workspaces, eq(workspaces.id, invites.workspaceId)).where(eq(invites.token, token))
+  : [];
+const valid = row && !row.inv.acceptedAt && row.inv.expiresAt > new Date();
+const user = Astro.locals.user;
+const next = `/auth/invite/${token}`;
+---
+
+<AuthLayout title="Workspace invite" heading={valid ? `Join ${row!.ws.name}` : "Invite unavailable"} subheading={valid ? `You've been invited as ${row!.inv.role}.` : "This invite link is invalid, used, or expired."}>
+  {
+    valid && user ? (
+      <AcceptInvite client:load token={token!} />
+    ) : valid ? (
+      <div class="grid gap-2">
+        <Button asChild size="lg"><a href={`/auth/sign-up?next=${encodeURIComponent(next)}&email=${encodeURIComponent(row!.inv.email)}`}>Create account</a></Button>
+        <Button asChild variant="outline" size="lg"><a href={`/auth/sign-in?next=${encodeURIComponent(next)}`}>I already have an account</a></Button>
+      </div>
+    ) : (
+      <Button asChild variant="outline"><a href="/auth/sign-in">Go to sign in</a></Button>
+    )
+  }
+</AuthLayout>
