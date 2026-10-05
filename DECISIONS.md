@@ -104,3 +104,15 @@ Defaults and judgement calls made while building Office Ledger v2. Newest phase 
 - **Expired invite codes** are rotated automatically and the owner is notified.
 - **Dashboard celebrations** show birthdays and work anniversaries in the next 14 days to everyone in the workspace (birth year is never shown).
 - **Astro + `asChild`**: Radix `Slot` can't wrap Astro slot content, so `.astro` files style links with `buttonVariants()` instead of `<Button asChild>`.
+
+## Phase 9 – Complaints, Settings, Audit log
+
+- **Anonymous issues**: managers always see "Anonymous"; the owner sees the name only if _Settings → Notifications → Owner can see anonymous submitters_ is on (off by default). The submitter always sees their own issue.
+- **Issue workflow**: new → reviewing → resolved; resolving requires a message to the submitter. Notes are internal by default; a toggle sends a visible message instead. Processors can't act on issues they submitted themselves. Categories are configurable.
+- **Settings are owner-only to change**; managers get a read-only view (the brief's banner). Every change is written to the audit log with a before → after diff of the changed keys.
+- **Leave types with history are deactivated, not deleted**, so past requests keep their label.
+- **Members & roles**: the owner can switch members between manager and employee and transfer ownership (type `TRANSFER` to confirm; the old owner becomes a manager).
+- **Export** (`/api/export`) is a ZIP of one CSV per tenant table, read through the RLS-scoped role. Secret columns (iCal tokens, invite tokens, storage keys, the invite code) are omitted. **Delete workspace** requires typing the workspace name and cascades everything, including its audit log (a console line records who did it).
+- **Audit log** loads the last 30 days by default (up to 5,000 events per range) with client-side filters and CSV export.
+- **Deep-linked dialogs** (`?task=`, `?id=`, `?new=1`) open after hydration so server HTML matches the client.
+- **Dev hot reload** caches only the Postgres pool, not the Drizzle instance, so schema edits apply without restarting.

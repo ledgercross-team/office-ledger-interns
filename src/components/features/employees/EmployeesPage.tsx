@@ -4,21 +4,7 @@ import { navigate } from "astro:transitions/client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
-import {
-  Check,
-  ChevronRight,
-  FileUp,
-  GitFork,
-  Mail,
-  Pencil,
-  Plus,
-  Search,
-  Table2,
-  Tags,
-  Trash2,
-  Users,
-  X,
-} from "lucide-react";
+import { Check, ChevronRight, FileUp, GitFork, Mail, Search, Table2, Tags, Users, X } from "lucide-react";
 import { withQuery, useServerQuery } from "../query";
 import type { EmployeeRow, employeesPage } from "@/lib/queries/employees";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -34,22 +20,50 @@ import { EmptyState } from "@/components/layout/StatTile";
 import { parseCsv } from "@/lib/csv";
 import { fmtDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";
+import OrgItemsEditor from "./OrgItemsEditor";
 
 type Data = Awaited<ReturnType<typeof employeesPage>>;
 type Status = "active" | "pending" | "rejected" | "deactivated";
 
 const ROLE_TONE = { owner: "primary", manager: "violet", employee: "neutral" } as const;
-const STATUS_TONE = { active: "success", pending: "warning", rejected: "danger", deactivated: "neutral" } as const;
+const STATUS_TONE = {
+  active: "success",
+  pending: "warning",
+  rejected: "danger",
+  deactivated: "neutral",
+} as const;
 
 // ---------------------------------------------------------------------------------------------
-function ImportDialog({ open, onOpenChange, canManagers }: { open: boolean; onOpenChange: (o: boolean) => void; canManagers: boolean }) {
+function ImportDialog({
+  open,
+  onOpenChange,
+  canManagers,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  canManagers: boolean;
+}) {
   const qc = useQueryClient();
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ email: string; status: string; message?: string }[] | null>(null);
   const FIELDS: Record<string, string> = {
-    name: "name", "full name": "name", email: "email", "employee id": "employeeCode", employee_code: "employeeCode", "employee code": "employeeCode", id: "employeeCode",
-    department: "department", designation: "designation", title: "designation", role: "role", "joining date": "joinedAt", joined_at: "joinedAt", joined: "joinedAt", phone: "phone", "contact number": "phone",
+    name: "name",
+    "full name": "name",
+    email: "email",
+    "employee id": "employeeCode",
+    employee_code: "employeeCode",
+    "employee code": "employeeCode",
+    id: "employeeCode",
+    department: "department",
+    designation: "designation",
+    title: "designation",
+    role: "role",
+    "joining date": "joinedAt",
+    joined_at: "joinedAt",
+    joined: "joinedAt",
+    phone: "phone",
+    "contact number": "phone",
   };
   const validate = (r: Record<string, string>) => {
     const errs: string[] = [];
@@ -67,7 +81,11 @@ function ImportDialog({ open, onOpenChange, canManagers }: { open: boolean; onOp
     const [head, ...body] = parsed;
     if (!head) return setRows([]);
     const keys = head.map((h) => FIELDS[h.trim().toLowerCase()] ?? null);
-    setRows(body.slice(0, 500).map((cells) => Object.fromEntries(keys.map((k, i) => [k ?? `_${i}`, (cells[i] ?? "").trim()]))));
+    setRows(
+      body
+        .slice(0, 500)
+        .map((cells) => Object.fromEntries(keys.map((k, i) => [k ?? `_${i}`, (cells[i] ?? "").trim()]))),
+    );
   }
   const valid = rows.filter((r) => !validate(r).length);
   async function run() {
@@ -91,7 +109,16 @@ function ImportDialog({ open, onOpenChange, canManagers }: { open: boolean; onOp
     toast.success(`Imported ${data.results.filter((r) => r.status !== "skipped").length} members`);
   }
   return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) { setRows([]); setResult(null); } }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        onOpenChange(o);
+        if (!o) {
+          setRows([]);
+          setResult(null);
+        }
+      }}
+    >
       <DialogContent
         className="max-w-3xl"
         title="Import employees from CSV"
@@ -101,13 +128,13 @@ function ImportDialog({ open, onOpenChange, canManagers }: { open: boolean; onOp
           type="file"
           accept=".csv,text/csv"
           onChange={(e) => onFile(e.target.files?.[0])}
-          className="block w-full text-sm file:me-3 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-sm file:font-medium"
+          className="file:bg-surface-2 block w-full text-sm file:me-3 file:rounded-lg file:border-0 file:px-3 file:py-2 file:text-sm file:font-medium"
           aria-label="CSV file"
         />
         {rows.length > 0 && !result && (
-          <div className="max-h-80 overflow-auto rounded-xl border border-border">
+          <div className="border-border max-h-80 overflow-auto rounded-xl border">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-surface-2 text-xs uppercase text-muted">
+              <thead className="bg-surface-2 text-muted sticky top-0 text-xs uppercase">
                 <tr>
                   <th className="px-3 py-2 text-start">Name</th>
                   <th className="px-3 py-2 text-start">Email</th>
@@ -120,13 +147,19 @@ function ImportDialog({ open, onOpenChange, canManagers }: { open: boolean; onOp
                 {rows.map((r, i) => {
                   const errs = validate(r);
                   return (
-                    <tr key={i} className="border-t border-border">
+                    <tr key={i} className="border-border border-t">
                       <td className="px-3 py-1.5">{r.name}</td>
                       <td className="px-3 py-1.5">{r.email}</td>
                       <td className="px-3 py-1.5">{r.department}</td>
                       <td className="px-3 py-1.5 capitalize">{r.role || "employee"}</td>
                       <td className="px-3 py-1.5">
-                        {errs.length ? <Badge tone="danger">Fix {errs.join(", ")}</Badge> : <Badge tone="success"><Check aria-hidden /> OK</Badge>}
+                        {errs.length ? (
+                          <Badge tone="danger">Fix {errs.join(", ")}</Badge>
+                        ) : (
+                          <Badge tone="success">
+                            <Check aria-hidden /> OK
+                          </Badge>
+                        )}
                       </td>
                     </tr>
                   );
@@ -138,18 +171,29 @@ function ImportDialog({ open, onOpenChange, canManagers }: { open: boolean; onOp
         {result && (
           <ul className="grid max-h-72 gap-1 overflow-auto text-sm">
             {result.map((r) => (
-              <li key={r.email} className="flex justify-between gap-2 rounded-lg bg-surface-2 px-3 py-1.5">
+              <li key={r.email} className="bg-surface-2 flex justify-between gap-2 rounded-lg px-3 py-1.5">
                 <span>{r.email}</span>
-                <Badge tone={r.status === "skipped" ? "warning" : "success"}>{r.status}{r.message ? ` · ${r.message}` : ""}</Badge>
+                <Badge tone={r.status === "skipped" ? "warning" : "success"}>
+                  {r.status}
+                  {r.message ? ` · ${r.message}` : ""}
+                </Badge>
               </li>
             ))}
           </ul>
         )}
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm text-muted">{rows.length ? `${valid.length} of ${rows.length} rows ready` : "Choose a CSV file to preview."}</p>
+          <p className="text-muted text-sm">
+            {rows.length ? `${valid.length} of ${rows.length} rows ready` : "Choose a CSV file to preview."}
+          </p>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
-            {!result && <Button onClick={run} disabled={!valid.length} loading={busy}>Import {valid.length || ""}</Button>}
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+            {!result && (
+              <Button onClick={run} disabled={!valid.length} loading={busy}>
+                Import {valid.length || ""}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
@@ -157,7 +201,17 @@ function ImportDialog({ open, onOpenChange, canManagers }: { open: boolean; onOp
   );
 }
 
-function InviteDialog({ open, onOpenChange, data, canManagers }: { open: boolean; onOpenChange: (o: boolean) => void; data: Data; canManagers: boolean }) {
+function InviteDialog({
+  open,
+  onOpenChange,
+  data,
+  canManagers,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  data: Data;
+  canManagers: boolean;
+}) {
   const [busy, setBusy] = useState(false);
   const [link, setLink] = useState<string | null>(null);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -176,14 +230,33 @@ function InviteDialog({ open, onOpenChange, data, canManagers }: { open: boolean
     toast.success("Invite sent");
   }
   return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setLink(null); }}>
-      <DialogContent title="Invite by email" description="The link is valid for 7 days and joins them straight away with this role and department.">
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        onOpenChange(o);
+        if (!o) setLink(null);
+      }}
+    >
+      <DialogContent
+        title="Invite by email"
+        description="The link is valid for 7 days and joins them straight away with this role and department."
+      >
         {link ? (
           <div className="grid gap-3">
             <p className="text-sm">Invite sent. You can also share this link directly:</p>
             <div className="flex gap-2">
-              <Input readOnly value={link} onFocus={(e) => e.currentTarget.select()} aria-label="Invite link" />
-              <Button variant="outline" onClick={() => navigator.clipboard.writeText(link).then(() => toast.success("Copied"))}>Copy</Button>
+              <Input
+                readOnly
+                value={link}
+                onFocus={(e) => e.currentTarget.select()}
+                aria-label="Invite link"
+              />
+              <Button
+                variant="outline"
+                onClick={() => navigator.clipboard.writeText(link).then(() => toast.success("Copied"))}
+              >
+                Copy
+              </Button>
             </div>
           </div>
         ) : (
@@ -201,19 +274,31 @@ function InviteDialog({ open, onOpenChange, data, canManagers }: { open: boolean
               <Field label="Department">
                 <Select name="departmentId" defaultValue="">
                   <option value="">—</option>
-                  {data.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  {data.departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
                 </Select>
               </Field>
               <Field label="Designation">
                 <Select name="designationId" defaultValue="">
                   <option value="">—</option>
-                  {data.designations.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  {data.designations.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
                 </Select>
               </Field>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" loading={busy}><Mail aria-hidden /> Send invite</Button>
+              <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={busy}>
+                <Mail aria-hidden /> Send invite
+              </Button>
             </div>
           </form>
         )}
@@ -222,65 +307,29 @@ function InviteDialog({ open, onOpenChange, data, canManagers }: { open: boolean
   );
 }
 
-function OrgItemsDialog({ open, onOpenChange, data }: { open: boolean; onOpenChange: (o: boolean) => void; data: Data }) {
+function OrgItemsDialog({
+  open,
+  onOpenChange,
+  data,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  data: Data;
+}) {
   const qc = useQueryClient();
-  const [editing, setEditing] = useState<{ kind: "department" | "designation"; id?: string; name: string } | null>(null);
-  const usage = (kind: "department" | "designation", id: string) =>
-    data.usage.filter((u) => (kind === "department" ? u.departmentId : u.designationId) === id).reduce((a, u) => a + u.n, 0);
-  async function save() {
-    if (!editing?.name.trim()) return;
-    const { error } = await actions.employees.saveOrgItem({ kind: editing.kind, id: editing.id, name: editing.name });
-    if (error) return toast.error(error.message);
-    setEditing(null);
-    void qc.invalidateQueries({ queryKey: ["employees"] });
-  }
-  async function remove(kind: "department" | "designation", id: string, name: string) {
-    if (!confirm(`Delete ${kind} "${name}"? Members keep their other details.`)) return;
-    const { error } = await actions.employees.deleteOrgItem({ kind, id });
-    if (error) return toast.error(error.message);
-    void qc.invalidateQueries({ queryKey: ["employees"] });
-  }
-  const col = (kind: "department" | "designation", items: { id: string; name: string }[]) => (
-    <section>
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="font-medium capitalize">{kind}s</h3>
-        <Button size="sm" variant="ghost" onClick={() => setEditing({ kind, name: "" })}><Plus aria-hidden /> Add</Button>
-      </div>
-      <ul className="grid gap-1">
-        {editing && editing.kind === kind && !editing.id && (
-          <li className="flex gap-2">
-            <Input autoFocus value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && save()} aria-label={`New ${kind}`} />
-            <Button size="icon" onClick={save} aria-label="Save"><Check aria-hidden /></Button>
-          </li>
-        )}
-        {items.map((it) => (
-          <li key={it.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-surface-2">
-            {editing?.id === it.id ? (
-              <>
-                <Input autoFocus value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} onKeyDown={(e) => e.key === "Enter" && save()} aria-label={`Rename ${it.name}`} />
-                <Button size="icon" onClick={save} aria-label="Save"><Check aria-hidden /></Button>
-                <Button size="icon" variant="ghost" onClick={() => setEditing(null)} aria-label="Cancel"><X aria-hidden /></Button>
-              </>
-            ) : (
-              <>
-                <span className="flex-1 text-sm">{it.name}</span>
-                <span className="tabular text-xs text-muted">{usage(kind, it.id)}</span>
-                <Button size="icon-sm" variant="ghost" onClick={() => setEditing({ kind, id: it.id, name: it.name })} aria-label={`Rename ${it.name}`}><Pencil aria-hidden /></Button>
-                <Button size="icon-sm" variant="ghost" onClick={() => remove(kind, it.id, it.name)} aria-label={`Delete ${it.name}`}><Trash2 aria-hidden /></Button>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl" title="Departments & designations" description="Rename or remove items; member counts are shown on the right.">
-        <div className="grid gap-6 sm:grid-cols-2">
-          {col("department", data.departments)}
-          {col("designation", data.designations)}
-        </div>
+      <DialogContent
+        className="max-w-2xl"
+        title="Departments & designations"
+        description="Rename or remove items; member counts are shown on the right."
+      >
+        <OrgItemsEditor
+          departments={data.departments}
+          designations={data.designations}
+          usage={data.usage}
+          onChanged={() => qc.invalidateQueries({ queryKey: ["employees"] })}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -294,21 +343,33 @@ function OrgChart({ rows }: { rows: EmployeeRow[] }) {
     const key = r.managerId && ids.has(r.managerId) ? r.managerId : null;
     byManager.set(key, [...(byManager.get(key) ?? []), r]);
   }
-  const roots = (byManager.get(null) ?? []).sort((a, b) => (a.role === "owner" ? -1 : b.role === "owner" ? 1 : a.name.localeCompare(b.name)));
+  const roots = (byManager.get(null) ?? []).sort((a, b) =>
+    a.role === "owner" ? -1 : b.role === "owner" ? 1 : a.name.localeCompare(b.name),
+  );
   const Node = ({ r, depth }: { r: EmployeeRow; depth: number }) => {
     const kids = byManager.get(r.id) ?? [];
     return (
-      <li className={cn(depth > 0 && "border-s border-border ps-5")}>
-        <a href={`/app/employees/${r.id}`} className="my-1.5 inline-flex items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2 shadow-card hover:bg-surface-2">
+      <li className={cn(depth > 0 && "border-border border-s ps-5")}>
+        <a
+          href={`/app/employees/${r.id}`}
+          className="border-border bg-surface shadow-card hover:bg-surface-2 my-1.5 inline-flex items-center gap-3 rounded-xl border px-3 py-2"
+        >
           <Avatar name={r.name} image={r.image} size="sm" />
           <span>
             <span className="block text-sm font-medium">{r.name}</span>
-            <span className="text-xs text-muted">{r.designation ?? r.role}{kids.length ? ` · ${kids.length} report${kids.length > 1 ? "s" : ""}` : ""}</span>
+            <span className="text-muted text-xs">
+              {r.designation ?? r.role}
+              {kids.length ? ` · ${kids.length} report${kids.length > 1 ? "s" : ""}` : ""}
+            </span>
           </span>
         </a>
         {kids.length > 0 && (
           <ul className="ms-4">
-            {kids.sort((a, b) => a.name.localeCompare(b.name)).map((k) => <Node key={k.id} r={k} depth={depth + 1} />)}
+            {kids
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((k) => (
+                <Node key={k.id} r={k} depth={depth + 1} />
+              ))}
           </ul>
         )}
       </li>
@@ -316,15 +377,31 @@ function OrgChart({ rows }: { rows: EmployeeRow[] }) {
   };
   return (
     <ul className="overflow-x-auto" aria-label="Organisation chart">
-      {roots.map((r) => <Node key={r.id} r={r} depth={0} />)}
+      {roots.map((r) => (
+        <Node key={r.id} r={r} depth={0} />
+      ))}
     </ul>
   );
 }
 
 // ---------------------------------------------------------------------------------------------
-function EmployeesPage({ initial, canImport, canManagers, initialTab }: { initial: Data; canImport: boolean; canManagers: boolean; initialTab?: Status }) {
+function EmployeesPage({
+  initial,
+  canImport,
+  canManagers,
+  initialTab,
+}: {
+  initial: Data;
+  canImport: boolean;
+  canManagers: boolean;
+  initialTab?: Status;
+}) {
   const qc = useQueryClient();
-  const { data = initial, isFetching } = useServerQuery(["employees"], () => actions.employees.list.orThrow(), initial);
+  const { data = initial, isFetching } = useServerQuery(
+    ["employees"],
+    () => actions.employees.list.orThrow(),
+    initial,
+  );
   const [tab, setTab] = useState<Status>(initialTab ?? "active");
   const [q, setQ] = useState("");
   const [dept, setDept] = useState("");
@@ -348,14 +425,17 @@ function EmployeesPage({ initial, canImport, canManagers, initialTab }: { initia
         (!dept || e.departmentId === dept) &&
         (!desig || e.designationId === desig) &&
         (!needle ||
-          [e.employeeCode, e.name, e.email, e.phone, e.department, e.designation].some((v) => v?.toLowerCase().includes(needle))),
+          [e.employeeCode, e.name, e.email, e.phone, e.department, e.designation].some((v) =>
+            v?.toLowerCase().includes(needle),
+          )),
     );
   }, [data.employees, tab, q, dept, desig]);
   const deptCount = new Set(rows.map((r) => r.departmentId).filter(Boolean)).size;
 
   async function decide(kind: "approve" | "reject", ids: string[]) {
     setBusy(true);
-    const res = kind === "approve" ? await actions.employees.approve({ ids }) : await actions.employees.reject({ ids });
+    const res =
+      kind === "approve" ? await actions.employees.approve({ ids }) : await actions.employees.reject({ ids });
     setBusy(false);
     if (res.error) return toast.error(res.error.message);
     toast.success(`${kind === "approve" ? "Approved" : "Rejected"} ${res.data.count}`);
@@ -366,13 +446,24 @@ function EmployeesPage({ initial, canImport, canManagers, initialTab }: { initia
 
   const columns = useMemo<ColumnDef<EmployeeRow, unknown>[]>(() => {
     const cols: ColumnDef<EmployeeRow, unknown>[] = [
-      { id: "code", header: "ID", accessorFn: (r) => r.employeeCode ?? "", cell: ({ getValue }) => <span className="tabular font-mono text-xs">{(getValue() as string) || "—"}</span> },
+      {
+        id: "code",
+        header: "ID",
+        accessorFn: (r) => r.employeeCode ?? "",
+        cell: ({ getValue }) => (
+          <span className="tabular font-mono text-xs">{(getValue() as string) || "—"}</span>
+        ),
+      },
       {
         id: "name",
         header: "Name",
         accessorFn: (r) => r.name,
         cell: ({ row }) => (
-          <a href={`/app/employees/${row.original.id}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2.5 font-medium hover:text-primary">
+          <a
+            href={`/app/employees/${row.original.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="hover:text-primary flex items-center gap-2.5 font-medium"
+          >
             <Avatar name={row.original.name} image={row.original.image} size="sm" /> {row.original.name}
           </a>
         ),
@@ -383,12 +474,42 @@ function EmployeesPage({ initial, canImport, canManagers, initialTab }: { initia
         id: "joined",
         header: "Joining date",
         accessorFn: (r) => r.joinedAt ?? "",
-        cell: ({ getValue }) => <span className="tabular">{getValue() ? fmtDate(getValue() as string) : "—"}</span>,
+        cell: ({ getValue }) => (
+          <span className="tabular">{getValue() ? fmtDate(getValue() as string) : "—"}</span>
+        ),
       },
-      { id: "phone", header: "Contact number", accessorFn: (r) => r.phone ?? "", cell: ({ getValue }) => <span className="tabular">{(getValue() as string) || "—"}</span> },
-      { id: "role", header: "Role", accessorFn: (r) => r.role, cell: ({ row }) => <Badge tone={ROLE_TONE[row.original.role]} className="capitalize">{row.original.role}</Badge> },
-      { id: "status", header: "Status", accessorFn: (r) => r.status, cell: ({ row }) => <Badge tone={STATUS_TONE[row.original.status]} className="capitalize">{row.original.status}</Badge> },
-      { id: "email", header: "Email", accessorFn: (r) => r.email, cell: ({ getValue }) => <span className="text-muted">{getValue() as string}</span> },
+      {
+        id: "phone",
+        header: "Contact number",
+        accessorFn: (r) => r.phone ?? "",
+        cell: ({ getValue }) => <span className="tabular">{(getValue() as string) || "—"}</span>,
+      },
+      {
+        id: "role",
+        header: "Role",
+        accessorFn: (r) => r.role,
+        cell: ({ row }) => (
+          <Badge tone={ROLE_TONE[row.original.role]} className="capitalize">
+            {row.original.role}
+          </Badge>
+        ),
+      },
+      {
+        id: "status",
+        header: "Status",
+        accessorFn: (r) => r.status,
+        cell: ({ row }) => (
+          <Badge tone={STATUS_TONE[row.original.status]} className="capitalize">
+            {row.original.status}
+          </Badge>
+        ),
+      },
+      {
+        id: "email",
+        header: "Email",
+        accessorFn: (r) => r.email,
+        cell: ({ getValue }) => <span className="text-muted">{getValue() as string}</span>,
+      },
       {
         id: "actions",
         header: "",
@@ -397,11 +518,25 @@ function EmployeesPage({ initial, canImport, canManagers, initialTab }: { initia
         cell: ({ row }) =>
           tab === "pending" ? (
             <span className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-              <Button size="sm" variant="success" onClick={() => decide("approve", [row.original.id])} disabled={busy}>Approve</Button>
-              <Button size="sm" variant="outline" onClick={() => decide("reject", [row.original.id])} disabled={busy}>Reject</Button>
+              <Button
+                size="sm"
+                variant="success"
+                onClick={() => decide("approve", [row.original.id])}
+                disabled={busy}
+              >
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => decide("reject", [row.original.id])}
+                disabled={busy}
+              >
+                Reject
+              </Button>
             </span>
           ) : (
-            <ChevronRight className="ms-auto size-4 text-muted rtl:rotate-180" aria-hidden />
+            <ChevronRight className="text-muted ms-auto size-4 rtl:rotate-180" aria-hidden />
           ),
       },
     ];
@@ -441,18 +576,40 @@ function EmployeesPage({ initial, canImport, canManagers, initialTab }: { initia
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs value={tab} onValueChange={(v) => { setTab(v as Status); setSelected(new Set()); }}>
+        <Tabs
+          value={tab}
+          onValueChange={(v) => {
+            setTab(v as Status);
+            setSelected(new Set());
+          }}
+        >
           <TabsList>
-            <TabsTrigger value="active" count={counts.active}>Active</TabsTrigger>
-            <TabsTrigger value="pending" count={counts.pending}>Pending</TabsTrigger>
-            <TabsTrigger value="rejected" count={counts.rejected}>Rejected</TabsTrigger>
-            <TabsTrigger value="deactivated" count={counts.deactivated}>Deactivated</TabsTrigger>
+            <TabsTrigger value="active" count={counts.active}>
+              Active
+            </TabsTrigger>
+            <TabsTrigger value="pending" count={counts.pending}>
+              Pending
+            </TabsTrigger>
+            <TabsTrigger value="rejected" count={counts.rejected}>
+              Rejected
+            </TabsTrigger>
+            <TabsTrigger value="deactivated" count={counts.deactivated}>
+              Deactivated
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => setDialog("org")}><Tags aria-hidden /> Departments</Button>
-          <Button variant="outline" size="sm" onClick={() => setDialog("invite")}><Mail aria-hidden /> Invite</Button>
-          {canImport && <Button variant="outline" size="sm" onClick={() => setDialog("import")}><FileUp aria-hidden /> Import CSV</Button>}
+          <Button variant="outline" size="sm" onClick={() => setDialog("org")}>
+            <Tags aria-hidden /> Departments
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setDialog("invite")}>
+            <Mail aria-hidden /> Invite
+          </Button>
+          {canImport && (
+            <Button variant="outline" size="sm" onClick={() => setDialog("import")}>
+              <FileUp aria-hidden /> Import CSV
+            </Button>
+          )}
         </div>
       </div>
 
@@ -462,9 +619,23 @@ function EmployeesPage({ initial, canImport, canManagers, initialTab }: { initia
           description={`${rows.length} employee${rows.length === 1 ? "" : "s"} in view across ${deptCount} department${deptCount === 1 ? "" : "s"}`}
           actions={
             tab === "active" && (
-              <div className="flex rounded-xl bg-surface-2 p-1" role="group" aria-label="View">
-                <Button size="sm" variant={view === "table" ? "outline" : "ghost"} onClick={() => setView("table")} aria-pressed={view === "table"}><Table2 aria-hidden /> Table</Button>
-                <Button size="sm" variant={view === "org" ? "outline" : "ghost"} onClick={() => setView("org")} aria-pressed={view === "org"}><GitFork aria-hidden /> Org chart</Button>
+              <div className="bg-surface-2 flex rounded-xl p-1" role="group" aria-label="View">
+                <Button
+                  size="sm"
+                  variant={view === "table" ? "outline" : "ghost"}
+                  onClick={() => setView("table")}
+                  aria-pressed={view === "table"}
+                >
+                  <Table2 aria-hidden /> Table
+                </Button>
+                <Button
+                  size="sm"
+                  variant={view === "org" ? "outline" : "ghost"}
+                  onClick={() => setView("org")}
+                  aria-pressed={view === "org"}
+                >
+                  <GitFork aria-hidden /> Org chart
+                </Button>
               </div>
             )
           }
@@ -485,27 +656,76 @@ function EmployeesPage({ initial, canImport, canManagers, initialTab }: { initia
               toolbar={
                 <>
                   <div className="relative min-w-56 flex-1 sm:max-w-xs">
-                    <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
-                    <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search ID, name, email, phone…" className="ps-9" aria-label="Search employees" />
+                    <Search
+                      className="text-muted pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2"
+                      aria-hidden
+                    />
+                    <Input
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      placeholder="Search ID, name, email, phone…"
+                      className="ps-9"
+                      aria-label="Search employees"
+                    />
                   </div>
-                  <Select value={dept} onChange={(e) => setDept(e.target.value)} className="w-auto min-w-40" aria-label="Department">
+                  <Select
+                    value={dept}
+                    onChange={(e) => setDept(e.target.value)}
+                    className="w-auto min-w-40"
+                    aria-label="Department"
+                  >
                     <option value="">All departments</option>
-                    {data.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    {data.departments.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
                   </Select>
-                  <Select value={desig} onChange={(e) => setDesig(e.target.value)} className="w-auto min-w-40" aria-label="Designation">
+                  <Select
+                    value={desig}
+                    onChange={(e) => setDesig(e.target.value)}
+                    className="w-auto min-w-40"
+                    aria-label="Designation"
+                  >
                     <option value="">All designations</option>
-                    {data.designations.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    {data.designations.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
                   </Select>
                   {filtersActive && (
-                    <Button variant="ghost" size="sm" onClick={() => { setQ(""); setDept(""); setDesig(""); }}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setQ("");
+                        setDept("");
+                        setDesig("");
+                      }}
+                    >
                       <X aria-hidden /> Clear filters
                     </Button>
                   )}
                   {tab === "pending" && selected.size > 0 && (
-                    <span className="flex items-center gap-2 rounded-xl bg-primary-soft px-2 py-1 text-sm">
-                      <span className="tabular px-1 font-medium text-primary">{selected.size} selected</span>
-                      <Button size="sm" variant="success" onClick={() => decide("approve", [...selected])} loading={busy}>Approve</Button>
-                      <Button size="sm" variant="outline" onClick={() => decide("reject", [...selected])} disabled={busy}>Reject</Button>
+                    <span className="bg-primary-soft flex items-center gap-2 rounded-xl px-2 py-1 text-sm">
+                      <span className="tabular text-primary px-1 font-medium">{selected.size} selected</span>
+                      <Button
+                        size="sm"
+                        variant="success"
+                        onClick={() => decide("approve", [...selected])}
+                        loading={busy}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => decide("reject", [...selected])}
+                        disabled={busy}
+                      >
+                        Reject
+                      </Button>
                     </span>
                   )}
                 </>
@@ -513,8 +733,20 @@ function EmployeesPage({ initial, canImport, canManagers, initialTab }: { initia
               empty={
                 <EmptyState
                   icon={Users}
-                  title={filtersActive ? "No matches" : tab === "pending" ? "No pending requests" : `No ${tab} members`}
-                  description={filtersActive ? "Try a different search or clear the filters." : tab === "pending" ? "Share the invite code from the dashboard to let people request access." : undefined}
+                  title={
+                    filtersActive
+                      ? "No matches"
+                      : tab === "pending"
+                        ? "No pending requests"
+                        : `No ${tab} members`
+                  }
+                  description={
+                    filtersActive
+                      ? "Try a different search or clear the filters."
+                      : tab === "pending"
+                        ? "Share the invite code from the dashboard to let people request access."
+                        : undefined
+                  }
                 />
               }
             />
@@ -522,8 +754,17 @@ function EmployeesPage({ initial, canImport, canManagers, initialTab }: { initia
         </CardBody>
       </Card>
 
-      <ImportDialog open={dialog === "import"} onOpenChange={(o) => setDialog(o ? "import" : null)} canManagers={canManagers} />
-      <InviteDialog open={dialog === "invite"} onOpenChange={(o) => setDialog(o ? "invite" : null)} data={data} canManagers={canManagers} />
+      <ImportDialog
+        open={dialog === "import"}
+        onOpenChange={(o) => setDialog(o ? "import" : null)}
+        canManagers={canManagers}
+      />
+      <InviteDialog
+        open={dialog === "invite"}
+        onOpenChange={(o) => setDialog(o ? "invite" : null)}
+        data={data}
+        canManagers={canManagers}
+      />
       <OrgItemsDialog open={dialog === "org"} onOpenChange={(o) => setDialog(o ? "org" : null)} data={data} />
     </div>
   );

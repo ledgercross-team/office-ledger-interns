@@ -122,6 +122,12 @@ export interface DigestPolicy {
   emailLockedReport: boolean;
 }
 
+export interface ComplaintPolicy {
+  /** When true, the owner (only) can see who submitted an anonymous issue. */
+  anonymousVisibleToOwner: boolean;
+  categories: string[];
+}
+
 export const workspaceSettings = pgTable("workspace_settings", {
   workspaceId: uuid()
     .primaryKey()
@@ -145,6 +151,13 @@ export const workspaceSettings = pgTable("workspace_settings", {
     .$type<DigestPolicy>()
     .notNull()
     .default({ dailyDigest: true, digestHour: 8, emailLockedReport: true }),
+  complaintPolicy: jsonb()
+    .$type<ComplaintPolicy>()
+    .notNull()
+    .default({
+      anonymousVisibleToOwner: false,
+      categories: ["Workplace", "Facilities", "IT", "Conduct", "Payroll", "Other"],
+    }),
   ...timestamps,
 });
 

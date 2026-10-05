@@ -25,19 +25,22 @@ export function Field({ label, error, hint, className, children, required }: Fie
       })
     : children;
   return (
-    <div className={cn("grid gap-1.5", className)}>
-      <label htmlFor={(children.props.id as string | undefined) ?? id} className="text-sm font-medium text-text">
+    <div className={cn("grid content-start gap-1.5", className)}>
+      <label
+        htmlFor={(children.props.id as string | undefined) ?? id}
+        className="text-text text-sm font-medium"
+      >
         {label}
         {required && <span className="text-danger-text"> *</span>}
       </label>
       {control}
       {hint && !error && (
-        <p id={hintId} className="text-xs text-muted">
+        <p id={hintId} className="text-muted text-xs">
           {hint}
         </p>
       )}
       {error && (
-        <p id={errId} role="alert" className="text-xs font-medium text-danger-text">
+        <p id={errId} role="alert" className="text-danger-text text-xs font-medium">
           {error}
         </p>
       )}
@@ -46,5 +49,5 @@ export function Field({ label, error, hint, className, children, required }: Fie
 }
 
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
-  return <label className={cn("text-sm font-medium text-text", className)} {...props} />;
+  return <label className={cn("text-text text-sm font-medium", className)} {...props} />;
 }

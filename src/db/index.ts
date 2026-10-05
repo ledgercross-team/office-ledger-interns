@@ -9,15 +9,13 @@ export type DB = PostgresJsDatabase<Schema>;
 export type Tx = Parameters<Parameters<DB["transaction"]>[0]>[0];
 export type Executor = DB | Tx;
 
-const g = globalThis as unknown as { __ledgerSql?: postgres.Sql; __ledgerDb?: DB };
+const g = globalThis as unknown as { __ledgerSql?: postgres.Sql };
 
 export const client = g.__ledgerSql ?? postgres(env.DATABASE_URL, { max: 10, onnotice: () => {} });
+// Only the pool survives dev hot reloads; the Drizzle instance is rebuilt so schema edits apply.
+if (env.NODE_ENV !== "production") g.__ledgerSql = client;
 /** Unscoped connection (owner role). Use only for auth, membership resolution, jobs and seeding. */
-export const db: DB = g.__ledgerDb ?? drizzle(client, { schema, casing: "snake_case" });
-if (env.NODE_ENV !== "production") {
-  g.__ledgerSql = client;
-  g.__ledgerDb = db;
-}
+export const db: DB = drizzle(client, { schema, casing: "snake_case" });
 
 /**
  * Runs `fn` in a transaction restricted to one workspace by Postgres RLS (role `ledger_app` +

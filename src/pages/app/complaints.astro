@@ -1,0 +1,27 @@
+---
+import AppLayout from "@/layouts/AppLayout.astro";
+import PageHero from "@/components/layout/PageHero.astro";
+import RefreshButton from "@/components/layout/RefreshButton";
+import ComplaintsPage from "@/components/features/complaints/ComplaintsPage";
+import { withWorkspace } from "@/db";
+import { complaintsPage } from "@/lib/queries/complaints";
+import { t } from "@/i18n/en";
+
+const ctx = Astro.locals.ctx!;
+const data = await withWorkspace(ctx.workspaceId, (tx) => complaintsPage(tx, ctx));
+const idParam = Astro.url.searchParams.get("id");
+const openId = idParam && /^[0-9a-f-]{36}$/.test(idParam) ? idParam : null;
+---
+
+<AppLayout title="Complaints">
+  <PageHero
+    eyebrow={t("pages.complaints.eyebrow")}
+    title={data.processor ? t("pages.complaints.title") : t("pages.complaints.employeeTitle")}
+    description={
+      data.processor ? t("pages.complaints.description") : t("pages.complaints.employeeDescription")
+    }
+  >
+    <RefreshButton slot="actions" client:idle />
+  </PageHero>
+  <ComplaintsPage client:load initial={data} tz={ctx.timezone} openId={openId} />
+</AppLayout>

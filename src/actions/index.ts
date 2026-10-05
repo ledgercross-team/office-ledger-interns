@@ -6,6 +6,8 @@ import { inbox } from "./inbox";
 import { tasksActions } from "./tasks";
 import { calendar } from "./calendar";
 import { reports } from "./reports";
+import { complaintsActions } from "./complaints";
+import { settings } from "./settings";
 import { announcementsActions, notificationsActions, shell } from "./shell";
 
 export const server = {
@@ -20,4 +22,6 @@ export const server = {
   tasks: tasksActions,
   calendar,
   reports,
+  complaints: complaintsActions,
+  settings,
 };

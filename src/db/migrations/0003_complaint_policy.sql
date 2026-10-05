@@ -1,0 +1,1 @@
+ALTER TABLE "workspace_settings" ADD COLUMN "complaint_policy" jsonb DEFAULT '{"anonymousVisibleToOwner":false,"categories":["Workplace","Facilities","IT","Conduct","Payroll","Other"]}'::jsonb NOT NULL;
