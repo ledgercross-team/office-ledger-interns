@@ -7,6 +7,14 @@ import tailwindcss from "@tailwindcss/vite";
 import "dotenv/config";
 
 const site = process.env.PUBLIC_SITE_URL ?? "http://localhost:4321";
+const siteUrl = new URL(site);
+// Astro only trusts Host / X-Forwarded-Host values matching these patterns (otherwise it assumes
+// "localhost", which breaks origin checks for Actions behind a real domain).
+const allowedDomains = [
+  { hostname: siteUrl.hostname, protocol: siteUrl.protocol.replace(":", "") },
+  { hostname: "localhost" },
+  { hostname: "127.0.0.1" },
+];
 const PUBLIC_PAGES = ["/", "/features", "/privacy", "/terms", "/contact", "/changelog"];
 
 export default defineConfig({
@@ -19,7 +27,7 @@ export default defineConfig({
       filter: (page) => PUBLIC_PAGES.includes(new URL(page).pathname.replace(/\/$/, "") || "/"),
     }),
   ],
-  security: { checkOrigin: true },
+  security: { checkOrigin: true, allowedDomains },
   devToolbar: { enabled: false },
   trailingSlash: "ignore",
   prefetch: { prefetchAll: false, defaultStrategy: "hover" },

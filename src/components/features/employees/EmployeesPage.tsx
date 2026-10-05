@@ -574,7 +574,7 @@ function EmployeesPage({
   const filtersActive = q || dept || desig;
 
   return (
-    <div className="grid gap-6">
+    <div className="grid grid-cols-1 gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs
           value={tab}

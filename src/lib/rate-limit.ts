@@ -33,7 +33,10 @@ class UpstashStore implements Store {
   async hit(key: string, windowSec: number) {
     const res = await fetch(`${env.UPSTASH_REDIS_REST_URL}/pipeline`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify([
         ["INCR", `rl:${key}`],
         ["EXPIRE", `rl:${key}`, String(windowSec), "NX"],
@@ -44,10 +47,13 @@ class UpstashStore implements Store {
   }
 }
 
-const store: Store = env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN ? new UpstashStore() : new MemoryStore();
+const store: Store =
+  env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN ? new UpstashStore() : new MemoryStore();
+
+const authLimit = Number(process.env.RATE_LIMIT_AUTH_PER_MIN ?? 10);
 
 export const LIMITS = {
-  auth: { limit: 10, windowSec: 60 },
+  auth: { limit: authLimit, windowSec: 60 },
   join: { limit: 5, windowSec: 300 },
   checkin: { limit: 10, windowSec: 60 },
   upload: { limit: 20, windowSec: 60 },
@@ -65,6 +71,8 @@ export async function rateLimit(bucket: keyof typeof LIMITS, id: string): Promis
 
 export function clientIp(request: Request, fallback = "unknown") {
   return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || fallback
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    fallback
   );
 }

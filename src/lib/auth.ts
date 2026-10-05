@@ -51,7 +51,14 @@ export const auth = betterAuth({
         to: user.email,
         subject: "Reset your Office Ledger password",
         text: `Hi ${user.name},\n\nUse this link within 30 minutes to choose a new password:\n${url}\n\nIf you didn't ask for this, ignore this email.`,
-        html: mailHtml("Reset your password", [`Hi ${user.name},`, "Use the button below within 30 minutes to choose a new password. If you didn't ask for this, ignore this email."], { label: "Reset password", url }),
+        html: mailHtml(
+          "Reset your password",
+          [
+            `Hi ${user.name},`,
+            "Use the button below within 30 minutes to choose a new password. If you didn't ask for this, ignore this email.",
+          ],
+          { label: "Reset password", url },
+        ),
       });
     },
   },
@@ -64,14 +71,20 @@ export const auth = betterAuth({
         to: user.email,
         subject: "Verify your email for Office Ledger",
         text: `Hi ${user.name},\n\nConfirm your email address:\n${url}`,
-        html: mailHtml("Verify your email", [`Hi ${user.name},`, "Confirm your email address to finish setting up your account."], { label: "Verify email", url }),
+        html: mailHtml(
+          "Verify your email",
+          [`Hi ${user.name},`, "Confirm your email address to finish setting up your account."],
+          { label: "Verify email", url },
+        ),
       });
     },
   },
   plugins: [twoFactor({ issuer: "Office Ledger", schema: { twoFactor: { modelName: "two_factors" } } })],
-  // Our own limiter (src/lib/rate-limit.ts) wraps the auth route; keep Better Auth's as a backstop.
-  rateLimit: { enabled: isProd, window: 60, max: 100 },
+  // Rate limiting + lockout are done by our wrapper around the auth route (src/pages/api/auth),
+  // which covers every sign-in/sign-up/reset/2FA path with a configurable per-IP budget.
+  rateLimit: { enabled: false },
   advanced: {
+    ipAddress: { ipAddressHeaders: ["x-forwarded-for", "x-real-ip"] },
     cookiePrefix: "ledger",
     useSecureCookies: isProd,
     defaultCookieAttributes: { sameSite: "lax", httpOnly: true, secure: isProd },
