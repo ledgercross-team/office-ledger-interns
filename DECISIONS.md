@@ -47,7 +47,7 @@ Defaults and judgement calls made while building Office Ledger v2. Newest phase 
 
 ## Phase 4 – App shell
 
-- **Sidebar is server-rendered Astro** (zero JS for navigation); collapse state lives in `localStorage` and is applied before paint by `/theme.js`. Under 1024 px it becomes an off-canvas drawer; under 640 px a bottom tab bar appears (employees get *Leave* in place of *Inbox*).
+- **Sidebar is server-rendered Astro** (zero JS for navigation); collapse state lives in `localStorage` and is applied before paint by `/theme.js`. Under 1024 px it becomes an off-canvas drawer; under 640 px a bottom tab bar appears (employees get _Leave_ in place of _Inbox_).
 - **One QueryClient for all islands** (module singleton that survives View Transitions). Islands seed queries with SSR data; the SSE stream (`/api/stream`) sends `invalidate` topics so every island refreshes the right queries live.
 - **Real-time** uses Postgres `LISTEN/NOTIFY` (`ledger_events`) so it works across multiple app instances. Each Web Push is "claimed" (`notifications.pushed_at`) so only one instance sends it.
 - **Announcements render markdown on the server** through `marked` + DOMPurify with a strict tag/URL allow-list; that sanitised HTML is the only HTML ever injected.
@@ -56,23 +56,23 @@ Defaults and judgement calls made while building Office Ledger v2. Newest phase 
 ## Phase 5 – Attendance, employees, profiles
 
 - **Late rule**: a check-in is late when local time > office start + threshold; `late_minutes` is measured from office start. Half-day rows (approved half-day leave) are never late.
-- **Status precedence**: late beats remote (a late remote check-in shows *Late* with mode *Remote*); the *Remote* tile counts by mode.
+- **Status precedence**: late beats remote (a late remote check-in shows _Late_ with mode _Remote_); the _Remote_ tile counts by mode.
 - **Approval policy** (`approval_mode`): none / late / remote / both. Going over the weekly remote quota (Monday-based week) always requires approval, whatever the mode.
-- **Geofence / office IP** is off by default. When on, an *Office* check-in must come from an allowed IP **or** a browser location within the radius; otherwise the user is asked to choose Remote.
+- **Geofence / office IP** is off by default. When on, an _Office_ check-in must come from an allowed IP **or** a browser location within the radius; otherwise the user is asked to choose Remote.
 - **Breaks**: started/ended by the employee (optionally tagged with a configured break window); break minutes are subtracted from tracked time.
 - **Corrections** never edit history directly. Approval applies them to the attendance row, and if that day's report is already locked, a `daily_report_corrections` entry is written.
 - **Employee codes** continue the workspace's existing prefix (`LC-016`, …) on approval or import; owners get `OWN-001` from the setup wizard.
 - **CSV import** creates accounts with a random password and emails each new person a reset link to choose their own; existing members are skipped.
 - **Deactivation** deletes the member's sessions immediately.
-- **Documents** are stored outside `public/` (`STORAGE_DIR`), checked against a MIME allow-list *and* magic bytes, and served only through HMAC-signed URLs that expire after 5–10 minutes with a sandboxed CSP. Avatars use an authenticated route instead because colleagues need to see them.
+- **Documents** are stored outside `public/` (`STORAGE_DIR`), checked against a MIME allow-list _and_ magic bytes, and served only through HMAC-signed URLs that expire after 5–10 minutes with a sandboxed CSP. Avatars use an authenticated route instead because colleagues need to see them.
 - **2FA** setup is offered to owners and managers (per the brief); employees don't see it.
 - **Profile visibility**: employees can only open their own profile (`/app/me`); managers and owners can open anyone's, and only someone with permission to manage that person sees their documents and emergency contact.
 
 ## Phase 6 – Leave & Inbox
 
-- **One decision layer** (`src/lib/services/decisions.ts`) is used by the Inbox *and* the source pages, so "Approve" means exactly the same thing everywhere (permissions re-checked against the source record, requester notified, audit written).
+- **One decision layer** (`src/lib/services/decisions.ts`) is used by the Inbox _and_ the source pages, so "Approve" means exactly the same thing everywhere (permissions re-checked against the source record, requester notified, audit written).
 - **Bulk Inbox decisions** run each item in its own savepoint; stale or forbidden items are skipped and reported instead of failing the batch.
-- **Button wording by kind**: exceptions are *Acknowledge / Flag* (flagging notifies the employee to file a correction or leave), complaints are *Start review / Close*, everything else is *Approve / Reject*. A rejection reason is optional and goes to the requester (in-app and, if they opted in, by email).
+- **Button wording by kind**: exceptions are _Acknowledge / Flag_ (flagging notifies the employee to file a correction or leave), complaints are _Start review / Close_, everything else is _Approve / Reject_. A rejection reason is optional and goes to the requester (in-app and, if they opted in, by email).
 - **Priority**: leave starting within 2 days and absences without leave are High; joins, corrections, holiday proposals and missing checkouts are Medium; attendance approvals, overtime and short days are Low; issues map from their severity. SLA badges turn amber after 1 day and red after 3.
 - **Leave days** count workdays only (weekends and active holidays excluded); half-day = 0.5. Requests may reach 30 days back and up to a year ahead, can't overlap the member's own pending/approved requests, and paid types with a quota can't exceed the available balance (accrued + carry-over − used − pending).
 - **Overlap warning** shows on pending requests when other members of the same department are off (approved or pending) on overlapping days; it turns amber at 2+ people or ≥30% of the department.
@@ -89,3 +89,18 @@ Defaults and judgement calls made while building Office Ledger v2. Newest phase 
 - **Holiday flow**: owner changes are immediate; a manager's mark becomes a proposal and a manager's removal becomes a removal request, both decided by the owner in the Inbox. A manager can withdraw their own pending proposal.
 - **Public holiday import** uses the free Nager.Date API for the workspace country (global holidays only); imported days are active for owners and proposals for managers. Existing dates are left untouched.
 - **iCal feed** (`/api/ical/<token>`) contains the member's meetings (with RRULE), their approved leave and active holidays as all-day events, from 90 days back. The token is the secret and can be reset from My Profile.
+
+## Phase 8 – Performance, Daily Report, Dashboard, jobs
+
+- **Chart colours = attendance status tokens** (Present green, Late amber, Remote blue, On leave violet, Absent red), validated as a set with the dataviz palette validator in both themes. Dark mode needed its own steps (`--success: oklch(0.52 0.13 158)`, `--warning: oklch(0.665 0.15 62)`) to stay inside the dark lightness band and keep green/amber apart for protanopes. Remote↔On leave sits in the 6–8 CVD band, so every chart carries a labelled legend with counts, 2px surface gaps, hover tooltips and a table view.
+- **Attendance momentum** plots working days only (weekends/holidays would show as fake drops), with 7/30/90-day ranges and optional Late/Remote series. Charts use one y-axis.
+- **Worked rate** = minutes worked so far today by people who checked in ÷ (people present × office minutes elapsed), capped at 100%.
+- **Performance trend**: the sparkline shows six consecutive periods of the selected length ending at the selected end date; the delta compares with the immediately preceding period. **PDF export** uses the print stylesheet (browser "Save as PDF") to avoid a server-side PDF engine.
+- **Employees see only their own score** on the Performance page (with formulas spelled out).
+- **Daily report locking**: the `lock-reports` job snapshots `fn_daily_report` at office end (workspace timezone). Past days that were never locked (e.g. the server was down) lock lazily the first time they're opened, so their snapshot reflects that moment. Live reports refresh every minute.
+- **Weekly/monthly roll-ups** aggregate `fn_attendance_summary` over Monday-based weeks or calendar months, capped at today.
+- **Jobs** run every minute via node-cron inside the server (`JOBS_ENABLED`) or `POST /api/cron/<job|all>` with `Authorization: Bearer $CRON_SECRET`. Once-a-day work (digest) is recorded in `job_runs`; report locks rely on the snapshot's unique key, and due reminders on `tasks.due_reminder_sent_at`. All jobs are idempotent.
+- **Auto-checkout** closes open sessions at `auto_checkout_at` (and any left over from earlier days), but records the checkout at office end so forgotten checkouts don't count as overtime. The day still appears as a _missing checkout_ exception and the member is notified.
+- **Expired invite codes** are rotated automatically and the owner is notified.
+- **Dashboard celebrations** show birthdays and work anniversaries in the next 14 days to everyone in the workspace (birth year is never shown).
+- **Astro + `asChild`**: Radix `Slot` can't wrap Astro slot content, so `.astro` files style links with `buttonVariants()` instead of `<Button asChild>`.

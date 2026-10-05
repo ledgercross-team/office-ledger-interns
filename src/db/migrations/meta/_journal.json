@@ -15,6 +15,13 @@
       "when": 1791189554541,
       "tag": "0001_notification_push",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791191916848,
+      "tag": "0002_job_runs",
+      "breakpoints": true
     }
   ]
 }

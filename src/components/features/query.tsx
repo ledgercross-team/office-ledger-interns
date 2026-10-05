@@ -6,7 +6,9 @@ const g = globalThis as unknown as { __ledgerQC?: QueryClient; __ledgerLive?: Ev
 
 const isServer = typeof window === "undefined";
 const makeClient = () =>
-  new QueryClient({ defaultOptions: { queries: { staleTime: 20_000, refetchOnWindowFocus: true, retry: 1 } } });
+  new QueryClient({
+    defaultOptions: { queries: { staleTime: 20_000, refetchOnWindowFocus: true, retry: 1 } },
+  });
 
 /**
  * Browser: one QueryClient shared by every island on the page (and across View Transition
@@ -39,7 +41,12 @@ export function withQuery<P extends object>(Component: ComponentType<P>) {
  * useQuery seeded with server-rendered data. `fetcher` usually calls an Astro Action with `.orThrow`.
  * Server events with the same topic (first key segment) invalidate it automatically.
  */
-export function useServerQuery<T>(key: QueryKey, fetcher: () => Promise<T>, initial: T | undefined, opts: { enabled?: boolean } = {}) {
+export function useServerQuery<T>(
+  key: QueryKey,
+  fetcher: () => Promise<T>,
+  initial: T | undefined,
+  opts: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: key,
     queryFn: fetcher,
@@ -62,7 +69,11 @@ export function startLive() {
   es.addEventListener("invalidate", (ev) => {
     const { topic } = JSON.parse((ev as MessageEvent).data) as { topic: string };
     void queryClient.invalidateQueries({ queryKey: [topic] });
-    if (topic !== "shell") void queryClient.invalidateQueries({ queryKey: ["shell"] });
+    // summary views aggregate every domain, so any change refreshes them
+    void queryClient.invalidateQueries({ queryKey: ["shell"] });
+    void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    if (["attendance", "leave", "calendar"].includes(topic))
+      void queryClient.invalidateQueries({ queryKey: ["profile"] });
   });
   es.addEventListener("notification", (ev) => {
     const data = JSON.parse((ev as MessageEvent).data);
@@ -75,5 +86,7 @@ export function onLiveNotification(h: LiveHandler) {
 }
 
 export function AppToaster() {
-  return <Toaster position="bottom-right" richColors closeButton toastOptions={{ className: "!rounded-xl" }} />;
+  return (
+    <Toaster position="bottom-right" richColors closeButton toastOptions={{ className: "!rounded-xl" }} />
+  );
 }

@@ -1,6 +1,6 @@
 ---
 import AuthLayout from "@/layouts/AuthLayout.astro";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { ResendVerification } from "@/components/features/auth/forms";
 const done = Astro.url.searchParams.has("done");
 const error = Astro.url.searchParams.get("error");
@@ -10,10 +10,28 @@ const user = Astro.locals.user;
 <AuthLayout
   title="Verify email"
   heading={done && !error ? "Email verified" : "Verify your email"}
-  subheading={done && !error ? "Thanks! Your email address is confirmed." : "Open the link we emailed you to confirm your address."}
+  subheading={
+    done && !error
+      ? "Thanks! Your email address is confirmed."
+      : "Open the link we emailed you to confirm your address."
+  }
 >
-  {error && <p role="alert" class="mb-4 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger-text">That verification link is invalid or has expired.</p>}
+  {error && (
+    <p role="alert" class="mb-4 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger-text">
+      That verification link is invalid or has expired.
+    </p>
+  )}
   <div class="grid gap-3">
-    {done && !error ? <Button asChild size="lg"><a href="/app">Continue</a></Button> : user ? <ResendVerification client:load email={user.email} /> : <Button asChild variant="outline"><a href="/auth/sign-in">Back to sign in</a></Button>}
+    {done && !error ? (
+      <a href="/app" class={buttonVariants({ size: "lg" })}>
+        Continue
+      </a>
+    ) : user ? (
+      <ResendVerification client:load email={user.email} />
+    ) : (
+      <a href="/auth/sign-in" class={buttonVariants({ variant: "outline" })}>
+        Back to sign in
+      </a>
+    )}
   </div>
 </AuthLayout>

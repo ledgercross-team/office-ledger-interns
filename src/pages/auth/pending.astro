@@ -1,7 +1,7 @@
 ---
 import AuthLayout from "@/layouts/AuthLayout.astro";
 import { SignOutButton } from "@/components/features/auth/forms";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Hourglass } from "lucide-react";
 const { user, ctx } = Astro.locals;
 if (!user) return Astro.redirect("/auth/sign-in");
@@ -9,14 +9,27 @@ if (ctx?.status === "active") return Astro.redirect("/app");
 if (!ctx) return Astro.redirect("/auth/join");
 ---
 
-<AuthLayout title="Awaiting approval" heading="Request sent" subheading={`Your request to join ${ctx.workspaceName} is waiting for approval.`}>
+<AuthLayout
+  title="Awaiting approval"
+  heading="Request sent"
+  subheading={`Your request to join ${ctx.workspaceName} is waiting for approval.`}
+>
   <div class="flex items-start gap-3 rounded-2xl border border-border bg-surface p-4">
-    <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-warning-soft text-warning-text"><Hourglass className="size-5" aria-hidden="true" /></span>
-    <p class="text-sm text-muted">An owner or manager will review it from their Inbox. You'll get access as soon as it's approved. Refresh this page any time.</p>
+    <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-warning-soft text-warning-text">
+      <Hourglass className="size-5" aria-hidden="true" />
+    </span>
+    <p class="text-sm text-muted">
+      An owner or manager will review it from their Inbox. You'll get access as soon as it's approved. Refresh
+      this page any time.
+    </p>
   </div>
   <div class="mt-6 flex flex-wrap gap-2">
-    <Button asChild><a href="/auth/pending">Check again</a></Button>
-    <Button asChild variant="outline"><a href="/auth/setup">Create a workspace instead</a></Button>
+    <a href="/auth/pending" class={buttonVariants({})}>
+      Check again
+    </a>
+    <a href="/auth/setup" class={buttonVariants({ variant: "outline" })}>
+      Create a workspace instead
+    </a>
     <SignOutButton client:load variant="ghost" />
   </div>
 </AuthLayout>

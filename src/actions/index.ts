@@ -5,6 +5,7 @@ import { leave } from "./leave";
 import { inbox } from "./inbox";
 import { tasksActions } from "./tasks";
 import { calendar } from "./calendar";
+import { reports } from "./reports";
 import { announcementsActions, notificationsActions, shell } from "./shell";
 
 export const server = {
@@ -18,4 +19,5 @@ export const server = {
   inbox,
   tasks: tasksActions,
   calendar,
+  reports,
 };

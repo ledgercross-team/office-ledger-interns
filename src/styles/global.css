@@ -59,6 +59,8 @@
     --primary: oklch(0.7 0.16 262);
     --primary-fg: oklch(0.17 0.03 265);
     --primary-soft: oklch(0.7 0.16 262 / 0.16);
+    --success: oklch(0.52 0.13 158);
+    --warning: oklch(0.665 0.15 62);
     --success-text: oklch(0.8 0.14 152);
     --warning-text: oklch(0.84 0.14 80);
     --danger-text: oklch(0.76 0.15 25);
@@ -80,6 +82,8 @@
   --primary: oklch(0.7 0.16 262);
   --primary-fg: oklch(0.17 0.03 265);
   --primary-soft: oklch(0.7 0.16 262 / 0.16);
+  --success: oklch(0.52 0.13 158);
+  --warning: oklch(0.665 0.15 62);
   --success-text: oklch(0.8 0.14 152);
   --warning-text: oklch(0.84 0.14 80);
   --danger-text: oklch(0.76 0.15 25);
@@ -161,10 +165,18 @@
   .hero-surface {
     background-color: var(--surface);
     background-image:
-      linear-gradient(135deg, color-mix(in oklch, var(--primary) 12%, transparent), color-mix(in oklch, var(--primary) 4%, transparent) 60%, transparent),
+      linear-gradient(
+        135deg,
+        color-mix(in oklch, var(--primary) 12%, transparent),
+        color-mix(in oklch, var(--primary) 4%, transparent) 60%,
+        transparent
+      ),
       linear-gradient(color-mix(in oklch, var(--border) 38%, transparent) 1px, transparent 1px),
       linear-gradient(90deg, color-mix(in oklch, var(--border) 38%, transparent) 1px, transparent 1px);
-    background-size: auto, 24px 24px, 24px 24px;
+    background-size:
+      auto,
+      24px 24px,
+      24px 24px;
   }
   /* RTL-safe helpers (logical properties) */
   .ms-auto-safe {
@@ -197,7 +209,12 @@
   }
 }
 .skeleton {
-  background: linear-gradient(90deg, var(--surface-2) 25%, color-mix(in oklch, var(--surface-2) 60%, var(--surface)) 50%, var(--surface-2) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    color-mix(in oklch, var(--surface-2) 60%, var(--surface)) 50%,
+    var(--surface-2) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
   border-radius: 0.5rem;
@@ -221,26 +238,41 @@
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
+  from {
+    opacity: 0;
+  }
 }
 @keyframes fade-out {
-  to { opacity: 0; }
+  to {
+    opacity: 0;
+  }
 }
 @keyframes pop-in {
-  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.97);
+  }
 }
 @keyframes slide-in-right {
-  from { transform: translateX(100%); }
+  from {
+    transform: translateX(100%);
+  }
 }
 @keyframes slide-in-left {
-  from { transform: translateX(-100%); }
+  from {
+    transform: translateX(-100%);
+  }
 }
-[dir="rtl"] { --rtl-flip: -1; }
+[dir="rtl"] {
+  --rtl-flip: -1;
+}
 
 /* ---- App shell ------------------------------------------------------------------------------ */
 .app-sidebar {
   width: var(--sidebar-w);
-  transition: width 180ms ease-out, transform 200ms ease-out;
+  transition:
+    width 180ms ease-out,
+    transform 200ms ease-out;
 }
 @media (min-width: 1024px) {
   html[data-sidebar="collapsed"] {

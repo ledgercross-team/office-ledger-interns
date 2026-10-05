@@ -1,4 +1,4 @@
-import { bigint, index, jsonb, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { bigint, date, index, jsonb, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { pk, timestamps } from "./_common";
 import { memberships, workspaces } from "./workspace";
 
@@ -18,7 +18,10 @@ export const auditLog = pgTable(
     meta: jsonb().$type<Record<string, unknown>>(),
     ...timestamps,
   },
-  (t) => [index("audit_log_ws_created_idx").on(t.workspaceId, t.createdAt), index("audit_log_ws_action_idx").on(t.workspaceId, t.action)],
+  (t) => [
+    index("audit_log_ws_created_idx").on(t.workspaceId, t.createdAt),
+    index("audit_log_ws_action_idx").on(t.workspaceId, t.action),
+  ],
 );
 
 export const files = pgTable(
@@ -40,4 +43,19 @@ export const files = pgTable(
     ...timestamps,
   },
   (t) => [index("files_entity_idx").on(t.workspaceId, t.entityType, t.entityId)],
+);
+
+/** Idempotency ledger for scheduled jobs: one row per (workspace, job, local date). */
+export const jobRuns = pgTable(
+  "job_runs",
+  {
+    id: pk(),
+    workspaceId: uuid()
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    job: text().notNull(),
+    runDate: date().notNull(),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("job_runs_uq").on(t.workspaceId, t.job, t.runDate)],
 );
