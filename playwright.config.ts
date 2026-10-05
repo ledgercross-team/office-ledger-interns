@@ -14,7 +14,11 @@ export default defineConfig({
   use: { baseURL: BASE, trace: "retain-on-failure", screenshot: "only-on-failure" },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] }, testIgnore: /mobile\.spec\.ts/ },
-    { name: "mobile", use: { ...devices["Pixel 7"] }, testMatch: /mobile\.spec\.ts/ },
+    {
+      name: "mobile",
+      use: { ...devices["Pixel 7"], viewport: { width: 360, height: 780 } },
+      testMatch: /mobile\.spec\.ts/,
+    },
   ],
   webServer: {
     command: "pnpm build && node server.mjs",

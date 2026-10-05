@@ -13,7 +13,17 @@ test("phone layout: bottom tabs, drawer navigation, no horizontal scroll", async
     .getByRole("link", { name: "Calendar" })
     .click();
   await expect(page).toHaveURL(/\/app\/calendar/);
-  for (const path of ["/app", "/app/inbox", "/app/attendance", "/app/employees"]) {
+  for (const path of [
+    "/app",
+    "/app/inbox",
+    "/app/attendance",
+    "/app/employees",
+    "/app/tasks",
+    "/app/calendar",
+    "/app/performance",
+    "/app/settings",
+    "/app/me",
+  ]) {
     await page.goto(path);
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

@@ -157,6 +157,10 @@
   [hidden] {
     display: none !important;
   }
+  /* Grid items may shrink below their content width (prevents horizontal page scroll on phones). */
+  .grid > * {
+    min-width: 0;
+  }
 }
 
 @layer utilities {
