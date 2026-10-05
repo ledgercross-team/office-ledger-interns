@@ -1,0 +1,27 @@
+---
+import ProfilePage from "./ProfilePage";
+import { withWorkspace } from "@/db";
+import { employeeProfile, managerOptions, orgLookups } from "@/lib/queries/employees";
+import { can } from "@/lib/permissions";
+import { env } from "@/lib/env";
+
+interface Props {
+  membershipId: string;
+}
+const ctx = Astro.locals.ctx!;
+const { membershipId } = Astro.props;
+const result = await withWorkspace(ctx.workspaceId, async (tx) => {
+  const profile = await employeeProfile(tx, ctx, membershipId);
+  if (!profile) return null;
+  const lookups = profile.permissions.editCompany ? { ...(await orgLookups(tx)), managers: await managerOptions(tx) } : undefined;
+  return { profile, lookups };
+});
+---
+
+{
+  result ? (
+    <ProfilePage client:load initial={result.profile} lookups={result.lookups} canTwoFactor={can(ctx, "dashboard.org")} vapidKey={env.PUBLIC_VAPID_PUBLIC_KEY} />
+  ) : (
+    <p class="rounded-2xl border border-border bg-surface p-8 text-center text-muted">This profile doesn't exist or you can't view it.</p>
+  )
+}

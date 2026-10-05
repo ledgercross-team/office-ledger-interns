@@ -52,3 +52,18 @@ Defaults and judgement calls made while building Office Ledger v2. Newest phase 
 - **Real-time** uses Postgres `LISTEN/NOTIFY` (`ledger_events`) so it works across multiple app instances. Each Web Push is "claimed" (`notifications.pushed_at`) so only one instance sends it.
 - **Announcements render markdown on the server** through `marked` + DOMPurify with a strict tag/URL allow-list; that sanitised HTML is the only HTML ever injected.
 - **Inbox visibility** (`src/lib/queries/inbox-scope.ts`) mirrors `can("inbox.review")` in SQL so badge counts and lists agree.
+
+## Phase 5 – Attendance, employees, profiles
+
+- **Late rule**: a check-in is late when local time > office start + threshold; `late_minutes` is measured from office start. Half-day rows (approved half-day leave) are never late.
+- **Status precedence**: late beats remote (a late remote check-in shows *Late* with mode *Remote*); the *Remote* tile counts by mode.
+- **Approval policy** (`approval_mode`): none / late / remote / both. Going over the weekly remote quota (Monday-based week) always requires approval, whatever the mode.
+- **Geofence / office IP** is off by default. When on, an *Office* check-in must come from an allowed IP **or** a browser location within the radius; otherwise the user is asked to choose Remote.
+- **Breaks**: started/ended by the employee (optionally tagged with a configured break window); break minutes are subtracted from tracked time.
+- **Corrections** never edit history directly. Approval applies them to the attendance row, and if that day's report is already locked, a `daily_report_corrections` entry is written.
+- **Employee codes** continue the workspace's existing prefix (`LC-016`, …) on approval or import; owners get `OWN-001` from the setup wizard.
+- **CSV import** creates accounts with a random password and emails each new person a reset link to choose their own; existing members are skipped.
+- **Deactivation** deletes the member's sessions immediately.
+- **Documents** are stored outside `public/` (`STORAGE_DIR`), checked against a MIME allow-list *and* magic bytes, and served only through HMAC-signed URLs that expire after 5–10 minutes with a sandboxed CSP. Avatars use an authenticated route instead because colleagues need to see them.
+- **2FA** setup is offered to owners and managers (per the brief); employees don't see it.
+- **Profile visibility**: employees can only open their own profile (`/app/me`); managers and owners can open anyone's, and only someone with permission to manage that person sees their documents and emergency contact.

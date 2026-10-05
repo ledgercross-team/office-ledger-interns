@@ -16,7 +16,9 @@
   function sidebar() {
     try {
       if (localStorage.getItem("ledger.sidebar") === "collapsed") r.setAttribute("data-sidebar", "collapsed");
-    } catch (e) {}
+    } catch {
+      /* storage unavailable */
+    }
   }
   apply();
   sidebar();

@@ -1,0 +1,22 @@
+---
+import AppLayout from "@/layouts/AppLayout.astro";
+import PageHero from "@/components/layout/PageHero.astro";
+import RefreshButton from "@/components/layout/RefreshButton";
+import EmployeesPage from "@/components/features/employees/EmployeesPage";
+import { withWorkspace } from "@/db";
+import { employeesPage } from "@/lib/queries/employees";
+import { can } from "@/lib/permissions";
+import { t } from "@/i18n/en";
+
+const ctx = Astro.locals.ctx!;
+const data = await withWorkspace(ctx.workspaceId, (tx) => employeesPage(tx));
+const tab = Astro.url.searchParams.get("tab");
+const initialTab = tab === "pending" || tab === "rejected" || tab === "deactivated" ? tab : "active";
+---
+
+<AppLayout title="Employees">
+  <PageHero title={t("pages.employees.title")} description={t("pages.employees.description")}>
+    <RefreshButton slot="actions" client:idle />
+  </PageHero>
+  <EmployeesPage client:load initial={data} canImport={can(ctx, "employees.import")} canManagers={can(ctx, "roles.manage")} initialTab={initialTab} />
+</AppLayout>
