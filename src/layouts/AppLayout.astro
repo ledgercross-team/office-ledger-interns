@@ -1,0 +1,114 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import Sidebar from "@/components/layout/Sidebar.astro";
+import BottomTabs from "@/components/layout/BottomTabs.astro";
+import TopbarActions from "@/components/features/shell/TopbarActions";
+import { withWorkspace } from "@/db";
+import { shellCounts } from "@/lib/queries/shell";
+import { listMemberships } from "@/lib/context";
+import { navFor } from "@/lib/nav";
+import { can } from "@/lib/permissions";
+import { en } from "@/i18n/en";
+import { Menu, WifiOff } from "lucide-react";
+
+interface Props {
+  title: string;
+  /** Short page title shown in the top bar (defaults to title). */
+  heading?: string;
+}
+const { title, heading = title } = Astro.props;
+const ctx = Astro.locals.ctx!;
+const user = Astro.locals.user!;
+const [counts, memberships] = await Promise.all([withWorkspace(ctx.workspaceId, (tx) => shellCounts(tx, ctx)), listMemberships(user.id)]);
+const nav = navFor(ctx);
+---
+
+<BaseLayout title={title} noindex>
+  <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-[60] focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:shadow-pop">{en.skipToContent}</a>
+  <div class="lg:flex">
+    <Sidebar
+      nav={nav}
+      inboxCount={counts.inbox}
+      workspace={{ id: ctx.workspaceId, name: ctx.workspaceName }}
+      memberships={memberships}
+      user={{ name: user.name, image: user.image }}
+      role={ctx.role}
+    />
+    <div class="min-w-0 flex-1">
+      <header data-topbar class="sticky top-0 z-20 border-b border-border bg-bg/85 backdrop-blur">
+        <div class="mx-auto flex h-14 max-w-[1248px] items-center gap-3 px-4 sm:px-6">
+          <button type="button" data-nav-open-btn class="-ms-1.5 rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-text lg:hidden" aria-label={en.topbar.openMenu} aria-controls="app-sidebar" aria-expanded="false">
+            <Menu className="size-5" aria-hidden="true" />
+          </button>
+          <p class="min-w-0 flex-1 truncate text-sm font-semibold">{heading}</p>
+          <TopbarActions
+            client:load
+            user={{ name: user.name, email: user.email, image: user.image }}
+            role={ctx.role}
+            counts={counts}
+            theme={user.theme}
+            nav={nav.map(({ label, href, icon }) => ({ label, href, icon }))}
+            canPost={can(ctx, "announcements.post")}
+            canCheckIn={can(ctx, "attendance.checkin")}
+            canRequestLeave={can(ctx, "leave.request")}
+          />
+        </div>
+        <div data-offline hidden class="border-t border-border bg-warning-soft px-4 py-1.5 text-center text-xs font-medium text-warning-text" role="status">
+          <WifiOff className="me-1 inline size-3.5" aria-hidden="true" />{en.common.offline}
+        </div>
+      </header>
+      <main id="main" tabindex="-1" class="mx-auto w-full max-w-[1248px] px-4 pb-28 pt-5 outline-none sm:px-6 sm:pb-10 sm:pt-6">
+        <slot />
+      </main>
+    </div>
+  </div>
+  <BottomTabs showInbox={can(ctx, "inbox.view")} inboxCount={counts.inbox} />
+</BaseLayout>
+
+<script>
+  import { authClient } from "@/lib/auth-client";
+
+  function init() {
+    const root = document.documentElement;
+    document.querySelectorAll<HTMLButtonElement>("[data-sidebar-toggle]").forEach((btn) => {
+      btn.onclick = () => {
+        const collapsed = root.getAttribute("data-sidebar") === "collapsed";
+        if (collapsed) root.removeAttribute("data-sidebar");
+        else root.setAttribute("data-sidebar", "collapsed");
+        try {
+          localStorage.setItem("ledger.sidebar", collapsed ? "expanded" : "collapsed");
+        } catch {
+          /* storage unavailable */
+        }
+      };
+    });
+    const openBtn = document.querySelector<HTMLButtonElement>("[data-nav-open-btn]");
+    const close = () => {
+      root.removeAttribute("data-nav-open");
+      openBtn?.setAttribute("aria-expanded", "false");
+    };
+    if (openBtn)
+      openBtn.onclick = () => {
+        root.setAttribute("data-nav-open", "");
+        openBtn.setAttribute("aria-expanded", "true");
+        document.querySelector<HTMLElement>("#app-sidebar a")?.focus();
+      };
+    const backdrop = document.querySelector<HTMLElement>("[data-nav-backdrop]");
+    if (backdrop) backdrop.onclick = close;
+    document.querySelectorAll<HTMLAnchorElement>("#app-sidebar a").forEach((a) => a.addEventListener("click", close));
+    document.addEventListener("keydown", (e) => e.key === "Escape" && close(), { once: true });
+    close();
+    const signOut = document.querySelector<HTMLButtonElement>("[data-sign-out]");
+    if (signOut)
+      signOut.onclick = async () => {
+        await authClient.signOut();
+        window.location.href = "/auth/sign-in";
+      };
+    const banner = document.querySelector<HTMLElement>("[data-offline]");
+    const sync = () => banner && (banner.hidden = navigator.onLine);
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    sync();
+  }
+  document.addEventListener("astro:page-load", init);
+</script>

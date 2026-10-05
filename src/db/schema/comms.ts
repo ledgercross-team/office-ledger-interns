@@ -53,6 +53,7 @@ export const notifications = pgTable(
     link: text(),
     readAt: timestamp({ withTimezone: true }),
     emailedAt: timestamp({ withTimezone: true }),
+    pushedAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [index("notifications_member_idx").on(t.membershipId, t.createdAt)],

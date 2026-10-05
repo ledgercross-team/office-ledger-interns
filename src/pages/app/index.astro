@@ -1,8 +1,12 @@
 ---
-import BaseLayout from "@/layouts/BaseLayout.astro";
-const { ctx, user } = Astro.locals;
+import AppLayout from "@/layouts/AppLayout.astro";
+import PageHero from "@/components/layout/PageHero.astro";
+import RefreshButton from "@/components/layout/RefreshButton";
+const { ctx } = Astro.locals;
 ---
 
-<BaseLayout title="Dashboard" noindex>
-  <main class="p-6">Hello {user?.name} · {ctx?.workspaceName} · {ctx?.role}</main>
-</BaseLayout>
+<AppLayout title="Dashboard">
+  <PageHero title={`${ctx!.workspaceName} operations`} description="Today's attendance and the workload that needs a manager">
+    <RefreshButton slot="actions" client:idle />
+  </PageHero>
+</AppLayout>

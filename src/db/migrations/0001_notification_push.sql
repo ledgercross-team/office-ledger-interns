@@ -1,0 +1,1 @@
+ALTER TABLE "notifications" ADD COLUMN "pushed_at" timestamp with time zone;

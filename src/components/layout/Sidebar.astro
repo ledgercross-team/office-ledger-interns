@@ -1,0 +1,118 @@
+---
+import Logo from "./Logo.astro";
+import WorkspaceSwitcher from "@/components/features/shell/WorkspaceSwitcher";
+import { NAV_ICONS } from "@/components/features/shell/icons";
+import { NAV_GROUPS, isActive, type NavItem } from "@/lib/nav";
+import { en } from "@/i18n/en";
+import { Avatar } from "@/components/ui/misc";
+import { ChevronsLeft, LogOut, UserRound } from "lucide-react";
+import type { MembershipSummary } from "@/lib/context";
+
+interface Props {
+  nav: NavItem[];
+  inboxCount: number;
+  workspace: { id: string; name: string };
+  memberships: MembershipSummary[];
+  user: { name: string; image: string | null };
+  role: string;
+}
+const { nav, inboxCount, workspace, memberships, user, role } = Astro.props;
+const path = Astro.url.pathname;
+const multi = memberships.filter((m) => m.status === "active").length > 1;
+const linkCls =
+  "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted transition-colors duration-150 hover:bg-surface-2 hover:text-text aria-[current=page]:bg-primary-soft aria-[current=page]:text-primary";
+---
+
+<div data-nav-backdrop class="fixed inset-0 z-30 hidden bg-black/40 lg:hidden" aria-hidden="true"></div>
+<aside
+  id="app-sidebar"
+  class="app-sidebar fixed inset-y-0 start-0 z-40 flex flex-col border-e border-border bg-surface lg:sticky lg:top-0 lg:h-dvh"
+  aria-label="Primary"
+>
+  <div class="flex items-center justify-between gap-2 px-4 pb-2 pt-4" data-collapse-center>
+    <a href="/app" class="flex min-w-0 items-center" aria-label="Office Ledger dashboard">
+      <span data-collapse-hide><Logo /></span>
+      <span class="hidden [html[data-sidebar=collapsed]_&]:lg:inline"><Logo withText={false} /></span>
+    </a>
+    <button
+      type="button"
+      data-sidebar-toggle
+      class="hidden rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-text lg:inline-flex"
+      aria-label={en.nav.collapse}
+      aria-controls="app-sidebar"
+      data-collapse-hide
+    >
+      <ChevronsLeft className="size-4" aria-hidden="true" />
+    </button>
+  </div>
+  <div class="px-3 pb-3">
+    {
+      multi ? (
+        <WorkspaceSwitcher client:idle current={workspace} workspaces={memberships} />
+      ) : (
+        <p class="truncate px-2 py-1 text-sm text-muted" data-collapse-hide>
+          {workspace.name}
+        </p>
+      )
+    }
+  </div>
+  <nav class="scrollbar-thin flex-1 overflow-y-auto px-3 pb-4" aria-label="Main navigation">
+    {
+      NAV_GROUPS.map((g) => {
+        const items = nav.filter((n) => n.group === g.key);
+        if (!items.length) return null;
+        return (
+          <div class="mb-4">
+            <p class="eyebrow px-3 pb-1.5" data-collapse-hide>
+              {g.label}
+            </p>
+            <ul class="grid gap-0.5">
+              {items.map((item) => {
+                const Icon = NAV_ICONS[item.icon];
+                return (
+                  <li>
+                    <a href={item.href} class={linkCls} aria-current={isActive(item.href, path) ? "page" : undefined} title={item.label} data-collapse-center>
+                      <Icon className="size-[1.125rem] shrink-0" aria-hidden="true" />
+                      <span class="flex-1 truncate" data-collapse-hide>
+                        {item.label}
+                      </span>
+                      {item.key === "inbox" && (
+                        <span data-inbox-count data-collapse-hide hidden={inboxCount === 0} class="tabular rounded-full bg-danger px-1.5 text-xs font-semibold text-white">
+                          {inboxCount}
+                        </span>
+                      )}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })
+    }
+  </nav>
+  <div class="border-t border-border p-3">
+    <a href="/app/me" class={linkCls} aria-current={path.startsWith("/app/me") ? "page" : undefined} title={en.nav.profile} data-collapse-center>
+      <UserRound className="size-[1.125rem] shrink-0" aria-hidden="true" />
+      <span data-collapse-hide>{en.nav.profile}</span>
+    </a>
+    <div class="mt-2 flex items-center gap-2.5 rounded-xl px-2 py-1.5" data-collapse-center>
+      <Avatar name={user.name} image={user.image} size="sm" />
+      <div class="min-w-0 flex-1" data-collapse-hide>
+        <p class="truncate text-sm font-medium">{user.name}</p>
+        <p class="text-xs capitalize text-muted">{role}</p>
+      </div>
+      <button type="button" data-sign-out class="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-text" aria-label={en.nav.signOut} title={en.nav.signOut} data-collapse-hide>
+        <LogOut className="size-4" aria-hidden="true" />
+      </button>
+    </div>
+    <button
+      type="button"
+      data-sidebar-toggle
+      class="mt-2 hidden w-full justify-center rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-text [html[data-sidebar=collapsed]_&]:lg:flex"
+      aria-label={en.nav.expand}
+    >
+      <ChevronsLeft className="size-4" data-collapse-flip aria-hidden="true" />
+    </button>
+  </div>
+</aside>

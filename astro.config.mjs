@@ -20,6 +20,7 @@ export default defineConfig({
     }),
   ],
   security: { checkOrigin: true },
+  devToolbar: { enabled: false },
   trailingSlash: "ignore",
   prefetch: { prefetchAll: false, defaultStrategy: "hover" },
   vite: {

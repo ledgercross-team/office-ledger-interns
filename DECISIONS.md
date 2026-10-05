@@ -44,3 +44,11 @@ Defaults and judgement calls made while building Office Ledger v2. Newest phase 
 - **Invite codes** look like `WORKSPACE-7Q4K` (no ambiguous characters). Join requests via code are `pending`; email invite links (7-day expiry) activate the membership immediately with the pre-assigned role/department because an owner/manager issued them.
 - **Route guard order**: signed out → sign-in; no/revoked membership → `/auth/join`; pending → `/auth/pending`; owner of a not-yet-onboarded workspace → `/auth/setup`; role not allowed → 403 page (rewrite, same URL).
 - **Managers can only manage employees** (not owners or other managers) and cannot review their own or other managers' requests; only owners decide holiday proposals.
+
+## Phase 4 – App shell
+
+- **Sidebar is server-rendered Astro** (zero JS for navigation); collapse state lives in `localStorage` and is applied before paint by `/theme.js`. Under 1024 px it becomes an off-canvas drawer; under 640 px a bottom tab bar appears (employees get *Leave* in place of *Inbox*).
+- **One QueryClient for all islands** (module singleton that survives View Transitions). Islands seed queries with SSR data; the SSE stream (`/api/stream`) sends `invalidate` topics so every island refreshes the right queries live.
+- **Real-time** uses Postgres `LISTEN/NOTIFY` (`ledger_events`) so it works across multiple app instances. Each Web Push is "claimed" (`notifications.pushed_at`) so only one instance sends it.
+- **Announcements render markdown on the server** through `marked` + DOMPurify with a strict tag/URL allow-list; that sanitised HTML is the only HTML ever injected.
+- **Inbox visibility** (`src/lib/queries/inbox-scope.ts`) mirrors `can("inbox.review")` in SQL so badge counts and lists agree.

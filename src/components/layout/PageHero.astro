@@ -1,0 +1,26 @@
+---
+interface Props {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+}
+const { eyebrow, title, description } = Astro.props;
+---
+
+<section class="hero-surface relative mb-6 overflow-hidden rounded-2xl border border-border px-5 py-6 sm:px-7 sm:py-7">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div class="min-w-0 max-w-3xl">
+      {eyebrow && <p class="eyebrow mb-1.5 !text-primary">{eyebrow}</p>}
+      <h1 class="text-2xl font-semibold tracking-tight sm:text-[1.65rem]">{title}</h1>
+      {description && <p class="mt-1.5 text-sm text-muted sm:text-[0.95rem]">{description}</p>}
+      <slot name="below" />
+    </div>
+    {
+      Astro.slots.has("actions") && (
+        <div class="no-print flex flex-wrap items-center gap-2">
+          <slot name="actions" />
+        </div>
+      )
+    }
+  </div>
+</section>

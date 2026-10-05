@@ -13,8 +13,17 @@
     var dark = m === "dark" || (m === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     r.setAttribute("data-theme", dark ? "dark" : "light");
   }
+  function sidebar() {
+    try {
+      if (localStorage.getItem("ledger.sidebar") === "collapsed") r.setAttribute("data-sidebar", "collapsed");
+    } catch (e) {}
+  }
   apply();
-  document.addEventListener("astro:after-swap", apply);
+  sidebar();
+  document.addEventListener("astro:after-swap", function () {
+    apply();
+    sidebar();
+  });
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", apply);
   window.__applyTheme = apply;
 })();
