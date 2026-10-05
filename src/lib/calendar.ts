@@ -20,7 +20,12 @@ export interface Occurrence<M> {
 }
 
 /** "Daily" means every working day: configured weekend days are skipped. */
-export function occursOn(m: Pick<MeetingLike, "recurrence" | "recurrenceUntil">, first: ISODate, day: ISODate, weekendDays: number[] = []) {
+export function occursOn(
+  m: Pick<MeetingLike, "recurrence" | "recurrenceUntil">,
+  first: ISODate,
+  day: ISODate,
+  weekendDays: number[] = [],
+) {
   if (day < first || (m.recurrenceUntil && day > m.recurrenceUntil)) return false;
   switch (m.recurrence) {
     case "none":
@@ -35,7 +40,13 @@ export function occursOn(m: Pick<MeetingLike, "recurrence" | "recurrenceUntil">,
 }
 
 /** Expand meetings (with their recurrence rules) into dated occurrences within [from, to]. */
-export function expand<M extends MeetingLike>(meetings: M[], from: ISODate, to: ISODate, tz: string, weekendDays: number[] = []): Occurrence<M>[] {
+export function expand<M extends MeetingLike>(
+  meetings: M[],
+  from: ISODate,
+  to: ISODate,
+  tz: string,
+  weekendDays: number[] = [],
+): Occurrence<M>[] {
   const out: Occurrence<M>[] = [];
   const days = eachDay(from, to);
   for (const m of meetings) {
@@ -52,8 +63,13 @@ export function expand<M extends MeetingLike>(meetings: M[], from: ISODate, to: 
 }
 
 // ---- ICS -----------------------------------------------------------------------------------------
-const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
-const utc = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+const esc = (s: string) =>
+  s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+const utc = (d: Date) =>
+  d
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
 const dateOnly = (d: ISODate) => d.replace(/-/g, "");
 
 /** Fold lines to 75 octets as required by RFC 5545. */
@@ -91,16 +107,30 @@ const BYDAY = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
 export function rruleFor(rec: Recurrence, until: string | null, weekendDays: number[] = []) {
   if (rec === "none") return null;
   const freq = { daily: "DAILY", weekly: "WEEKLY", monthly: "MONTHLY" }[rec];
-  const byday = rec === "daily" && weekendDays.length ? `;BYDAY=${BYDAY.filter((_, i) => !weekendDays.includes(i)).join(",")}` : "";
+  const byday =
+    rec === "daily" && weekendDays.length
+      ? `;BYDAY=${BYDAY.filter((_, i) => !weekendDays.includes(i)).join(",")}`
+      : "";
   return `FREQ=${freq}${byday}${until ? `;UNTIL=${dateOnly(until)}T235959Z` : ""}`;
 }
 
 export function buildIcs(name: string, events: IcsEvent[]) {
   const now = utc(new Date());
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Office Ledger//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${esc(name)}`];
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Office Ledger//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    `X-WR-CALNAME:${esc(name)}`,
+  ];
   for (const e of events) {
     lines.push("BEGIN:VEVENT", `UID:${e.uid}`, `DTSTAMP:${now}`);
-    if (e.allDay) lines.push(`DTSTART;VALUE=DATE:${dateOnly(e.allDay.start)}`, `DTEND;VALUE=DATE:${dateOnly(addDaysISO(e.allDay.end, 1))}`);
+    if (e.allDay)
+      lines.push(
+        `DTSTART;VALUE=DATE:${dateOnly(e.allDay.start)}`,
+        `DTEND;VALUE=DATE:${dateOnly(addDaysISO(e.allDay.end, 1))}`,
+      );
     else if (e.start && e.end) lines.push(`DTSTART:${utc(e.start)}`, `DTEND:${utc(e.end)}`);
     lines.push(`SUMMARY:${esc(e.title)}`);
     if (e.description) lines.push(`DESCRIPTION:${esc(e.description)}`);
