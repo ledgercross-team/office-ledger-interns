@@ -7,7 +7,7 @@ import tailwindcss from "@tailwindcss/vite";
 import "dotenv/config";
 
 const site = process.env.PUBLIC_SITE_URL ?? "http://localhost:4321";
-const PUBLIC_PAGES = ["/", "/features/", "/privacy/", "/terms/", "/contact/", "/changelog/"];
+const PUBLIC_PAGES = ["/", "/features", "/privacy", "/terms", "/contact", "/changelog"];
 
 export default defineConfig({
   site,
@@ -16,7 +16,7 @@ export default defineConfig({
   integrations: [
     react(),
     sitemap({
-      filter: (page) => PUBLIC_PAGES.includes(new URL(page).pathname),
+      filter: (page) => PUBLIC_PAGES.includes(new URL(page).pathname.replace(/\/$/, "") || "/"),
     }),
   ],
   security: { checkOrigin: true },

@@ -17,10 +17,19 @@ import {
   UserRound,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { authClient } from "@/lib/auth-client";
+import { signOut } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Dialog, SheetContent } from "@/components/ui/dialog";
-import { Menu, MenuContent, MenuItem, MenuLabel, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
+import {
+  Menu,
+  MenuContent,
+  MenuItem,
+  MenuLabel,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuSeparator,
+  MenuTrigger,
+} from "@/components/ui/menu";
 import { Avatar, Switch } from "@/components/ui/misc";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
@@ -52,7 +61,10 @@ function dayLabel(d: Date) {
 function CountBadge({ n, label }: { n: number; label: string }) {
   if (!n) return null;
   return (
-    <span className="tabular absolute -end-0.5 -top-0.5 grid h-4.5 min-w-4.5 place-items-center rounded-full bg-danger px-1 text-[0.65rem] font-semibold text-white" aria-label={label}>
+    <span
+      className="tabular bg-danger absolute -end-0.5 -top-0.5 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[0.65rem] font-semibold text-white"
+      aria-label={label}
+    >
       {n > 99 ? "99+" : n}
     </span>
   );
@@ -89,12 +101,18 @@ function NotificationsDrawer({ open, onOpenChange }: { open: boolean; onOpenChan
           </Button>
         }
       >
-        {isLoading && <div className="grid gap-3">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-14" />)}</div>}
+        {isLoading && (
+          <div className="grid gap-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="skeleton h-14" />
+            ))}
+          </div>
+        )}
         {!isLoading && !data.length && (
           <div className="grid place-items-center py-16 text-center">
-            <Bell className="size-8 text-muted" aria-hidden />
+            <Bell className="text-muted size-8" aria-hidden />
             <p className="mt-3 font-medium">You're all caught up</p>
-            <p className="text-sm text-muted">New notifications will appear here instantly.</p>
+            <p className="text-muted text-sm">New notifications will appear here instantly.</p>
           </div>
         )}
         <div className="grid gap-5">
@@ -110,13 +128,23 @@ function NotificationsDrawer({ open, onOpenChange }: { open: boolean; onOpenChan
                         if (!n.readAt) await actions.notifications.markRead({ id: n.id });
                         onOpenChange(false);
                       }}
-                      className="flex gap-3 rounded-xl p-2.5 hover:bg-surface-2"
+                      className="hover:bg-surface-2 flex gap-3 rounded-xl p-2.5"
                     >
-                      <span className={`mt-1.5 size-2 shrink-0 rounded-full ${n.readAt ? "bg-transparent" : "bg-primary"}`} aria-label={n.readAt ? undefined : "Unread"} />
+                      <span
+                        className={`mt-1.5 size-2 shrink-0 rounded-full ${n.readAt ? "bg-transparent" : "bg-primary"}`}
+                        aria-label={n.readAt ? undefined : "Unread"}
+                      />
                       <span className="min-w-0">
-                        <span className={`block text-sm ${n.readAt ? "text-muted" : "font-medium"}`}>{n.title}</span>
-                        {n.body && <span className="block truncate text-xs text-muted">{n.body}</span>}
-                        <span className="text-xs text-muted">{new Date(n.createdAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</span>
+                        <span className={`block text-sm ${n.readAt ? "text-muted" : "font-medium"}`}>
+                          {n.title}
+                        </span>
+                        {n.body && <span className="text-muted block truncate text-xs">{n.body}</span>}
+                        <span className="text-muted text-xs">
+                          {new Date(n.createdAt).toLocaleTimeString(undefined, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
                       </span>
                     </a>
                   </li>
@@ -130,7 +158,15 @@ function NotificationsDrawer({ open, onOpenChange }: { open: boolean; onOpenChan
   );
 }
 
-function AnnouncementsDrawer({ open, onOpenChange, canPost }: { open: boolean; onOpenChange: (o: boolean) => void; canPost: boolean }) {
+function AnnouncementsDrawer({
+  open,
+  onOpenChange,
+  canPost,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  canPost: boolean;
+}) {
   const qc = useQueryClient();
   const [composing, setComposing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -143,7 +179,9 @@ function AnnouncementsDrawer({ open, onOpenChange, canPost }: { open: boolean; o
   useEffect(() => {
     const unread = data.filter((a) => !a.read).map((a) => a.id);
     if (open && unread.length)
-      void actions.announcements.markRead({ ids: unread }).then(() => qc.invalidateQueries({ queryKey: ["shell"] }));
+      void actions.announcements
+        .markRead({ ids: unread })
+        .then(() => qc.invalidateQueries({ queryKey: ["shell"] }));
   }, [open, data, qc]);
   const refresh = () => qc.invalidateQueries({ queryKey: ["announcements"] });
   async function post(e: React.FormEvent<HTMLFormElement>) {
@@ -177,7 +215,7 @@ function AnnouncementsDrawer({ open, onOpenChange, canPost }: { open: boolean; o
         }
       >
         {composing && (
-          <form onSubmit={post} className="mb-6 grid gap-3 rounded-2xl border border-border p-4">
+          <form onSubmit={post} className="border-border mb-6 grid gap-3 rounded-2xl border p-4">
             <Field label="Title" required>
               <Input name="title" maxLength={140} />
             </Field>
@@ -189,7 +227,8 @@ function AnnouncementsDrawer({ open, onOpenChange, canPost }: { open: boolean; o
                 <Input name="expiresAt" type="datetime-local" />
               </Field>
               <label className="flex items-center gap-2 self-end pb-2 text-sm">
-                <Switch checked={pinned} onCheckedChange={setPinned} aria-label="Pin announcement" /> Pin to top
+                <Switch checked={pinned} onCheckedChange={setPinned} aria-label="Pin announcement" /> Pin to
+                top
               </label>
             </div>
             <div className="flex justify-end gap-2">
@@ -202,27 +241,35 @@ function AnnouncementsDrawer({ open, onOpenChange, canPost }: { open: boolean; o
             </div>
           </form>
         )}
-        {isLoading && <div className="grid gap-3">{[0, 1].map((i) => <div key={i} className="skeleton h-24" />)}</div>}
+        {isLoading && (
+          <div className="grid gap-3">
+            {[0, 1].map((i) => (
+              <div key={i} className="skeleton h-24" />
+            ))}
+          </div>
+        )}
         {!isLoading && !data.length && !composing && (
           <div className="grid place-items-center py-16 text-center">
-            <Megaphone className="size-8 text-muted" aria-hidden />
+            <Megaphone className="text-muted size-8" aria-hidden />
             <p className="mt-3 font-medium">No announcements</p>
-            <p className="text-sm text-muted">Workspace news will show up here.</p>
+            <p className="text-muted text-sm">Workspace news will show up here.</p>
           </div>
         )}
         <ul className="grid gap-3">
           {data.map((a) => (
-            <li key={a.id} className="rounded-2xl border border-border p-4">
+            <li key={a.id} className="border-border rounded-2xl border p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="flex items-center gap-1.5 font-medium">
-                    {a.pinned && <Pin className="size-3.5 text-primary" aria-label="Pinned" />}
-                    {!a.read && <span className="size-2 rounded-full bg-primary" aria-label="Unread" />}
+                    {a.pinned && <Pin className="text-primary size-3.5" aria-label="Pinned" />}
+                    {!a.read && <span className="bg-primary size-2 rounded-full" aria-label="Unread" />}
                     {a.title}
                   </p>
-                  <p className="text-xs text-muted">
-                    {a.authorName ?? "Someone"} · {new Date(a.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                    {a.expiresAt && ` · until ${new Date(a.expiresAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
+                  <p className="text-muted text-xs">
+                    {a.authorName ?? "Someone"} ·{" "}
+                    {new Date(a.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                    {a.expiresAt &&
+                      ` · until ${new Date(a.expiresAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
                   </p>
                 </div>
                 {canPost && (
@@ -254,7 +301,10 @@ function AnnouncementsDrawer({ open, onOpenChange, canPost }: { open: boolean; o
                 )}
               </div>
               {/* html is produced by the server-side sanitiser (src/lib/markdown.ts) */}
-              <div className="prose-sm mt-2 text-sm leading-relaxed [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-surface-2 [&_code]:px-1 [&_li]:ms-4 [&_ol]:list-decimal [&_p]:mb-2 [&_ul]:list-disc" dangerouslySetInnerHTML={{ __html: a.html }} />
+              <div
+                className="prose-sm [&_a]:text-primary [&_code]:bg-surface-2 mt-2 text-sm leading-relaxed [&_a]:underline [&_code]:rounded [&_code]:px-1 [&_li]:ms-4 [&_ol]:list-decimal [&_p]:mb-2 [&_ul]:list-disc"
+                dangerouslySetInnerHTML={{ __html: a.html }}
+              />
             </li>
           ))}
         </ul>
@@ -280,7 +330,10 @@ function TopbarActions(props: Props) {
   useEffect(() => {
     startLive();
     const off = onLiveNotification((n) =>
-      toast(n.title, { description: n.body ?? undefined, action: n.link ? { label: "Open", onClick: () => navigate(n.link!) } : undefined }),
+      toast(n.title, {
+        description: n.body ?? undefined,
+        action: n.link ? { label: "Open", onClick: () => navigate(n.link!) } : undefined,
+      }),
     );
     const params = new URLSearchParams(window.location.search);
     if (params.has("announcements")) setAnnOpen(true);
@@ -318,20 +371,42 @@ function TopbarActions(props: Props) {
       <button
         type="button"
         onClick={() => setPaletteOpen(true)}
-        className="hidden h-9 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-sm text-muted transition-colors hover:bg-surface-2 md:flex"
+        className="border-border bg-surface text-muted hover:bg-surface-2 hidden h-9 items-center gap-2 rounded-xl border px-3 text-sm transition-colors md:flex"
       >
         <Search className="size-4" aria-hidden />
         <span>Search</span>
-        <kbd className="ms-4 rounded-md border border-border bg-surface-2 px-1.5 text-[0.7rem] font-medium">Ctrl K</kbd>
+        <kbd className="border-border bg-surface-2 ms-4 rounded-md border px-1.5 text-[0.7rem] font-medium">
+          Ctrl K
+        </kbd>
       </button>
-      <Button variant="ghost" size="icon" className="md:hidden" aria-label="Search" onClick={() => setPaletteOpen(true)}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="md:hidden"
+        aria-label="Search"
+        onClick={() => setPaletteOpen(true)}
+      >
         <Search aria-hidden />
       </Button>
-      <Button variant="ghost" size="icon" className="relative" aria-label={`Announcements${counts.announcements ? `, ${counts.announcements} unread` : ""}`} onClick={() => setAnnOpen(true)}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="relative"
+        aria-label={`Announcements${counts.announcements ? `, ${counts.announcements} unread` : ""}`}
+        onClick={() => setAnnOpen(true)}
+      >
         <Megaphone aria-hidden />
-        {counts.announcements > 0 && <span className="absolute end-1.5 top-1.5 size-2 rounded-full bg-primary" aria-hidden />}
+        {counts.announcements > 0 && (
+          <span className="bg-primary absolute end-1.5 top-1.5 size-2 rounded-full" aria-hidden />
+        )}
       </Button>
-      <Button variant="ghost" size="icon" className="relative" aria-label={`Notifications${counts.notifications ? `, ${counts.notifications} unread` : ""}`} onClick={() => setNotifOpen(true)}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="relative"
+        aria-label={`Notifications${counts.notifications ? `, ${counts.notifications} unread` : ""}`}
+        onClick={() => setNotifOpen(true)}
+      >
         <Bell aria-hidden />
         <CountBadge n={counts.notifications} label={`${counts.notifications} unread`} />
       </Button>
@@ -344,22 +419,34 @@ function TopbarActions(props: Props) {
         <MenuContent className="min-w-36">
           <MenuLabel>Theme</MenuLabel>
           <MenuRadioGroup value={theme} onValueChange={(v) => changeTheme(v as ThemeMode)}>
-            <MenuRadioItem value="light"><Sun aria-hidden /> Light</MenuRadioItem>
-            <MenuRadioItem value="dark"><Moon aria-hidden /> Dark</MenuRadioItem>
-            <MenuRadioItem value="system"><Monitor aria-hidden /> System</MenuRadioItem>
+            <MenuRadioItem value="light">
+              <Sun aria-hidden /> Light
+            </MenuRadioItem>
+            <MenuRadioItem value="dark">
+              <Moon aria-hidden /> Dark
+            </MenuRadioItem>
+            <MenuRadioItem value="system">
+              <Monitor aria-hidden /> System
+            </MenuRadioItem>
           </MenuRadioGroup>
         </MenuContent>
       </Menu>
       <Menu>
         <MenuTrigger asChild>
-          <button type="button" className="ms-1 rounded-full focus-visible:outline-2 focus-visible:outline-ring" aria-label="Account menu">
+          <button
+            type="button"
+            className="focus-visible:outline-ring ms-1 rounded-full focus-visible:outline-2"
+            aria-label="Account menu"
+          >
             <Avatar name={user.name} image={user.image} size="sm" />
           </button>
         </MenuTrigger>
         <MenuContent>
           <div className="px-2.5 py-2">
             <p className="text-sm font-medium">{user.name}</p>
-            <p className="truncate text-xs text-muted">{user.email} · <span className="capitalize">{role}</span></p>
+            <p className="text-muted truncate text-xs">
+              {user.email} · <span className="capitalize">{role}</span>
+            </p>
           </div>
           <MenuSeparator />
           <MenuItem onSelect={() => navigate("/app/me")}>
@@ -368,24 +455,31 @@ function TopbarActions(props: Props) {
           <MenuSeparator />
           <MenuLabel>Theme</MenuLabel>
           <MenuRadioGroup value={theme} onValueChange={(v) => changeTheme(v as ThemeMode)}>
-            <MenuRadioItem value="light"><Sun aria-hidden /> Light</MenuRadioItem>
-            <MenuRadioItem value="dark"><Moon aria-hidden /> Dark</MenuRadioItem>
-            <MenuRadioItem value="system"><Monitor aria-hidden /> System</MenuRadioItem>
+            <MenuRadioItem value="light">
+              <Sun aria-hidden /> Light
+            </MenuRadioItem>
+            <MenuRadioItem value="dark">
+              <Moon aria-hidden /> Dark
+            </MenuRadioItem>
+            <MenuRadioItem value="system">
+              <Monitor aria-hidden /> System
+            </MenuRadioItem>
           </MenuRadioGroup>
           <MenuSeparator />
-          <MenuItem
-            onSelect={async () => {
-              await authClient.signOut();
-              window.location.href = "/auth/sign-in";
-            }}
-          >
+          <MenuItem onSelect={() => signOut()}>
             <LogOut aria-hidden /> Sign out
           </MenuItem>
         </MenuContent>
       </Menu>
       <NotificationsDrawer open={notifOpen} onOpenChange={setNotifOpen} />
       <AnnouncementsDrawer open={annOpen} onOpenChange={setAnnOpen} canPost={props.canPost} />
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} nav={props.nav} canCheckIn={props.canCheckIn} canRequestLeave={props.canRequestLeave} />
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        nav={props.nav}
+        canCheckIn={props.canCheckIn}
+        canRequestLeave={props.canRequestLeave}
+      />
       <AppToaster />
     </div>
   );

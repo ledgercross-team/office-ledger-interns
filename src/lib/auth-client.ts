@@ -17,3 +17,10 @@ export function safeNext(next: string | null | undefined, fallback = "/app") {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
   return next;
 }
+
+/** Signs out and drops any app pages the service worker cached for offline use. */
+export async function signOut(to = "/auth/sign-in") {
+  navigator.serviceWorker?.controller?.postMessage("clear-pages");
+  await authClient.signOut();
+  window.location.href = to;
+}

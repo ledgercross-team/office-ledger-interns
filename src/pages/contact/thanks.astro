@@ -1,0 +1,13 @@
+---
+export const prerender = true;
+import MarketingLayout from "@/layouts/MarketingLayout.astro";
+import Prose from "@/components/marketing/Prose.astro";
+---
+
+<MarketingLayout title="Message sent" description="Thanks for getting in touch.">
+  <Prose title="Thanks, we got your message" lead="We'll reply to the email you gave within one working day.">
+    <p>
+      <a href="/">Back to the home page</a>
+    </p>
+  </Prose>
+</MarketingLayout>

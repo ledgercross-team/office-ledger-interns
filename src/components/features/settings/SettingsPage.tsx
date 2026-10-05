@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { StatTile } from "@/components/layout/StatTile";
 import OrgItemsEditor from "../employees/OrgItemsEditor";
-import { authClient } from "@/lib/auth-client";
+import { signOut } from "@/lib/auth-client";
 import { cn } from "@/lib/cn";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -845,8 +845,7 @@ function DangerTab({ name }: { name: string }) {
               const { error } = await actions.settings.deleteWorkspace({ confirmName });
               setBusy(false);
               if (error) return toast.error(error.message);
-              await authClient.signOut();
-              window.location.href = "/auth/sign-in";
+              await signOut();
             }}
           >
             Delete workspace

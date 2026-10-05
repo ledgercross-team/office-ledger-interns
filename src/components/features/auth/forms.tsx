@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { actions } from "astro:actions";
 import { navigate } from "astro:transitions/client";
 import { AlertCircle, CheckCircle2, Eye, EyeOff, MailCheck } from "lucide-react";
-import { authClient, safeNext } from "@/lib/auth-client";
+import { authClient, safeNext, signOut } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,10 @@ import { Input } from "@/components/ui/input";
 function FormError({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <div role="alert" className="flex items-start gap-2 rounded-xl bg-danger-soft px-3 py-2.5 text-sm text-danger-text">
+    <div
+      role="alert"
+      className="bg-danger-soft text-danger-text flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm"
+    >
       <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
       <span>{message}</span>
     </div>
@@ -19,11 +22,11 @@ function FormError({ message }: { message: string | null }) {
 
 function Notice({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div role="status" className="flex items-start gap-3 rounded-2xl border border-border bg-surface p-4">
-      <MailCheck className="mt-0.5 size-5 shrink-0 text-success" aria-hidden />
+    <div role="status" className="border-border bg-surface flex items-start gap-3 rounded-2xl border p-4">
+      <MailCheck className="text-success mt-0.5 size-5 shrink-0" aria-hidden />
       <div>
         <p className="font-medium">{title}</p>
-        <p className="mt-1 text-sm text-muted">{children}</p>
+        <p className="text-muted mt-1 text-sm">{children}</p>
       </div>
     </div>
   );
@@ -37,7 +40,7 @@ function PasswordInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
       <button
         type="button"
         onClick={() => setShow((s) => !s)}
-        className="absolute end-1 top-1 grid size-8 place-items-center rounded-lg text-muted hover:text-text"
+        className="text-muted hover:text-text absolute end-1 top-1 grid size-8 place-items-center rounded-lg"
         aria-label={show ? "Hide password" : "Show password"}
       >
         {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -46,7 +49,8 @@ function PasswordInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   );
 }
 
-const fd = (e: FormEvent<HTMLFormElement>) => Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
+const fd = (e: FormEvent<HTMLFormElement>) =>
+  Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
 
 export function SignInForm({ next, initialEmail = "" }: { next?: string | null; initialEmail?: string }) {
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +63,11 @@ export function SignInForm({ next, initialEmail = "" }: { next?: string | null; 
     const { data, error: err } = await authClient.signIn.email({ email, password, rememberMe: true });
     setLoading(false);
     if (err) {
-      setError(err.status === 403 ? "Please verify your email first. We've sent you a new link." : err.message || "Invalid email or password");
+      setError(
+        err.status === 403
+          ? "Please verify your email first. We've sent you a new link."
+          : err.message || "Invalid email or password",
+      );
       return;
     }
     if (data && "twoFactorRedirect" in data && data.twoFactorRedirect) return; // plugin redirects
@@ -71,15 +79,27 @@ export function SignInForm({ next, initialEmail = "" }: { next?: string | null; 
       <Field label="Email">
         <Input name="email" type="email" autoComplete="email" required defaultValue={initialEmail} />
       </Field>
-      <Field label={<span className="flex justify-between">Password <a href="/auth/forgot" className="text-sm font-normal text-primary hover:underline">Forgot password?</a></span>}>
+      <Field
+        label={
+          <span className="flex justify-between">
+            Password{" "}
+            <a href="/auth/forgot" className="text-primary text-sm font-normal hover:underline">
+              Forgot password?
+            </a>
+          </span>
+        }
+      >
         <PasswordInput name="password" autoComplete="current-password" required />
       </Field>
       <Button type="submit" loading={loading} size="lg">
         Sign in
       </Button>
-      <p className="text-center text-sm text-muted">
+      <p className="text-muted text-center text-sm">
         New here?{" "}
-        <a href={`/auth/sign-up${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-medium text-primary hover:underline">
+        <a
+          href={`/auth/sign-up${next ? `?next=${encodeURIComponent(next)}` : ""}`}
+          className="text-primary font-medium hover:underline"
+        >
           Create an account
         </a>
       </p>
@@ -87,7 +107,15 @@ export function SignInForm({ next, initialEmail = "" }: { next?: string | null; 
   );
 }
 
-export function SignUpForm({ next, requireVerification, initialEmail = "" }: { next?: string | null; requireVerification: boolean; initialEmail?: string }) {
+export function SignUpForm({
+  next,
+  requireVerification,
+  initialEmail = "",
+}: {
+  next?: string | null;
+  requireVerification: boolean;
+  initialEmail?: string;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -104,7 +132,12 @@ export function SignUpForm({ next, requireVerification, initialEmail = "" }: { n
     if (Object.keys(fe).length) return;
     setLoading(true);
     setError(null);
-    const { error: err } = await authClient.signUp.email({ name: name.trim(), email, password, callbackURL: "/auth/verify?done=1" });
+    const { error: err } = await authClient.signUp.email({
+      name: name.trim(),
+      email,
+      password,
+      callbackURL: "/auth/verify?done=1",
+    });
     setLoading(false);
     if (err) {
       setError(err.message || "Could not create your account.");
@@ -137,9 +170,12 @@ export function SignUpForm({ next, requireVerification, initialEmail = "" }: { n
       <Button type="submit" loading={loading} size="lg">
         Create account
       </Button>
-      <p className="text-center text-sm text-muted">
+      <p className="text-muted text-center text-sm">
         Already have an account?{" "}
-        <a href={`/auth/sign-in${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-medium text-primary hover:underline">
+        <a
+          href={`/auth/sign-in${next ? `?next=${encodeURIComponent(next)}` : ""}`}
+          className="text-primary font-medium hover:underline"
+        >
           Sign in
         </a>
       </p>
@@ -159,7 +195,11 @@ export function ForgotForm() {
     setSent(true); // Always the same message: never reveal whether an account exists.
   }
   if (sent)
-    return <Notice title="Check your inbox">If an account exists for that email, a reset link is on its way. It expires in 30 minutes.</Notice>;
+    return (
+      <Notice title="Check your inbox">
+        If an account exists for that email, a reset link is on its way. It expires in 30 minutes.
+      </Notice>
+    );
   return (
     <form onSubmit={onSubmit} className="grid gap-4">
       <Field label="Email">
@@ -168,7 +208,7 @@ export function ForgotForm() {
       <Button type="submit" loading={loading} size="lg">
         Send reset link
       </Button>
-      <a href="/auth/sign-in" className="text-center text-sm text-primary hover:underline">
+      <a href="/auth/sign-in" className="text-primary text-center text-sm hover:underline">
         Back to sign in
       </a>
     </form>
@@ -176,7 +216,9 @@ export function ForgotForm() {
 }
 
 export function ResetForm({ token, error: initialError }: { token: string | null; error?: string | null }) {
-  const [error, setError] = useState<string | null>(initialError ? "This reset link is invalid or has expired." : null);
+  const [error, setError] = useState<string | null>(
+    initialError ? "This reset link is invalid or has expired." : null,
+  );
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -194,7 +236,10 @@ export function ResetForm({ token, error: initialError }: { token: string | null
   if (done)
     return (
       <div className="grid gap-4">
-        <div role="status" className="flex items-center gap-2 rounded-xl bg-success-soft px-3 py-2.5 text-sm text-success-text">
+        <div
+          role="status"
+          className="bg-success-soft text-success-text flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm"
+        >
           <CheckCircle2 className="size-4" aria-hidden /> Password updated. Other sessions were signed out.
         </div>
         <Button asChild size="lg">
@@ -227,7 +272,9 @@ export function ResendVerification({ email }: { email: string }) {
       disabled={state === "sent"}
       onClick={async () => {
         setState("sending");
-        await authClient.sendVerificationEmail({ email, callbackURL: "/auth/verify?done=1" }).catch(() => null);
+        await authClient
+          .sendVerificationEmail({ email, callbackURL: "/auth/verify?done=1" })
+          .catch(() => null);
         setState("sent");
       }}
     >
@@ -256,15 +303,27 @@ export function TwoFactorForm({ next }: { next?: string | null }) {
     <form onSubmit={onSubmit} className="grid gap-4">
       <FormError message={error} />
       <Field label={backup ? "Backup code" : "6-digit code from your authenticator app"}>
-        <Input name="code" inputMode={backup ? "text" : "numeric"} autoComplete="one-time-code" required autoFocus maxLength={backup ? 32 : 8} />
+        <Input
+          name="code"
+          inputMode={backup ? "text" : "numeric"}
+          autoComplete="one-time-code"
+          required
+          autoFocus
+          maxLength={backup ? 32 : 8}
+        />
       </Field>
-      <label className="flex items-center gap-2 text-sm text-muted">
-        <input type="checkbox" name="trust" className="size-4 accent-[var(--primary)]" /> Trust this device for 30 days
+      <label className="text-muted flex items-center gap-2 text-sm">
+        <input type="checkbox" name="trust" className="size-4 accent-[var(--primary)]" /> Trust this device
+        for 30 days
       </label>
       <Button type="submit" loading={loading} size="lg">
         Verify
       </Button>
-      <button type="button" onClick={() => setBackup((b) => !b)} className="text-sm text-primary hover:underline">
+      <button
+        type="button"
+        onClick={() => setBackup((b) => !b)}
+        className="text-primary text-sm hover:underline"
+      >
         {backup ? "Use authenticator code" : "Use a backup code instead"}
       </button>
     </form>
@@ -287,8 +346,18 @@ export function JoinForm() {
   return (
     <form onSubmit={onSubmit} className="grid gap-4">
       <FormError message={error} />
-      <Field label="Invite code" hint="Share this code with employees to request access. Ask your manager for it.">
-        <Input name="code" placeholder="e.g. LEDGER-7Q4K" autoComplete="off" autoCapitalize="characters" required className="font-mono uppercase tracking-wider" />
+      <Field
+        label="Invite code"
+        hint="Share this code with employees to request access. Ask your manager for it."
+      >
+        <Input
+          name="code"
+          placeholder="e.g. LEDGER-7Q4K"
+          autoComplete="off"
+          autoCapitalize="characters"
+          required
+          className="font-mono tracking-wider uppercase"
+        />
       </Field>
       <Button type="submit" loading={loading} size="lg">
         Request access
@@ -320,15 +389,15 @@ export function AcceptInvite({ token }: { token: string }) {
   );
 }
 
-export function SignOutButton({ variant = "outline", label = "Sign out" }: { variant?: "outline" | "ghost" | "link"; label?: string }) {
+export function SignOutButton({
+  variant = "outline",
+  label = "Sign out",
+}: {
+  variant?: "outline" | "ghost" | "link";
+  label?: string;
+}) {
   return (
-    <Button
-      variant={variant}
-      onClick={async () => {
-        await authClient.signOut();
-        window.location.href = "/auth/sign-in";
-      }}
-    >
+    <Button variant={variant} onClick={() => signOut()}>
       {label}
     </Button>
   );

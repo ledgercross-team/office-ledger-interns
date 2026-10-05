@@ -116,3 +116,14 @@ Defaults and judgement calls made while building Office Ledger v2. Newest phase 
 - **Audit log** loads the last 30 days by default (up to 5,000 events per range) with client-side filters and CSV export.
 - **Deep-linked dialogs** (`?task=`, `?id=`, `?new=1`) open after hydration so server HTML matches the client.
 - **Dev hot reload** caches only the Postgres pool, not the Drizzle instance, so schema edits apply without restarting.
+
+## Phase 10 – Marketing site, SEO, PWA, security files
+
+- **Marketing pages are prerendered and ship no JavaScript** apart from the 600-byte theme bootstrap; FAQ uses `<details>`. Screenshots are real app captures (`scripts/capture-screenshots.ts`) optimised to WebP by Astro `<Image>`, with a dark-mode variant.
+- **`robots.txt` and `/.well-known/security.txt` are prerendered endpoints** (not static files in `public/`) so the sitemap URL and canonical domain always follow `PUBLIC_SITE_URL`. `security.txt` `Expires` is one year from the build date.
+- **`/.well-known/change-password`** redirects to `/auth/forgot` (the reset-request page), per the W3C well-known URL spec.
+- **Contact form** is a plain HTML form posting to `/api/contact` (rate-limited, honeypot, emails the team, then redirects to `/contact/thanks`), so the page stays static.
+- **Pricing** is a labelled placeholder.
+- **Service worker** is hand-written (no build plugin): precached offline page, cache-first for hashed assets/icons, network-first for `/app` pages with an offline fallback; `/api`, `/auth` and `/_actions` are never cached. Signing out clears cached app pages. It's registered only in production builds so it never interferes with Vite in dev.
+- **Icons and OG image** are generated from one SVG with `sharp` (`pnpm icons`); `favicon.ico` holds PNG images (16/32/48).
+- **HSTS and `upgrade-insecure-requests`** are only sent when `PUBLIC_SITE_URL` is HTTPS, so plain-HTTP previews still work.

@@ -1,0 +1,152 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import Logo from "@/components/layout/Logo.astro";
+import { buttonVariants } from "@/components/ui/button";
+
+interface Props {
+  title?: string;
+  description?: string;
+  jsonLd?: Record<string, unknown>[];
+}
+const { title, description, jsonLd = [] } = Astro.props;
+const path = Astro.url.pathname.replace(/\/$/, "") || "/";
+const links = [
+  { href: "/features", label: "Features" },
+  { href: "/#pricing", label: "Pricing" },
+  { href: "/changelog", label: "Changelog" },
+  { href: "/contact", label: "Contact" },
+];
+const site = Astro.site!;
+const org = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Office Ledger",
+  url: site.href,
+  logo: new URL("/icon-512.png", site).href,
+  contactPoint: { "@type": "ContactPoint", email: `hello@${site.host}`, contactType: "customer support" },
+};
+---
+
+<BaseLayout title={title} description={description} jsonLd={[org, ...jsonLd]} transitions={false}>
+  <a
+    href="#main"
+    class="sr-only focus:not-sr-only focus:fixed focus:start-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2"
+  >
+    Skip to content
+  </a>
+  <header class="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur">
+    <div class="mx-auto flex h-16 max-w-[1200px] items-center gap-6 px-4 sm:px-6">
+      <a href="/" aria-label="Office Ledger home">
+        <Logo />
+      </a>
+      <nav aria-label="Main" class="hidden flex-1 md:block">
+        <ul class="flex gap-1">
+          {links.map((l) => (
+            <li>
+              <a
+                href={l.href}
+                class="rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-text aria-[current=page]:text-text"
+                aria-current={path === l.href ? "page" : undefined}
+              >
+                {l.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div class="ms-auto flex items-center gap-2">
+        <a href="/auth/sign-in" class={buttonVariants({ variant: "ghost", size: "sm" })}>
+          Sign in
+        </a>
+        <a href="/auth/sign-up" class={buttonVariants({ size: "sm" })}>
+          Get started
+        </a>
+      </div>
+    </div>
+    <nav aria-label="Main (mobile)" class="scrollbar-thin overflow-x-auto border-t border-border md:hidden">
+      <ul class="flex gap-1 px-2 py-1">
+        {links.map((l) => (
+          <li>
+            <a
+              href={l.href}
+              class="block whitespace-nowrap rounded-lg px-3 py-1.5 text-sm text-muted hover:text-text"
+            >
+              {l.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </header>
+  <main id="main">
+    <slot />
+  </main>
+  <footer class="mt-24 border-t border-border">
+    <div class="mx-auto grid max-w-[1200px] gap-8 px-4 py-12 sm:grid-cols-[2fr_1fr_1fr_1fr] sm:px-6">
+      <div>
+        <Logo />
+        <p class="mt-3 max-w-xs text-sm text-muted">
+          Attendance, leave, tasks and end-of-day reporting for small and mid-sized offices.
+        </p>
+      </div>
+      <div>
+        <p class="eyebrow mb-3">Product</p>
+        <ul class="grid gap-2 text-sm">
+          <li>
+            <a class="text-muted hover:text-text" href="/features">
+              Features
+            </a>
+          </li>
+          <li>
+            <a class="text-muted hover:text-text" href="/#pricing">
+              Pricing
+            </a>
+          </li>
+          <li>
+            <a class="text-muted hover:text-text" href="/changelog">
+              Changelog
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <p class="eyebrow mb-3">Company</p>
+        <ul class="grid gap-2 text-sm">
+          <li>
+            <a class="text-muted hover:text-text" href="/contact">
+              Contact
+            </a>
+          </li>
+          <li>
+            <a class="text-muted hover:text-text" href="/humans.txt">
+              Humans
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <p class="eyebrow mb-3">Legal</p>
+        <ul class="grid gap-2 text-sm">
+          <li>
+            <a class="text-muted hover:text-text" href="/privacy">
+              Privacy
+            </a>
+          </li>
+          <li>
+            <a class="text-muted hover:text-text" href="/terms">
+              Terms
+            </a>
+          </li>
+          <li>
+            <a class="text-muted hover:text-text" href="/.well-known/security.txt">
+              Security
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <p class="border-t border-border py-6 text-center text-xs text-muted">
+      © {new Date().getFullYear()} Office Ledger. All rights reserved.
+    </p>
+  </footer>
+</BaseLayout>

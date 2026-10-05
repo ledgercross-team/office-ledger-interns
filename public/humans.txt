@@ -1,0 +1,9 @@
+/* TEAM */
+Product & engineering: Ledgercross team
+Contact: hello@officeledger.example.com
+Location: Dhaka, Bangladesh
+
+/* SITE */
+Standards: HTML, CSS, TypeScript, WCAG 2.2 AA
+Components: Astro, React, Tailwind CSS, Radix UI, Drizzle ORM, Better Auth, Recharts, dnd-kit
+Software: VS Code, PostgreSQL

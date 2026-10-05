@@ -1,0 +1,58 @@
+---
+export const prerender = true;
+import MarketingLayout from "@/layouts/MarketingLayout.astro";
+import Prose from "@/components/marketing/Prose.astro";
+import { buttonVariants } from "@/components/ui/button";
+const host = Astro.site!.host;
+const field =
+  "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text focus-visible:outline-2 focus-visible:outline-ring";
+---
+
+<MarketingLayout
+  title="Contact"
+  description="Questions about Office Ledger, pricing or security? Get in touch."
+>
+  <Prose
+    eyebrow="Contact"
+    title="Talk to us"
+    lead="Questions about features, pricing or rolling Office Ledger out to your office? We usually reply within one working day."
+  >
+    <form
+      method="post"
+      action="/api/contact"
+      class="grid gap-4 rounded-2xl border border-border bg-surface p-6 not-prose"
+    >
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="grid gap-1.5 text-sm font-medium">
+          Name
+          <input name="name" required maxlength="100" autocomplete="name" class={field} />
+        </label>
+        <label class="grid gap-1.5 text-sm font-medium">
+          Work email
+          <input name="email" type="email" required maxlength="200" autocomplete="email" class={field} />
+        </label>
+      </div>
+      <label class="grid gap-1.5 text-sm font-medium">
+        Company size
+        <select name="size" class={field}>
+          <option>1–10</option>
+          <option>11–50</option>
+          <option>51–200</option>
+          <option>200+</option>
+        </select>
+      </label>
+      <label class="grid gap-1.5 text-sm font-medium">
+        Message
+        <textarea name="message" rows="5" required minlength="10" maxlength="4000" class={field}></textarea>
+      </label>
+      <input type="text" name="website" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true" />
+      <button type="submit" class={buttonVariants() + " justify-self-start"}>
+        Send message
+      </button>
+    </form>
+    <p class="mt-6">
+      Prefer email? Write to <a href={`mailto:hello@${host}`}>hello@{host}</a>. For security reports, see{" "}
+      <a href="/.well-known/security.txt">security.txt</a>.
+    </p>
+  </Prose>
+</MarketingLayout>
