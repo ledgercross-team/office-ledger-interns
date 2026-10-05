@@ -1,5 +1,5 @@
 import { defineAction, ActionError } from "astro:actions";
-import { z } from "astro:schema";
+import { z } from "astro/zod";
 import { and, asc, count, desc, eq, gte, lte, ne } from "drizzle-orm";
 import type { Tx } from "@/db";
 import { db } from "@/db";
@@ -169,7 +169,7 @@ export const settings = {
           lat: z.number().min(-90).max(90).nullable(),
           lng: z.number().min(-180).max(180).nullable(),
           radiusM: z.number().int().min(25).max(5000),
-          allowedIps: z.array(z.string().trim().ip()).max(20),
+          allowedIps: z.array(z.union([z.ipv4(), z.ipv6()])).max(20),
         }),
       })
       .refine((v) => v.officeEnd > v.officeStart, { message: "Office end must be after office start." })
@@ -233,7 +233,7 @@ export const settings = {
   saveBreak: defineAction({
     input: z
       .object({
-        id: z.string().uuid().optional(),
+        id: z.uuid().optional(),
         name: z.string().trim().min(2).max(40),
         startTime: time,
         endTime: time,
@@ -260,7 +260,7 @@ export const settings = {
   }),
 
   deleteBreak: defineAction({
-    input: z.object({ id: z.string().uuid() }),
+    input: z.object({ id: z.uuid() }),
     handler: async ({ id }, context) => {
       const ctx = requireCtx(context, "settings.edit");
       return scoped(ctx, async (tx) => {
@@ -274,7 +274,7 @@ export const settings = {
 
   saveLeaveType: defineAction({
     input: z.object({
-      id: z.string().uuid().optional(),
+      id: z.uuid().optional(),
       code: z
         .string()
         .trim()
@@ -310,7 +310,7 @@ export const settings = {
   }),
 
   deleteLeaveType: defineAction({
-    input: z.object({ id: z.string().uuid() }),
+    input: z.object({ id: z.uuid() }),
     handler: async ({ id }, context) => {
       const ctx = requireCtx(context, "settings.edit");
       return scoped(ctx, async (tx) => {
@@ -369,7 +369,7 @@ export const settings = {
   }),
 
   setRole: defineAction({
-    input: z.object({ membershipId: z.string().uuid(), role: z.enum(["manager", "employee"]) }),
+    input: z.object({ membershipId: z.uuid(), role: z.enum(["manager", "employee"]) }),
     handler: async ({ membershipId, role }, context) => {
       const ctx = requireCtx(context, "roles.manage");
       if (membershipId === ctx.membershipId)

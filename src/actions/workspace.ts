@@ -1,5 +1,5 @@
 import { defineAction, ActionError } from "astro:actions";
-import { z } from "astro:schema";
+import { z } from "astro/zod";
 import { and, eq, sql } from "drizzle-orm";
 import { db, withWorkspace } from "@/db";
 import {
@@ -26,7 +26,14 @@ const DEFAULT_LEAVE_TYPES = [
   { code: "casual", name: "Casual", yearlyQuota: 10, accrual: "monthly" as const, color: "info" },
   { code: "sick", name: "Sick", yearlyQuota: 14, accrual: "yearly" as const, color: "danger" },
   { code: "annual", name: "Annual", yearlyQuota: 18, accrual: "monthly" as const, color: "success" },
-  { code: "unpaid", name: "Unpaid", yearlyQuota: 0, accrual: "yearly" as const, color: "warning", paid: false },
+  {
+    code: "unpaid",
+    name: "Unpaid",
+    yearlyQuota: 0,
+    accrual: "yearly" as const,
+    color: "warning",
+    paid: false,
+  },
 ];
 
 export const workspace = {
@@ -36,8 +43,15 @@ export const workspace = {
     handler: async ({ code }, context) => {
       const user = requireUser(context);
       const rl = await rateLimit("join", `${user.id}:${clientIp(context.request)}`);
-      if (!rl.ok) throw new ActionError({ code: "TOO_MANY_REQUESTS", message: "Too many attempts. Try again in a few minutes." });
-      const [ws] = await db.select().from(workspaces).where(eq(sql`upper(${workspaces.inviteCode})`, code.toUpperCase()));
+      if (!rl.ok)
+        throw new ActionError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Too many attempts. Try again in a few minutes.",
+        });
+      const [ws] = await db
+        .select()
+        .from(workspaces)
+        .where(eq(sql`upper(${workspaces.inviteCode})`, code.toUpperCase()));
       if (!ws || (ws.inviteCodeExpiresAt && ws.inviteCodeExpiresAt < new Date()))
         throw new ActionError({ code: "NOT_FOUND", message: "That invite code is invalid or has expired." });
       const [existing] = await db
@@ -49,12 +63,21 @@ export const workspace = {
         return { status: "active" as const, workspace: ws.name };
       }
       if (existing?.status === "rejected" || existing?.status === "deactivated")
-        throw new ActionError({ code: "FORBIDDEN", message: "Your access to this workspace was revoked. Contact the workspace owner." });
+        throw new ActionError({
+          code: "FORBIDDEN",
+          message: "Your access to this workspace was revoked. Contact the workspace owner.",
+        });
       if (!existing) {
         await withWorkspace(ws.id, async (tx) => {
           const [m] = await tx
             .insert(memberships)
-            .values({ workspaceId: ws.id, userId: user.id, role: "employee", status: "pending", icalToken: token(18) })
+            .values({
+              workspaceId: ws.id,
+              userId: user.id,
+              role: "employee",
+              status: "pending",
+              icalToken: token(18),
+            })
             .returning();
           const reviewers = await membersWithRoles(tx, ws.id, ["owner", "manager"]);
           await notify(tx, ws.id, reviewers, {
@@ -79,13 +102,19 @@ export const workspace = {
       if (!inv || inv.acceptedAt || inv.expiresAt < new Date())
         throw new ActionError({ code: "NOT_FOUND", message: "This invite link is invalid or has expired." });
       if (inv.email.toLowerCase() !== user.email.toLowerCase())
-        throw new ActionError({ code: "FORBIDDEN", message: `This invite was sent to ${inv.email}. Sign in with that email to accept it.` });
+        throw new ActionError({
+          code: "FORBIDDEN",
+          message: `This invite was sent to ${inv.email}. Sign in with that email to accept it.`,
+        });
       await withWorkspace(inv.workspaceId, async (tx) => {
         const [existing] = await tx
           .select()
           .from(memberships)
           .where(and(eq(memberships.workspaceId, inv.workspaceId), eq(memberships.userId, user.id)));
-        const count = await tx.select({ n: sql<number>`count(*)::int` }).from(memberships).where(eq(memberships.workspaceId, inv.workspaceId));
+        const count = await tx
+          .select({ n: sql<number>`count(*)::int` })
+          .from(memberships)
+          .where(eq(memberships.workspaceId, inv.workspaceId));
         const values = {
           role: inv.role,
           status: "active" as const,
@@ -130,23 +159,37 @@ export const workspace = {
       } catch {
         throw new ActionError({ code: "BAD_REQUEST", message: "Unknown timezone." });
       }
-      if (input.officeEnd <= input.officeStart) throw new ActionError({ code: "BAD_REQUEST", message: "Office end must be after office start." });
+      if (input.officeEnd <= input.officeStart)
+        throw new ActionError({ code: "BAD_REQUEST", message: "Office end must be after office start." });
       const ctx = context.locals.ctx;
       const reuse = ctx && ctx.role === "owner" && !ctx.onboarded ? ctx.workspaceId : null;
       let wsId = reuse;
       if (!wsId) {
         const base = slugify(input.name);
-        const slug = `${base}-${token(3).toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+        const slug = `${base}-${token(3)
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "")}`;
         const [ws] = await db
           .insert(workspaces)
-          .values({ name: input.name, slug, timezone: input.timezone, country: input.country, inviteCode: inviteCode(input.name) })
+          .values({
+            name: input.name,
+            slug,
+            timezone: input.timezone,
+            country: input.country,
+            inviteCode: inviteCode(input.name),
+          })
           .returning();
         wsId = ws!.id;
       }
       await withWorkspace(wsId, async (tx) => {
         await tx
           .update(workspaces)
-          .set({ name: input.name, timezone: input.timezone, country: input.country, onboardedAt: new Date() })
+          .set({
+            name: input.name,
+            timezone: input.timezone,
+            country: input.country,
+            onboardedAt: new Date(),
+          })
           .where(eq(workspaces.id, wsId));
         const settings = {
           officeStart: input.officeStart,
@@ -154,7 +197,10 @@ export const workspace = {
           lateThresholdMin: input.lateThresholdMin,
           weekendDays: input.weekendDays,
         };
-        await tx.insert(workspaceSettings).values({ workspaceId: wsId, ...settings }).onConflictDoUpdate({ target: workspaceSettings.workspaceId, set: settings });
+        await tx
+          .insert(workspaceSettings)
+          .values({ workspaceId: wsId, ...settings })
+          .onConflictDoUpdate({ target: workspaceSettings.workspaceId, set: settings });
         if (!reuse) {
           await tx.insert(memberships).values({
             workspaceId: wsId,
@@ -167,10 +213,22 @@ export const workspace = {
           });
           await tx.insert(leaveTypes).values(DEFAULT_LEAVE_TYPES.map((l) => ({ workspaceId: wsId, ...l })));
         }
-        for (const name of new Set(input.departments)) await tx.insert(departments).values({ workspaceId: wsId, name }).onConflictDoNothing();
-        for (const name of new Set(input.designations)) await tx.insert(designations).values({ workspaceId: wsId, name }).onConflictDoNothing();
-        const [owner] = await tx.select().from(memberships).where(and(eq(memberships.workspaceId, wsId), eq(memberships.userId, user.id)));
-        await audit(tx, { workspaceId: wsId, userId: user.id, membershipId: owner!.id }, "workspace.setup", "workspace", wsId, `Set up workspace ${input.name}`);
+        for (const name of new Set(input.departments))
+          await tx.insert(departments).values({ workspaceId: wsId, name }).onConflictDoNothing();
+        for (const name of new Set(input.designations))
+          await tx.insert(designations).values({ workspaceId: wsId, name }).onConflictDoNothing();
+        const [owner] = await tx
+          .select()
+          .from(memberships)
+          .where(and(eq(memberships.workspaceId, wsId), eq(memberships.userId, user.id)));
+        await audit(
+          tx,
+          { workspaceId: wsId, userId: user.id, membershipId: owner!.id },
+          "workspace.setup",
+          "workspace",
+          wsId,
+          `Set up workspace ${input.name}`,
+        );
       });
       await db.update(users).set({ activeWorkspaceId: wsId }).where(eq(users.id, user.id));
       return { workspaceId: wsId };
@@ -178,10 +236,11 @@ export const workspace = {
   }),
 
   switch: defineAction({
-    input: z.object({ workspaceId: z.string().uuid() }),
+    input: z.object({ workspaceId: z.uuid() }),
     handler: async ({ workspaceId }, context) => {
       const user = requireUser(context);
-      if (!(await switchWorkspace(user.id, workspaceId))) throw new ActionError({ code: "FORBIDDEN", message: "Not a member of that workspace." });
+      if (!(await switchWorkspace(user.id, workspaceId)))
+        throw new ActionError({ code: "FORBIDDEN", message: "Not a member of that workspace." });
       return { ok: true };
     },
   }),
@@ -203,8 +262,19 @@ export const workspace = {
       const code = inviteCode(ctx.workspaceName);
       const expiresAt = expiresInDays ? new Date(Date.now() + expiresInDays * 86400_000) : null;
       await scoped(ctx, async (tx) => {
-        await tx.update(workspaces).set({ inviteCode: code, inviteCodeExpiresAt: expiresAt }).where(eq(workspaces.id, ctx.workspaceId));
-        await audit(tx, ctx, "invite.regenerated", "workspace", ctx.workspaceId, "Regenerated the workspace invite code", { expiresInDays });
+        await tx
+          .update(workspaces)
+          .set({ inviteCode: code, inviteCodeExpiresAt: expiresAt })
+          .where(eq(workspaces.id, ctx.workspaceId));
+        await audit(
+          tx,
+          ctx,
+          "invite.regenerated",
+          "workspace",
+          ctx.workspaceId,
+          "Regenerated the workspace invite code",
+          { expiresInDays },
+        );
       });
       return { code, expiresAt: expiresAt?.toISOString() ?? null };
     },
@@ -213,10 +283,10 @@ export const workspace = {
   /** Email invite link with pre-assigned role / department / designation. */
   sendInvite: defineAction({
     input: z.object({
-      email: z.string().trim().email().max(200),
+      email: z.string().trim().pipe(z.email().max(200)),
       role: z.enum(["manager", "employee"]),
-      departmentId: z.string().uuid().nullable().optional(),
-      designationId: z.string().uuid().nullable().optional(),
+      departmentId: z.uuid().nullable().optional(),
+      designationId: z.uuid().nullable().optional(),
     }),
     handler: async (input, context) => {
       const ctx = requireCtx(context, "employees.manage", { targetRole: input.role });
@@ -239,7 +309,13 @@ export const workspace = {
         to: input.email,
         subject: `You're invited to ${ctx.workspaceName} on Office Ledger`,
         text: `You've been invited to join ${ctx.workspaceName} as ${input.role}.\n\nAccept within 7 days:\n${url}`,
-        html: mailHtml(`Join ${ctx.workspaceName}`, [`You've been invited to join ${ctx.workspaceName} as ${input.role}. The link is valid for 7 days.`], { label: "Accept invite", url }),
+        html: mailHtml(
+          `Join ${ctx.workspaceName}`,
+          [
+            `You've been invited to join ${ctx.workspaceName} as ${input.role}. The link is valid for 7 days.`,
+          ],
+          { label: "Accept invite", url },
+        ),
       });
       return { url };
     },

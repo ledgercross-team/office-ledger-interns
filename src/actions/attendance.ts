@@ -1,5 +1,5 @@
 import { defineAction, ActionError } from "astro:actions";
-import { z } from "astro:schema";
+import { z } from "astro/zod";
 import { attendanceCorrections } from "@/db/schema";
 import { audit } from "@/lib/audit";
 import { addDaysISO, localDate } from "@/lib/dates";
@@ -20,7 +20,10 @@ export const attendanceActions = {
   today: defineAction({
     handler: async (_, context) => {
       const ctx = requireCtx(context);
-      return scoped(ctx, async (tx) => ({ ...(await attendanceToday(tx, ctx)), missing: ctx.role === "employee" ? [] : await notCheckedIn(tx, ctx) }));
+      return scoped(ctx, async (tx) => ({
+        ...(await attendanceToday(tx, ctx)),
+        missing: ctx.role === "employee" ? [] : await notCheckedIn(tx, ctx),
+      }));
     },
   }),
 
@@ -35,13 +38,21 @@ export const attendanceActions = {
       const ctx = requireCtx(context, "attendance.checkin");
       const ip = clientIp(context.request);
       const rl = await rateLimit("checkin", ctx.membershipId);
-      if (!rl.ok) throw new ActionError({ code: "TOO_MANY_REQUESTS", message: "Too many check-in attempts. Wait a minute." });
+      if (!rl.ok)
+        throw new ActionError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Too many check-in attempts. Wait a minute.",
+        });
       return scoped(ctx, async (tx) => {
         const { row, needsApproval } = await svc.checkIn(tx, ctx, { ...input, ip }).catch(mapErr);
         if (needsApproval) {
-          const reviewers = (await membersWithRoles(tx, ctx.workspaceId, ctx.role === "employee" ? ["owner", "manager"] : ["owner"])).filter(
-            (m) => m !== ctx.membershipId,
-          );
+          const reviewers = (
+            await membersWithRoles(
+              tx,
+              ctx.workspaceId,
+              ctx.role === "employee" ? ["owner", "manager"] : ["owner"],
+            )
+          ).filter((m) => m !== ctx.membershipId);
           await notify(tx, ctx.workspaceId, reviewers, {
             kind: "attendance.review",
             title: `${context.locals.user!.name}: ${row.status === "late" ? `late check-in (${row.lateMinutes} min)` : "remote check-in"} needs approval`,
@@ -49,8 +60,19 @@ export const attendanceActions = {
           });
         }
         await publish(tx, ctx.workspaceId, "attendance");
-        const time = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", timeZone: ctx.timezone }).format(row.checkInAt!);
-        const label = { present: "Present", late: "Late", remote: "Remote", half_day: "Half-day", absent: "Absent", on_leave: "On leave" }[row.status];
+        const time = new Intl.DateTimeFormat("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: ctx.timezone,
+        }).format(row.checkInAt!);
+        const label = {
+          present: "Present",
+          late: "Late",
+          remote: "Remote",
+          half_day: "Half-day",
+          absent: "Absent",
+          on_leave: "On leave",
+        }[row.status];
         return {
           status: row.status,
           approval: row.approval,
@@ -72,7 +94,7 @@ export const attendanceActions = {
   }),
 
   startBreak: defineAction({
-    input: z.object({ breakWindowId: z.string().uuid().nullish() }),
+    input: z.object({ breakWindowId: z.uuid().nullish() }),
     handler: async ({ breakWindowId }, context) => {
       const ctx = requireCtx(context, "attendance.checkin");
       await scoped(ctx, (tx) => svc.startBreak(tx, ctx, breakWindowId ?? null).catch(mapErr));
@@ -101,8 +123,13 @@ export const attendanceActions = {
     handler: async (input, context) => {
       const ctx = requireCtx(context, "attendance.checkin");
       const today = localDate(ctx.timezone);
-      if (input.date > today) throw new ActionError({ code: "BAD_REQUEST", message: "You can't correct a future date." });
-      if (input.date < addDaysISO(today, -60)) throw new ActionError({ code: "BAD_REQUEST", message: "Corrections are limited to the last 60 days." });
+      if (input.date > today)
+        throw new ActionError({ code: "BAD_REQUEST", message: "You can't correct a future date." });
+      if (input.date < addDaysISO(today, -60))
+        throw new ActionError({
+          code: "BAD_REQUEST",
+          message: "Corrections are limited to the last 60 days.",
+        });
       if (input.checkIn && input.checkOut && input.checkOut <= input.checkIn)
         throw new ActionError({ code: "BAD_REQUEST", message: "Check-out must be after check-in." });
       return scoped(ctx, async (tx) => {
@@ -112,21 +139,36 @@ export const attendanceActions = {
             workspaceId: ctx.workspaceId,
             membershipId: ctx.membershipId,
             date: input.date,
-            requestedCheckIn: input.checkIn ? svc.localToInstant(ctx.timezone, input.date, input.checkIn) : null,
-            requestedCheckOut: input.checkOut ? svc.localToInstant(ctx.timezone, input.date, input.checkOut) : null,
+            requestedCheckIn: input.checkIn
+              ? svc.localToInstant(ctx.timezone, input.date, input.checkIn)
+              : null,
+            requestedCheckOut: input.checkOut
+              ? svc.localToInstant(ctx.timezone, input.date, input.checkOut)
+              : null,
             reason: input.reason,
           })
           .returning();
-        const reviewers = (await membersWithRoles(tx, ctx.workspaceId, ctx.role === "employee" ? ["owner", "manager"] : ["owner"])).filter(
-          (m) => m !== ctx.membershipId,
-        );
+        const reviewers = (
+          await membersWithRoles(
+            tx,
+            ctx.workspaceId,
+            ctx.role === "employee" ? ["owner", "manager"] : ["owner"],
+          )
+        ).filter((m) => m !== ctx.membershipId);
         await notify(tx, ctx.workspaceId, reviewers, {
           kind: "correction.requested",
           title: `${context.locals.user!.name} requested an attendance correction for ${input.date}`,
           body: input.reason,
           link: "/app/inbox?tab=reviews",
         });
-        await audit(tx, ctx, "attendance.correction_requested", "attendance_corrections", row!.id, `Requested a correction for ${input.date}`);
+        await audit(
+          tx,
+          ctx,
+          "attendance.correction_requested",
+          "attendance_corrections",
+          row!.id,
+          `Requested a correction for ${input.date}`,
+        );
         await publish(tx, ctx.workspaceId, "inbox");
         return { id: row!.id };
       });

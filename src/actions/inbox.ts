@@ -1,5 +1,5 @@
 import { defineAction, ActionError } from "astro:actions";
-import { z } from "astro:schema";
+import { z } from "astro/zod";
 import { publish } from "@/lib/notifications";
 import { listInbox } from "@/lib/queries/inbox";
 import { nextEmployeeCode } from "@/lib/queries/employees";
@@ -49,7 +49,8 @@ export const inbox = {
                 case "absent":
                 case "overtime":
                 case "anomaly":
-                  if (!a || !b || !/^\d{4}-\d{2}-\d{2}$/.test(b)) throw new d.DecisionError("Malformed item.");
+                  if (!a || !b || !/^\d{4}-\d{2}-\d{2}$/.test(b))
+                    throw new d.DecisionError("Malformed item.");
                   return d.decideException(sp, ctx, kind, a, b, decision, reason);
                 default:
                   throw new d.DecisionError("Unknown item type.");
@@ -62,7 +63,8 @@ export const inbox = {
           }
         }
         await publish(tx, ctx.workspaceId, "inbox");
-        if (results.every((r) => !r.ok)) throw new ActionError({ code: "CONFLICT", message: results[0]?.message ?? "Nothing was updated." });
+        if (results.every((r) => !r.ok))
+          throw new ActionError({ code: "CONFLICT", message: results[0]?.message ?? "Nothing was updated." });
         return { results, ok: results.filter((r) => r.ok).length };
       });
     },

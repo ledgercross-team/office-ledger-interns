@@ -4,7 +4,7 @@ Defaults and judgement calls made while building Office Ledger v2. Newest phase 
 
 ## Phase 1 – Scaffold & tooling
 
-- **Astro 5.18** (not the newer Astro 7) because the brief pins Astro 5; matching adapters are `@astrojs/node@9`, `@astrojs/react@4`. **TypeScript 5.9** (TS 7's native compiler is not yet supported by `astro check`). **TanStack Table v8** (stable, widely documented) and **Vitest 3**.
+- **Astro 5.18** was used initially because the brief pins Astro 5. _Superseded in Phase 11: upgraded to Astro 7, see below._ **TypeScript 5.9** (TS 7's native compiler is not yet supported by `astro check`). **TanStack Table v8** (stable, widely documented) and **Vitest 3**.
 - **Zod 3** for app code because Astro 5 Actions bundle Zod 3 (`astro:schema`); Better Auth carries its own Zod 4 internally.
 - **Node adapter in `middleware` mode** + a tiny `server.mjs` (Node `http` + `sirv`) so security headers apply to prerendered marketing pages and static assets too, not only SSR responses.
 - **No inline scripts on static pages**: the theme bootstrap is `/theme.js` (render-blocking, ~600 B) and `vite.build.assetsInlineLimit = 0` keeps Astro's processed scripts external. SSR pages get a per-request nonce for Astro's island hydration scripts (see Phase 3).
@@ -127,3 +127,12 @@ Defaults and judgement calls made while building Office Ledger v2. Newest phase 
 - **Service worker** is hand-written (no build plugin): precached offline page, cache-first for hashed assets/icons, network-first for `/app` pages with an offline fallback; `/api`, `/auth` and `/_actions` are never cached. Signing out clears cached app pages. It's registered only in production builds so it never interferes with Vite in dev.
 - **Icons and OG image** are generated from one SVG with `sharp` (`pnpm icons`); `favicon.ico` holds PNG images (16/32/48).
 - **HSTS and `upgrade-insecure-requests`** are only sent when `PUBLIC_SITE_URL` is HTTPS, so plain-HTTP previews still work.
+
+## Phase 11 – Tests, CI, Docker, docs
+
+- **Upgraded Astro 5 → 7 (deviation from the brief).** `pnpm audit` flagged a _critical_ RCE (AVIF image optimisation) and several high-severity XSS/SSRF/DoS advisories in Astro 5.x and `@astrojs/node` 9, fixed only in Astro ≥ 7.2.8 / node adapter ≥ 11.1.3. The brief also requires `pnpm audit` in CI, so security won over the version pin. The migration was small: Zod 4 (`astro/zod` instead of `astro:schema`, `z.uuid()`/`z.email()`/`z.ipv4()`). It's an isolated commit and easy to revert if you must stay on 5.x. `sharp` and `vitest` were bumped for the same reason. Node ≥ 22.12 is now required.
+- **`security.allowedDomains`** is set from `PUBLIC_SITE_URL` (plus localhost). Without it Astro ignores the `Host` header, sees every request as `http://localhost`, and its origin check rejects bodyless Action calls in production. Rebuild when the public domain changes.
+- **Better Auth's built-in rate limiter is off**; our wrapper around `/api/auth/*` does per-IP limiting (`RATE_LIMIT_AUTH_PER_MIN`, default 10) plus account lockout. E2E runs raise the limit.
+- **`server.mjs` only hands existing files to `sirv`**, so a redeploy that swaps `dist/` under a running process can't crash it on a stale file index.
+- **E2E** (Playwright) builds the production server, re-seeds the database, and covers: every page per role (allowed → 200, forbidden → 403), server-side rejection of a forbidden action, the employee check-in → leave request → manager Inbox approval flow (verified in the DB), phone layout without horizontal scroll, and the public SEO/PWA files.
+- **Docker image** is multi-stage on `node:22-bookworm-slim` (glibc for `sharp`/`@node-rs/argon2`), runs as UID 1001, stores uploads in a `/data` volume, and runs migrations (`scripts/migrate.mjs`, plain Node) before starting. `PUBLIC_SITE_URL` is a build arg because it's baked into the sitemap and trusted hosts.

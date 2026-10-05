@@ -1,5 +1,5 @@
 import { defineAction, ActionError } from "astro:actions";
-import { z } from "astro:schema";
+import { z } from "astro/zod";
 import { and, eq, inArray } from "drizzle-orm";
 import { dailyReportSnapshots, memberships, users } from "@/db/schema";
 import { audit } from "@/lib/audit";

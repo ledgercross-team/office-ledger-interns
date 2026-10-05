@@ -24,7 +24,10 @@
     "db:reset": "tsx src/db/reset.ts && pnpm db:migrate && pnpm db:seed",
     "db:local": "tsx scripts/local-postgres.ts",
     "icons": "tsx scripts/generate-icons.ts",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "db:migrate:prod": "node scripts/migrate.mjs",
+    "screenshots": "tsx scripts/capture-screenshots.ts",
+    "check": "pnpm lint && pnpm typecheck && pnpm test"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs}": [
@@ -47,8 +50,8 @@
     ]
   },
   "dependencies": {
-    "@astrojs/node": "9.5.5",
-    "@astrojs/react": "4.4.2",
+    "@astrojs/node": "11.1.6",
+    "@astrojs/react": "7.0.0",
     "@astrojs/sitemap": "^3.7.4",
     "@date-fns/tz": "^1.5.0",
     "@dnd-kit/core": "^6.3.1",
@@ -59,7 +62,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.104.1",
     "@tanstack/react-table": "^8.21.3",
-    "astro": "5.18.2",
+    "astro": "7.3.5",
     "better-auth": "~1.7.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -115,6 +118,6 @@
     "tsx": "^4.23.15",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.71.0",
-    "vitest": "^3.2.7"
+    "vitest": "^5.0.3"
   }
 }

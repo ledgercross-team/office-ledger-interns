@@ -1,5 +1,5 @@
 import { defineAction, ActionError } from "astro:actions";
-import { z } from "astro:schema";
+import { z } from "astro/zod";
 import { eq } from "drizzle-orm";
 import { complaintEvents, complaints, memberships } from "@/db/schema";
 import { audit } from "@/lib/audit";
@@ -32,15 +32,13 @@ export const complaintsActions = {
           .insert(complaints)
           .values({ workspaceId: ctx.workspaceId, submitterId: ctx.membershipId, ...input })
           .returning();
-        await tx
-          .insert(complaintEvents)
-          .values({
-            workspaceId: ctx.workspaceId,
-            complaintId: row!.id,
-            actorId: ctx.membershipId,
-            kind: "created",
-            toStatus: "new",
-          });
+        await tx.insert(complaintEvents).values({
+          workspaceId: ctx.workspaceId,
+          complaintId: row!.id,
+          actorId: ctx.membershipId,
+          kind: "created",
+          toStatus: "new",
+        });
         const processors = (await membersWithRoles(tx, ctx.workspaceId, ["owner", "manager"])).filter(
           (m) => m !== ctx.membershipId,
         );
@@ -60,9 +58,9 @@ export const complaintsActions = {
   /** Status change, assignment, internal note or message to the submitter. */
   update: defineAction({
     input: z.object({
-      id: z.string().uuid(),
+      id: z.uuid(),
       status: status.optional(),
-      assigneeId: z.string().uuid().nullable().optional(),
+      assigneeId: z.uuid().nullable().optional(),
       note: z.string().trim().max(3000).optional(),
       internal: z.boolean().default(true),
       resolutionMessage: z.string().trim().max(3000).optional(),
