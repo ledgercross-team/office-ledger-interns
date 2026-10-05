@@ -77,3 +77,15 @@ Defaults and judgement calls made while building Office Ledger v2. Newest phase 
 - **Leave days** count workdays only (weekends and active holidays excluded); half-day = 0.5. Requests may reach 30 days back and up to a year ahead, can't overlap the member's own pending/approved requests, and paid types with a quota can't exceed the available balance (accrued + carry-over − used − pending).
 - **Overlap warning** shows on pending requests when other members of the same department are off (approved or pending) on overlapping days; it turns amber at 2+ people or ≥30% of the department.
 - **Approving leave after the day's report locked** adds a correction entry to that report.
+
+## Phase 7 – Taskboard & Calendar
+
+- **Task permissions**: employees can create tasks (always assigned to themselves) and update tasks they're assigned to or created; owners/managers can assign anyone and archive. Archived tasks are read-only history with a Restore action.
+- **Ordering** uses a floating `position` per column (midpoint between neighbours on drop), so a move is one row update. Moves are optimistic and roll back on error. Keyboard drag (space, arrows) is supported through dnd-kit's keyboard sensor.
+- **@mentions** accept `@First` or `@[Full Name]` (the composer inserts the bracketed form); mentioned people and assignees are notified separately.
+- **"Due soon"** badges: overdue (red), due within 2 days (amber). Reminder notifications are sent by the daily job (Phase 8).
+- **"Daily" meetings mean every working day**: configured weekend days are skipped in the UI, the daily report's meeting count, and the ICS `RRULE` (`BYDAY`). Holidays are not excluded from recurring meetings.
+- **Meeting visibility**: owners/managers see all meetings; employees see the ones they're invited to.
+- **Holiday flow**: owner changes are immediate; a manager's mark becomes a proposal and a manager's removal becomes a removal request, both decided by the owner in the Inbox. A manager can withdraw their own pending proposal.
+- **Public holiday import** uses the free Nager.Date API for the workspace country (global holidays only); imported days are active for owners and proposals for managers. Existing dates are left untouched.
+- **iCal feed** (`/api/ical/<token>`) contains the member's meetings (with RRULE), their approved leave and active holidays as all-day events, from 90 days back. The token is the secret and can be reset from My Profile.

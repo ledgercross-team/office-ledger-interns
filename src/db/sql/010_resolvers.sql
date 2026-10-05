@@ -201,14 +201,16 @@ language sql stable as $$
   left join designations g on g.id = mb.designation_id
 $$;
 
--- Does a (possibly recurring) meeting occur on a local date?
-create or replace function fn_meeting_occurs(p_starts date, p_recurrence recurrence, p_until date, p_day date) returns boolean
+-- Does a (possibly recurring) meeting occur on a local date? "Daily" skips the weekend days given.
+drop function if exists fn_meeting_occurs(date, recurrence, date, date);
+create or replace function fn_meeting_occurs(p_starts date, p_recurrence recurrence, p_until date, p_day date, p_weekend int[] default '{}')
+returns boolean
 language sql immutable as $$
   select p_day >= p_starts
     and (p_until is null or p_day <= p_until)
     and case p_recurrence
           when 'none' then p_day = p_starts
-          when 'daily' then true
+          when 'daily' then p_day = p_starts or not (extract(dow from p_day)::int = any (p_weekend))
           when 'weekly' then extract(dow from p_day) = extract(dow from p_starts)
           when 'monthly' then extract(day from p_day) = extract(day from p_starts)
         end

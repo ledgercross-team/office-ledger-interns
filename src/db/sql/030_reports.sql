@@ -61,7 +61,7 @@ language sql stable as $$
       'missingCheckout', att.missing_checkout,
       'meetings', (select count(*) from meetings mt join workspaces w on w.id = mt.workspace_id
                    where mt.workspace_id = p_ws
-                     and fn_meeting_occurs((mt.starts_at at time zone w.timezone)::date, mt.recurrence, mt.recurrence_until, p_date))::int,
+                     and fn_meeting_occurs((mt.starts_at at time zone w.timezone)::date, mt.recurrence, mt.recurrence_until, p_date, (select weekend_days from s)))::int,
       'holidays', (select count(*) from holidays h where h.workspace_id = p_ws and h.status = 'active'
                    and date_trunc('month', h.date) = date_trunc('month', p_date::timestamp))::int,
       'isHoliday', exists (select 1 from holidays h where h.workspace_id = p_ws and h.status = 'active' and h.date = p_date)

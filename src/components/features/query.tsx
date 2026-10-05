@@ -1,24 +1,33 @@
 import { QueryClient, QueryClientProvider, useQuery, type QueryKey } from "@tanstack/react-query";
-import type { ComponentType, ReactNode } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { Toaster } from "sonner";
 
 const g = globalThis as unknown as { __ledgerQC?: QueryClient; __ledgerLive?: EventSource };
 
-/** One QueryClient shared by every island on the page (and across View Transition navigations). */
-export const queryClient =
-  g.__ledgerQC ??
-  (g.__ledgerQC = new QueryClient({
-    defaultOptions: { queries: { staleTime: 20_000, refetchOnWindowFocus: true, retry: 1 } },
-  }));
+const isServer = typeof window === "undefined";
+const makeClient = () =>
+  new QueryClient({ defaultOptions: { queries: { staleTime: 20_000, refetchOnWindowFocus: true, retry: 1 } } });
+
+/**
+ * Browser: one QueryClient shared by every island on the page (and across View Transition
+ * navigations). Server: never shared. Each SSR render gets its own client so data can't leak
+ * between requests or users.
+ */
+export const queryClient: QueryClient = isServer ? makeClient() : (g.__ledgerQC ??= makeClient());
+
+function useClient() {
+  const [serverClient] = useState(() => (isServer ? makeClient() : null));
+  return serverClient ?? queryClient;
+}
 
 export function QueryProvider({ children }: { children: ReactNode }) {
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return <QueryClientProvider client={useClient()}>{children}</QueryClientProvider>;
 }
 
 /** Wrap an island's root component so it can use TanStack Query. */
 export function withQuery<P extends object>(Component: ComponentType<P>) {
   const Wrapped = (props: P) => (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={useClient()}>
       <Component {...props} />
     </QueryClientProvider>
   );
