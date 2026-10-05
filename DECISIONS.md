@@ -67,3 +67,13 @@ Defaults and judgement calls made while building Office Ledger v2. Newest phase 
 - **Documents** are stored outside `public/` (`STORAGE_DIR`), checked against a MIME allow-list *and* magic bytes, and served only through HMAC-signed URLs that expire after 5–10 minutes with a sandboxed CSP. Avatars use an authenticated route instead because colleagues need to see them.
 - **2FA** setup is offered to owners and managers (per the brief); employees don't see it.
 - **Profile visibility**: employees can only open their own profile (`/app/me`); managers and owners can open anyone's, and only someone with permission to manage that person sees their documents and emergency contact.
+
+## Phase 6 – Leave & Inbox
+
+- **One decision layer** (`src/lib/services/decisions.ts`) is used by the Inbox *and* the source pages, so "Approve" means exactly the same thing everywhere (permissions re-checked against the source record, requester notified, audit written).
+- **Bulk Inbox decisions** run each item in its own savepoint; stale or forbidden items are skipped and reported instead of failing the batch.
+- **Button wording by kind**: exceptions are *Acknowledge / Flag* (flagging notifies the employee to file a correction or leave), complaints are *Start review / Close*, everything else is *Approve / Reject*. A rejection reason is optional and goes to the requester (in-app and, if they opted in, by email).
+- **Priority**: leave starting within 2 days and absences without leave are High; joins, corrections, holiday proposals and missing checkouts are Medium; attendance approvals, overtime and short days are Low; issues map from their severity. SLA badges turn amber after 1 day and red after 3.
+- **Leave days** count workdays only (weekends and active holidays excluded); half-day = 0.5. Requests may reach 30 days back and up to a year ahead, can't overlap the member's own pending/approved requests, and paid types with a quota can't exceed the available balance (accrued + carry-over − used − pending).
+- **Overlap warning** shows on pending requests when other members of the same department are off (approved or pending) on overlapping days; it turns amber at 2+ people or ≥30% of the department.
+- **Approving leave after the day's report locked** adds a correction entry to that report.

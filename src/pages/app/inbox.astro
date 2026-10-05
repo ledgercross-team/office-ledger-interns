@@ -1,0 +1,24 @@
+---
+import AppLayout from "@/layouts/AppLayout.astro";
+import PageHero from "@/components/layout/PageHero.astro";
+import RefreshButton from "@/components/layout/RefreshButton";
+import InboxPage from "@/components/features/inbox/InboxPage";
+import OpenPill from "@/components/features/inbox/OpenPill";
+import { withWorkspace } from "@/db";
+import { listInbox } from "@/lib/queries/inbox";
+import { t } from "@/i18n/en";
+
+const ctx = Astro.locals.ctx!;
+const items = await withWorkspace(ctx.workspaceId, (tx) => listInbox(tx, ctx));
+const tab = Astro.url.searchParams.get("tab");
+const initialTab = tab === "reviews" || tab === "exceptions" ? tab : "decisions";
+const focus = Astro.url.searchParams.get("focus");
+---
+
+<AppLayout title="Inbox">
+  <PageHero title={t("pages.inbox.title")} description={t("pages.inbox.description")}>
+    <OpenPill slot="actions" client:idle initial={items.length} />
+    <RefreshButton slot="actions" client:idle />
+  </PageHero>
+  <InboxPage client:load initial={items as never} initialTab={initialTab} focus={focus} />
+</AppLayout>

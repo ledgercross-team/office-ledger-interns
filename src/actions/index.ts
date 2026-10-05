@@ -1,6 +1,8 @@
 import { workspace } from "./workspace";
 import { attendanceActions } from "./attendance";
 import { employees } from "./employees";
+import { leave } from "./leave";
+import { inbox } from "./inbox";
 import { announcementsActions, notificationsActions, shell } from "./shell";
 
 export const server = {
@@ -10,4 +12,6 @@ export const server = {
   announcements: announcementsActions,
   attendance: attendanceActions,
   employees,
+  leave,
+  inbox,
 };

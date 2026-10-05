@@ -1,6 +1,6 @@
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro:schema";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, departments, designations, files, memberships, users } from "@/db/schema";
 import { audit } from "@/lib/audit";
@@ -12,7 +12,8 @@ import { notify, publish } from "@/lib/notifications";
 import { hashPassword } from "@/lib/password";
 import { can } from "@/lib/permissions";
 import { employeeProfile, employeesPage, nextEmployeeCode } from "@/lib/queries/employees";
-import { assertCan, bad, notFound, requireCtx, scoped } from "./_helpers";
+import { assertCan, bad, mapDecision, notFound, requireCtx, scoped } from "./_helpers";
+import { decideJoin } from "@/lib/services/decisions";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const ids = z.array(z.string().uuid()).min(1).max(200);
@@ -41,24 +42,9 @@ export const employees = {
     handler: async (input, context) => {
       const ctx = requireCtx(context, "employees.manage");
       return scoped(ctx, async (tx) => {
-        const rows = await tx.select().from(memberships).where(and(inArray(memberships.id, input.ids), eq(memberships.status, "pending")));
-        for (const m of rows) {
-          assertCan(ctx, "employees.manage", { ownerRole: m.role });
-          await tx
-            .update(memberships)
-            .set({
-              status: "active",
-              employeeCode: m.employeeCode ?? (await nextEmployeeCode(tx)),
-              joinedAt: m.joinedAt ?? new Date().toISOString().slice(0, 10),
-              statusChangedAt: new Date(),
-            })
-            .where(eq(memberships.id, m.id));
-          await notify(tx, ctx.workspaceId, [m.id], { kind: "join.approved", title: `Welcome to ${ctx.workspaceName}! Your access was approved.`, link: "/app" });
-          await audit(tx, ctx, "member.approved", "membership", m.id, "Approved a join request");
-        }
-        await publish(tx, ctx.workspaceId, "employees");
+        for (const id of input.ids) await decideJoin(tx, ctx, id, "approve", null, () => nextEmployeeCode(tx)).catch(mapDecision);
         await publish(tx, ctx.workspaceId, "inbox");
-        return { count: rows.length };
+        return { count: input.ids.length };
       });
     },
   }),
@@ -68,15 +54,9 @@ export const employees = {
     handler: async (input, context) => {
       const ctx = requireCtx(context, "employees.manage");
       return scoped(ctx, async (tx) => {
-        const rows = await tx.select().from(memberships).where(and(inArray(memberships.id, input.ids), eq(memberships.status, "pending")));
-        for (const m of rows) {
-          assertCan(ctx, "employees.manage", { ownerRole: m.role });
-          await tx.update(memberships).set({ status: "rejected", statusChangedAt: new Date() }).where(eq(memberships.id, m.id));
-          await audit(tx, ctx, "member.rejected", "membership", m.id, "Rejected a join request", input.reason ? { reason: input.reason } : undefined);
-        }
-        await publish(tx, ctx.workspaceId, "employees");
+        for (const id of input.ids) await decideJoin(tx, ctx, id, "reject", input.reason).catch(mapDecision);
         await publish(tx, ctx.workspaceId, "inbox");
-        return { count: rows.length };
+        return { count: input.ids.length };
       });
     },
   }),
