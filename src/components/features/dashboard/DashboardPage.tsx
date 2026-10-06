@@ -27,6 +27,7 @@ import {
   UserX,
   Wifi,
   Award,
+  type LucideIcon,
 } from "lucide-react";
 import { withQuery, useServerQuery } from "../query";
 import type { DashboardData } from "@/lib/queries/reports";
@@ -168,6 +169,80 @@ function InviteCard({ invite }: { invite: NonNullable<Org["invite"]> }) {
             <RefreshCw aria-hidden /> Regenerate
           </Button>
         )}
+      </CardBody>
+    </Card>
+  );
+}
+
+function QuickActions({ mode }: { mode: "org" | "employee" }) {
+  const items: { href: string; label: string; description: string; icon: LucideIcon }[] =
+    mode === "org"
+      ? [
+          { href: "/app/inbox", label: "Review inbox", description: "Clear pending approvals", icon: Inbox },
+          {
+            href: "/app/tasks?new=1",
+            label: "Create a task",
+            description: "Add work to the board",
+            icon: ListTodo,
+          },
+          {
+            href: "/app/calendar",
+            label: "Open calendar",
+            description: "Plan the next workday",
+            icon: CalendarDays,
+          },
+          {
+            href: "/app/attendance",
+            label: "Check attendance",
+            description: "See today's coverage",
+            icon: UserCheck,
+          },
+        ]
+      : [
+          {
+            href: "/app/attendance",
+            label: "Open attendance",
+            description: "Check in or review history",
+            icon: UserCheck,
+          },
+          {
+            href: "/app/leave?new=1",
+            label: "Request leave",
+            description: "Start a time-off request",
+            icon: Plane,
+          },
+          { href: "/app/tasks", label: "View my tasks", description: "Keep work moving", icon: ListTodo },
+          {
+            href: "/app/calendar",
+            label: "Open calendar",
+            description: "See meetings and holidays",
+            icon: CalendarDays,
+          },
+        ];
+
+  return (
+    <Card>
+      <CardHeader title="Quick actions" description="Jump straight into the next thing." />
+      <CardBody className="grid gap-2">
+        {items.map(({ href, label, description, icon: Icon }) => (
+          <a
+            key={href}
+            href={href}
+            className="group hover:border-border hover:bg-surface-2 flex items-center gap-3 rounded-xl border border-transparent px-2.5 py-2 transition-[background-color,border-color]"
+          >
+            <span className="bg-primary-soft text-primary grid size-9 shrink-0 place-items-center rounded-xl transition-transform duration-150 group-hover:scale-105">
+              <Icon className="size-4" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">{label}</span>
+              <span className="text-muted block truncate text-xs">{description}</span>
+            </span>
+            <ArrowRight
+              className="text-muted size-4 shrink-0 transition-transform duration-150 group-hover:translate-x-0.5 rtl:rotate-180"
+              aria-hidden
+            />
+          </a>
+        ))}
       </CardBody>
     </Card>
   );
@@ -463,6 +538,7 @@ function OrgDashboard({ d, workspace }: { d: Org; workspace: string }) {
 
         <div className="grid content-start gap-6">
           {d.invite && <InviteCard invite={d.invite} />}
+          <QuickActions mode="org" />
           <AttendanceCard d={d} />
           <Card>
             <CardHeader
@@ -622,6 +698,7 @@ function EmployeeDashboard({ d }: { d: Emp }) {
           <People d={d} />
         </div>
         <div className="grid content-start gap-6">
+          <QuickActions mode="employee" />
           <AttendanceCard d={d} />
           <Card>
             <CardHeader

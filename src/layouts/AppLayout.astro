@@ -33,7 +33,7 @@ const nav = navFor(ctx);
   >
     {en.skipToContent}
   </a>
-  <div class="lg:flex">
+  <div class="app-shell min-h-dvh lg:flex">
     <Sidebar
       nav={nav}
       inboxCount={counts.inbox}
@@ -123,7 +123,9 @@ const nav = navFor(ctx);
     document
       .querySelectorAll<HTMLAnchorElement>("#app-sidebar a")
       .forEach((a) => a.addEventListener("click", close));
-    document.addEventListener("keydown", (e) => e.key === "Escape" && close(), { once: true });
+    // Keep Escape available for the entire page session. A one-shot listener would
+    // disappear after the first keypress, even when that key was not Escape.
+    document.addEventListener("keydown", (e) => e.key === "Escape" && close());
     close();
     const signOut = document.querySelector<HTMLButtonElement>("[data-sign-out]");
     if (signOut) signOut.onclick = () => doSignOut();

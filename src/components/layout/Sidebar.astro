@@ -20,7 +20,7 @@ const { nav, inboxCount, workspace, memberships, user, role } = Astro.props;
 const path = Astro.url.pathname;
 const multi = memberships.filter((m) => m.status === "active").length > 1;
 const linkCls =
-  "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted transition-colors duration-150 hover:bg-surface-2 hover:text-text aria-[current=page]:bg-primary-soft aria-[current=page]:text-primary";
+  "group flex items-center gap-3 rounded-xl border-s-2 border-transparent px-3 py-2 text-sm font-medium text-muted transition-[background-color,color,border-color] duration-150 hover:bg-surface-2 hover:text-text aria-[current=page]:border-primary aria-[current=page]:bg-primary-soft aria-[current=page]:font-semibold aria-[current=page]:text-primary";
 ---
 
 <div data-nav-backdrop class="fixed inset-0 z-30 hidden bg-black/40 lg:hidden" aria-hidden="true"></div>

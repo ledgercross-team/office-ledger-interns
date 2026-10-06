@@ -57,12 +57,27 @@ function systemCtx(
   };
 }
 
+async function getJobWorkspaces() {
+  try {
+    return await db
+      .select({ ws: workspaces, s: workspaceSettings })
+      .from(workspaces)
+      .innerJoin(workspaceSettings, eq(workspaceSettings.workspaceId, workspaces.id))
+      .where(isNotNull(workspaces.onboardedAt));
+  } catch (error) {
+    // A local frontend run may not have PostgreSQL available. Skip this cycle instead of
+    // allowing the rejected query to surface as an Astro unhandled-rejection overlay.
+    console.error(
+      "[jobs] database unavailable; skipping cycle",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
+  }
+}
+
 export async function runJobs(only?: JobName, now = new Date()) {
-  const list = await db
-    .select({ ws: workspaces, s: workspaceSettings })
-    .from(workspaces)
-    .innerJoin(workspaceSettings, eq(workspaceSettings.workspaceId, workspaces.id))
-    .where(isNotNull(workspaces.onboardedAt));
+  const list = await getJobWorkspaces();
+  if (!list) return [];
   const done: string[] = [];
   for (const { ws, s } of list) {
     const today = localDate(ws.timezone, now);
@@ -271,6 +286,11 @@ export function startJobs() {
   if (g.__ledgerJobs || !env.JOBS_ENABLED || env.NODE_ENV === "test") return;
   g.__ledgerJobs = true;
   cron.schedule("* * * * *", () => {
-    void runJobs().then((done) => done.length && console.info(`[jobs] ${done.join(", ")}`));
+    void runJobs()
+      .then((done) => done.length && console.info(`[jobs] ${done.join(", ")}`))
+      .catch((error) => {
+        // A transient database outage must not become an unhandled rejection in Astro.
+        console.error("[jobs] run failed", error);
+      });
   });
 }

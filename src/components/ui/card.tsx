@@ -2,7 +2,15 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-2xl border border-border bg-surface shadow-card", className)} {...props} />;
+  return (
+    <div
+      className={cn(
+        "border-border bg-surface shadow-card rounded-2xl border transition-[border-color,box-shadow] duration-200",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function CardHeader({
@@ -22,8 +30,8 @@ export function CardHeader({
     <div className={cn("flex flex-wrap items-start justify-between gap-3 px-5 pt-5", className)}>
       <div className="min-w-0">
         {eyebrow && <p className="eyebrow mb-1">{eyebrow}</p>}
-        <h2 className="text-base font-semibold text-text">{title}</h2>
-        {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
+        <h2 className="text-text text-base font-semibold">{title}</h2>
+        {description && <p className="text-muted mt-0.5 text-sm">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

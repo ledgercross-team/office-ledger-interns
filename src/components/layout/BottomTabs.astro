@@ -34,7 +34,7 @@ const tabs: { label: string; href: string; icon: NavIcon }[] = [
           <a
             href={t.href}
             aria-current={active ? "page" : undefined}
-            class="relative flex flex-col items-center gap-0.5 py-2 text-[0.7rem] font-medium text-muted aria-[current=page]:text-primary"
+            class="relative flex min-h-14 flex-col items-center gap-0.5 py-2 text-[0.7rem] font-medium text-muted transition-colors aria-[current=page]:bg-primary-soft/50 aria-[current=page]:text-primary aria-[current=page]:after:absolute aria-[current=page]:after:inset-x-5 aria-[current=page]:after:top-0 aria-[current=page]:after:h-0.5 aria-[current=page]:after:rounded-full aria-[current=page]:after:bg-primary"
           >
             <Icon className="size-5" aria-hidden="true" />
             {t.label}

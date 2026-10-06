@@ -287,6 +287,13 @@
     width 180ms ease-out,
     transform 200ms ease-out;
 }
+.app-shell {
+  background-image: radial-gradient(
+    circle at 100% 0%,
+    color-mix(in oklch, var(--primary) 5%, transparent),
+    transparent 32rem
+  );
+}
 @media (min-width: 1024px) {
   html[data-sidebar="collapsed"] {
     --sidebar-w: 4.5rem;
