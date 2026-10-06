@@ -1,9 +1,0 @@
----
-import AuthLayout from "@/layouts/AuthLayout.astro";
-import { SignInForm } from "@/components/features/auth/forms";
-const next = Astro.url.searchParams.get("next");
----
-
-<AuthLayout title="Sign in" heading="Welcome back" subheading="Sign in to your Office Ledger workspace.">
-  <SignInForm client:load next={next} />
-</AuthLayout>

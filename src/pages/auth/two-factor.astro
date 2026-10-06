@@ -1,9 +1,0 @@
----
-import AuthLayout from "@/layouts/AuthLayout.astro";
-import { TwoFactorForm } from "@/components/features/auth/forms";
-const next = Astro.url.searchParams.get("next");
----
-
-<AuthLayout title="Two-factor verification" heading="Two-factor verification" subheading="Enter the code from your authenticator app.">
-  <TwoFactorForm client:load next={next} />
-</AuthLayout>
