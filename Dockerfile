@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # ---- base -------------------------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS base
+FROM node:25-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
 RUN corepack enable && corepack prepare pnpm@10.34.6 --activate
 WORKDIR /app
@@ -24,7 +24,7 @@ COPY package.json pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod
 
 # ---- runtime ----------------------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS runtime
+FROM node:25-bookworm-slim AS runtime
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=4321 STORAGE_DIR=/data/storage
 WORKDIR /app
 RUN groupadd --system --gid 1001 ledger && useradd --system --uid 1001 --gid ledger --home /app ledger \
