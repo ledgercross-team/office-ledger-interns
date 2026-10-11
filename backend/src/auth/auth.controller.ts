@@ -21,9 +21,9 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 
-const LOGIN_RATE = { limit: 5, ttl: 15 * 60 * 1000 };
-const REFRESH_RATE = { limit: 30, ttl: 15 * 60 * 1000 };
-const CHANGE_PASSWORD_RATE = { limit: 5, ttl: 15 * 60 * 1000 };
+const LOGIN_RATE = { limit: 5, ttl: 2 * 60 * 1000 };
+const REFRESH_RATE = { limit: 30, ttl: 2 * 60 * 1000 };
+const CHANGE_PASSWORD_RATE = { limit: 5, ttl: 2 * 60 * 1000 };
 
 @Controller('auth')
 export class AuthController {
