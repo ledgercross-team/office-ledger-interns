@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { seconds, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { seconds, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { DbModule } from './db/db.module';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { HealthModule } from './modules/health/health.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { RedisService } from './modules/redis/redis.service';
@@ -25,6 +28,7 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env'] }),
     DbModule,
+    AuthModule,
     HealthModule,
     RedisModule,
     ThrottlerModule.forRootAsync({
@@ -62,7 +66,11 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
     AppService,
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: AppThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
   ],
 })

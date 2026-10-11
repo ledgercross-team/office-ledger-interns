@@ -73,6 +73,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  app.setGlobalPrefix('api/v1');
   app.enableShutdownHooks();
 
   await app.listen(positiveInteger(config.get<string>('PORT'), 4000));

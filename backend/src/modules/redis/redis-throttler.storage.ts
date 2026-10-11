@@ -1,5 +1,5 @@
 import { ServiceUnavailableException } from '@nestjs/common';
-import type { ThrottlerStorage, ThrottlerStorageRecord } from '@nestjs/throttler';
+import type { ThrottlerStorage } from '@nestjs/throttler';
 import Redis from 'ioredis';
 
 const THROTTLE_SCRIPT = `
@@ -35,7 +35,12 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
     limit: number,
     blockDuration: number,
     _throttlerName: string,
-  ): Promise<ThrottlerStorageRecord> {
+  ): Promise<{
+    totalHits: number;
+    timeToExpire: number;
+    isBlocked: boolean;
+    timeToBlockExpire: number;
+  }> {
     const counterKey = `${this.keyPrefix}:${key}`;
     const blockKey = `${counterKey}:blocked`;
 
