@@ -173,17 +173,66 @@ export interface GameMasterCompany {
   unreadCount: number;
 }
 
+export interface DashboardToday {
+  workDate: string;
+  // null on a weekend with no record.
+  status: AttendanceDayStatus | null;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+}
+
+export interface OverdueItem {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  deadline: string;
+  assigneeId: string;
+  assigneeName: string;
+}
+
+export type TasksByStatus = Record<TaskStatus, number>;
+
+export interface AttendanceCounts {
+  total: number;
+  present: number;
+  late: number;
+  absent: number;
+}
+
+// Shape depends on the caller's role (backend GET /dashboard/summary).
 export interface DashboardSummary {
   role: Role;
   openTasks: number;
   overdueTasks: number;
   doneThisWeek: number;
+  // employee and manager
+  today?: DashboardToday;
+  // manager: the employees they manage
+  team?: {
+    people: number;
+    openTasks: number;
+    overdueTasks: number;
+    doneThisWeek: number;
+    tasksByStatus: TasksByStatus;
+    overdueList: OverdueItem[];
+    attendance: AttendanceCounts;
+  };
+  // admin
   activePeople?: number;
   peopleByRole?: Record<Role, number>;
+  tasksByStatus?: TasksByStatus;
+  overdueList?: OverdueItem[];
+  attendance?: AttendanceCounts;
   todayAttendanceRate?: number;
   subscriptionEndsOn?: string | null;
   daysLeft?: number | null;
   unreadMessages?: number;
+}
+
+export interface CompanySubscription {
+  current: Subscription | null;
+  daysLeft: number | null;
+  items: Subscription[];
 }
 
 export interface CreateUserResponse {

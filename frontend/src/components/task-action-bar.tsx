@@ -46,7 +46,10 @@ export function TaskActionBar({ task }: { task: Task }) {
       setDialog(null);
       setComment('');
       setError(null);
-      await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+      ]);
     },
     onError: (err) => setError(errorMessage(err)),
   });

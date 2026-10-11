@@ -2,6 +2,15 @@ export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
+/** YYYY-MM-DD as a calendar date, with no timezone shift. */
+export function formatDate(date: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { dateStyle: 'medium' });
+}
+
+export function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, { timeStyle: 'short' });
+}
+
 // Builds "?a=1&b=2", skipping empty values.
 export function buildQuery(params: Record<string, string | number | boolean | undefined | null>): string {
   const search = new URLSearchParams();
