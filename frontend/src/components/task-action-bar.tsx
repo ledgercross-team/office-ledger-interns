@@ -79,7 +79,7 @@ export function TaskActionBar({ task }: { task: Task }) {
               disabled={!isEnabled || mutation.isPending}
               title={isEnabled ? undefined : spec.hint}
               onClick={() => press(spec)}
-              className="rounded border px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border border-charcoal/15 bg-white px-3 py-1.5 text-sm font-medium text-charcoal transition-colors hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
             >
               {spec.label}
             </button>
@@ -88,7 +88,7 @@ export function TaskActionBar({ task }: { task: Task }) {
       </div>
 
       {!dialog && error && (
-        <p role="alert" className="mt-2 text-sm text-red-600">
+        <p role="alert" className="mt-2 text-sm text-alert-deep">
           {error}
         </p>
       )}
@@ -101,16 +101,16 @@ export function TaskActionBar({ task }: { task: Task }) {
           className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4"
         >
           <form
-            className="w-full max-w-md space-y-3 rounded-lg border bg-background p-4"
+            className="w-full max-w-md space-y-3 rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_8px_24px_rgba(19,78,58,0.12)]"
             onSubmit={(event) => {
               event.preventDefault();
               mutation.mutate({ spec: dialog, text: comment.trim() });
             }}
           >
-            <h2 id={`dialog-title-${task.id}`} className="font-semibold">
+            <h2 id={`dialog-title-${task.id}`} className="font-semibold text-charcoal">
               {dialog.label}: {task.title}
             </h2>
-            <label htmlFor={`comment-${task.id}`} className="block text-sm font-medium">
+            <label htmlFor={`comment-${task.id}`} className="block text-sm font-medium text-charcoal">
               Comment
             </label>
             <textarea
@@ -120,10 +120,10 @@ export function TaskActionBar({ task }: { task: Task }) {
               required
               maxLength={1000}
               rows={4}
-              className="w-full rounded border px-3 py-2"
+              className="w-full rounded-xl border border-charcoal/15 px-3 py-2 outline-none focus:border-evergreen"
             />
             {error && (
-              <p role="alert" className="text-sm text-red-600">
+              <p role="alert" className="text-sm text-alert-deep">
                 {error}
               </p>
             )}
@@ -134,14 +134,14 @@ export function TaskActionBar({ task }: { task: Task }) {
                   setDialog(null);
                   setError(null);
                 }}
-                className="rounded border px-3 py-1 text-sm"
+                className="rounded-xl border border-charcoal/15 px-4 py-2 text-sm font-medium hover:bg-mist"
               >
                 Close
               </button>
               <button
                 type="submit"
                 disabled={mutation.isPending || comment.trim() === ''}
-                className="rounded bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-60"
+                className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-evergreen-dark disabled:opacity-60"
               >
                 {mutation.isPending ? 'Saving…' : dialog.label}
               </button>

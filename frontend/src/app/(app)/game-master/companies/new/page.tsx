@@ -34,7 +34,7 @@ function Field({
         defaultValue={defaultValue}
         list={list}
         required
-        className="w-full rounded border bg-background px-3 py-2"
+        className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
       />
     </div>
   );
@@ -82,11 +82,11 @@ function NewCompanyForm() {
         <div className="flex gap-3 text-sm">
           <Link
             href={`/game-master/companies/${created.company.id}`}
-            className="rounded border px-3 py-1"
+            className="rounded-xl border border-charcoal/15 px-3 py-1"
           >
             Open company
           </Link>
-          <Link href="/game-master" className="rounded border px-3 py-1">
+          <Link href="/game-master" className="rounded-xl border border-charcoal/15 px-3 py-1">
             Back to companies
           </Link>
         </div>
@@ -121,14 +121,14 @@ function NewCompanyForm() {
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-alert-deep">
           {error}
         </p>
       )}
       <button
         type="submit"
         disabled={create.isPending}
-        className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-60"
+        className="rounded-xl bg-evergreen px-4 py-2 text-white disabled:opacity-60"
       >
         {create.isPending ? 'Creating…' : 'Create company'}
       </button>

@@ -4,15 +4,29 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { motion } from 'motion/react';
 import { CheckInCard } from '@/components/check-in-card';
 import { OpenTaskList } from '@/components/open-task-list';
 import { OverdueList } from '@/components/overdue-list';
+import { Reveal } from '@/components/reveal';
 import { RoleGate } from '@/components/role-gate';
 import { StatTile } from '@/components/stat-tile';
+import {
+  AttendanceBars,
+  AttendanceSpotlight,
+  RateDonut,
+  ScrollProgress,
+  StoryChapter,
+} from '@/components/story';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
-import { errorMessage, formatDate } from '@/lib/format';
-import type { AttendanceCounts, DashboardSummary, TasksByStatus } from '@/lib/types';
+import { buildQuery, errorMessage, formatDate } from '@/lib/format';
+import type {
+  AttendanceCounts,
+  DashboardSummary,
+  TasksByStatus,
+  TeamAttendanceRow,
+} from '@/lib/types';
 
 const STATUS_LABELS: [keyof TasksByStatus, string][] = [
   ['todo', 'To do'],
@@ -23,104 +37,209 @@ const STATUS_LABELS: [keyof TasksByStatus, string][] = [
   ['cancelled', 'Cancelled'],
 ];
 
-function StatusTiles({ counts }: { counts: TasksByStatus }) {
+const STATUS_BAR_CLASS: Record<keyof TasksByStatus, string> = {
+  todo: 'bg-charcoal/40',
+  in_progress: 'bg-mint',
+  delayed: 'bg-brand-amber',
+  done: 'bg-evergreen',
+  incomplete: 'bg-alert',
+  cancelled: 'bg-charcoal/20',
+};
+
+function TaskBars({ counts }: { counts: TasksByStatus }) {
+  const total = Math.max(
+    1,
+    Object.values(counts).reduce((sum, n) => sum + n, 0),
+  );
+
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-      {STATUS_LABELS.map(([key, label]) => (
-        <StatTile key={key} label={label} value={counts[key]} />
-      ))}
+    <ul className="space-y-3">
+      {STATUS_LABELS.map(([key, label]) => {
+        const pct = Math.round((counts[key] / total) * 100);
+        return (
+          <li key={key}>
+            <div className="mb-1 flex items-baseline justify-between text-sm">
+              <span className="font-medium text-charcoal">{label}</span>
+              <span className="text-charcoal-soft">
+                {counts[key]} · {pct}%
+              </span>
+            </div>
+            <div className="h-2.5 overflow-hidden rounded-full bg-charcoal/10">
+              <motion.div
+                className={`h-full rounded-full ${STATUS_BAR_CLASS[key]}`}
+                initial={{ width: 0 }}
+                whileInView={{ width: `${pct}%` }}
+                viewport={{ once: true, margin: '-48px' }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+              />
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function AttendanceStory({
+  attendance,
+  rate,
+  spotlight,
+  teamHref,
+}: {
+  attendance: AttendanceCounts;
+  rate?: number;
+  spotlight: { userId: string; userFullName: string; status: 'late' | 'absent' }[];
+  teamHref?: string;
+}) {
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <div className="space-y-5">
+        {rate !== undefined && (
+          <RateDonut rate={rate} label="of the company checked in on time or late today." />
+        )}
+        <AttendanceBars attendance={attendance} />
+      </div>
+      <div>
+        <h3 className="mb-1 text-sm font-semibold tracking-wide text-charcoal-soft uppercase">
+          Needs attention
+        </h3>
+        <AttendanceSpotlight rows={spotlight} />
+        {teamHref && (
+          <p className="mt-3 text-sm">
+            <Link href={teamHref} className="font-medium text-evergreen hover:underline">
+              Open team attendance
+            </Link>
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
-function AttendanceTiles({ attendance }: { attendance: AttendanceCounts }) {
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <StatTile label="People" value={attendance.total} />
-      <StatTile label="Present" value={attendance.present} />
-      <StatTile label="Late" value={attendance.late} />
-      <StatTile label="Absent" value={attendance.absent} />
-    </div>
-  );
-}
+// Late/absent names for the story, from the same endpoint the team page uses.
+function useTodaySpotlight(enabled: boolean) {
+  const date = new Date().toLocaleDateString('en-CA');
+  const query = useQuery({
+    queryKey: ['attendance', 'team', date],
+    queryFn: () =>
+      apiFetch<{ timezone: string; items: TeamAttendanceRow[] }>(`/attendance${buildQuery({ date })}`),
+    enabled,
+  });
 
-function CountTiles({ summary }: { summary: DashboardSummary }) {
-  return (
-    <div className="grid grid-cols-3 gap-3">
-      <StatTile label="Open" value={summary.openTasks} />
-      <StatTile label="Overdue" value={summary.overdueTasks} tone="warning" />
-      <StatTile label="Done this week" value={summary.doneThisWeek} />
-    </div>
-  );
+  const spotlight = (query.data?.items ?? [])
+    .filter((row) => row.status === 'late' || row.status === 'absent')
+    .slice(0, 5)
+    .map((row) => ({
+      userId: row.userId,
+      userFullName: row.userFullName,
+      status: row.status as 'late' | 'absent',
+    }));
+
+  return spotlight;
 }
 
 function EmployeeDashboard({ summary }: { summary: DashboardSummary }) {
   return (
-    <div className="space-y-6">
-      <CountTiles summary={summary} />
+    <div className="space-y-5">
+      <Reveal>
+        <div className="grid grid-cols-3 gap-3">
+          <StatTile label="Open" value={summary.openTasks} />
+          <StatTile label="Overdue" value={summary.overdueTasks} tone="warning" />
+          <StatTile label="Done this week" value={summary.doneThisWeek} />
+        </div>
+      </Reveal>
       {summary.today && <CheckInCard today={summary.today} timezone={summary.timezone} />}
-      <OpenTaskList title="Open tasks" />
+      <Reveal>
+        <div className="rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
+          <OpenTaskList title="Open tasks" />
+        </div>
+      </Reveal>
     </div>
   );
 }
 
 function ManagerDashboard({ summary, userId }: { summary: DashboardSummary; userId: string }) {
   const team = summary.team;
+  const spotlight = useTodaySpotlight(team !== undefined);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {summary.today && <CheckInCard today={summary.today} timezone={summary.timezone} />}
-      <section className="space-y-3">
-        <h2 className="font-semibold">My tasks</h2>
-        <CountTiles summary={summary} />
-      </section>
-      <OpenTaskList title="My open tasks" assigneeId={userId} />
+
+      <Reveal>
+        <div className="grid grid-cols-3 gap-3">
+          <StatTile label="My open" value={summary.openTasks} />
+          <StatTile label="Overdue" value={summary.overdueTasks} tone="warning" />
+          <StatTile label="Done this week" value={summary.doneThisWeek} />
+        </div>
+      </Reveal>
 
       {team && (
-        <section aria-label="Team" className="space-y-4">
-          <h2 className="text-lg font-semibold">Team</h2>
-          <StatusTiles counts={team.tasksByStatus} />
-          <OverdueList items={team.overdueList} />
-          <div className="space-y-2">
-            <h3 className="font-semibold">Attendance today</h3>
-            <AttendanceTiles attendance={team.attendance} />
-          </div>
-        </section>
+        <>
+          <StoryChapter step="Chapter 1" title="How is the team doing today?" lede="Attendance across the people you manage.">
+            <AttendanceStory
+              attendance={team.attendance}
+              spotlight={spotlight}
+              teamHref="/team-attendance"
+            />
+          </StoryChapter>
+
+          <StoryChapter step="Chapter 2" title="Where is the work stuck?" lede="Team tasks by status, then the overdue list.">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <TaskBars counts={team.tasksByStatus} />
+              <OverdueList items={team.overdueList} />
+            </div>
+          </StoryChapter>
+        </>
       )}
+
+      <Reveal>
+        <div className="rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
+          <OpenTaskList title="My open tasks" assigneeId={userId} />
+        </div>
+      </Reveal>
     </div>
   );
 }
 
 function AdminDashboard({ summary }: { summary: DashboardSummary }) {
   const people = summary.peopleByRole;
+  const spotlight = useTodaySpotlight(summary.attendance !== undefined);
 
   return (
-    <div className="space-y-6">
-      <section className="space-y-3">
-        <h2 className="font-semibold">People</h2>
-        <div className="grid grid-cols-3 gap-3">
-          <StatTile label="Managers" value={people?.manager ?? 0} />
-          <StatTile label="Employees" value={people?.employee ?? 0} />
+    <div className="space-y-8">
+      <Reveal>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatTile label="Active people" value={summary.activePeople ?? 0} />
+          <StatTile label="Attendance rate" value={`${summary.todayAttendanceRate ?? 0}%`} />
+          <StatTile label="Open tasks" value={summary.openTasks} />
+          <StatTile label="Overdue" value={summary.overdueTasks} tone="warning" />
         </div>
-      </section>
+      </Reveal>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">Tasks</h2>
-        <CountTiles summary={summary} />
-        {summary.tasksByStatus && <StatusTiles counts={summary.tasksByStatus} />}
-      </section>
+      {summary.attendance && (
+        <StoryChapter
+          step="Chapter 1"
+          title="Who showed up today?"
+          lede={`${summary.activePeople ?? 0} active people · ${(people?.manager ?? 0) + (people?.employee ?? 0)} managers and employees.`}
+        >
+          <AttendanceStory
+            attendance={summary.attendance}
+            rate={summary.todayAttendanceRate ?? 0}
+            spotlight={spotlight}
+            teamHref="/team-attendance"
+          />
+        </StoryChapter>
+      )}
 
-      <OverdueList items={summary.overdueList ?? []} />
+      <StoryChapter step="Chapter 2" title="Where is the work stuck?" lede="Company tasks by status, then the overdue list.">
+        <div className="grid gap-6 lg:grid-cols-2">
+          {summary.tasksByStatus && <TaskBars counts={summary.tasksByStatus} />}
+          <OverdueList items={summary.overdueList ?? []} />
+        </div>
+      </StoryChapter>
 
-      <section className="space-y-3">
-        <h2 className="font-semibold">Attendance today</h2>
-        <StatTile label="Attendance rate" value={`${summary.todayAttendanceRate ?? 0}%`} />
-        {summary.attendance && <AttendanceTiles attendance={summary.attendance} />}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="font-semibold">Subscription and messages</h2>
+      <StoryChapter step="Chapter 3" title="Is the account healthy?" lede="Subscription and unread messages.">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatTile
             label="Subscription ends"
@@ -129,16 +248,16 @@ function AdminDashboard({ summary }: { summary: DashboardSummary }) {
           <StatTile label="Days left" value={summary.daysLeft ?? '—'} />
           <StatTile label="Unread messages" value={summary.unreadMessages ?? 0} />
         </div>
-        <p className="text-sm">
-          <Link href="/subscription" className="underline">
+        <p className="mt-4 text-sm">
+          <Link href="/subscription" className="font-medium text-evergreen hover:underline">
             View subscription
           </Link>{' '}
-          ·{' '}
-          <Link href="/messages" className="underline">
+          <span className="text-charcoal-soft">·</span>{' '}
+          <Link href="/messages" className="font-medium text-evergreen hover:underline">
             Messages
           </Link>
         </p>
-      </section>
+      </StoryChapter>
     </div>
   );
 }
@@ -151,21 +270,23 @@ function Dashboard() {
   });
 
   if (query.isLoading) {
-    return <p className="text-sm text-neutral-500">Loading…</p>;
+    return <p className="text-sm text-charcoal-soft">Loading…</p>;
   }
   if (query.error || !query.data || !user) {
     return (
-      <p role="alert" className="text-sm text-red-600">
+      <p role="alert" className="text-sm text-alert-deep">
         {errorMessage(query.error)}
       </p>
     );
   }
 
   const summary = query.data;
+  const story = summary.role === 'admin' || summary.role === 'manager';
 
   return (
-    <div className="max-w-5xl space-y-4">
-      <h1 className="text-xl font-semibold">Dashboard</h1>
+    <div className="mx-auto max-w-5xl space-y-4">
+      <h1 className="text-xl font-semibold text-charcoal">Dashboard</h1>
+      {story && <ScrollProgress />}
       {summary.role === 'admin' && <AdminDashboard summary={summary} />}
       {summary.role === 'manager' && <ManagerDashboard summary={summary} userId={user.id} />}
       {summary.role === 'employee' && <EmployeeDashboard summary={summary} />}

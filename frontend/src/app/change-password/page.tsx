@@ -11,7 +11,7 @@ import type { ChangePasswordRequest } from '@/lib/types';
 function Field({ id, label, autoComplete }: { id: string; label: string; autoComplete: string }) {
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium">
+      <label htmlFor={id} className="block text-sm font-medium text-charcoal">
         {label}
       </label>
       <input
@@ -20,7 +20,7 @@ function Field({ id, label, autoComplete }: { id: string; label: string; autoCom
         type="password"
         autoComplete={autoComplete}
         required
-        className="w-full rounded border px-3 py-2"
+        className="w-full rounded-xl border border-charcoal/15 px-3 py-2 outline-none focus:border-evergreen"
       />
     </div>
   );
@@ -66,11 +66,11 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center p-4">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4 rounded-lg border p-6">
-        <h1 className="text-xl font-semibold">Change your password</h1>
+    <main className="flex flex-1 items-center justify-center bg-mist/40 p-4">
+      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4 rounded-2xl border border-charcoal/10 bg-white p-6 shadow-[0_8px_24px_rgba(19,78,58,0.10)]">
+        <h1 className="text-xl font-semibold text-charcoal">Change your password</h1>
         {user?.mustChangePassword && (
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-charcoal-soft">
             Choose your own password before you continue.
           </p>
         )}
@@ -78,14 +78,14 @@ export default function ChangePasswordPage() {
         <Field id="newPassword" label="New password" autoComplete="new-password" />
         <Field id="confirmPassword" label="Confirm new password" autoComplete="new-password" />
         {error && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-alert-deep">
             {error}
           </p>
         )}
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded bg-blue-600 px-3 py-2 font-medium text-white disabled:opacity-60"
+          className="w-full rounded-xl bg-evergreen px-3 py-2.5 font-medium text-white transition-colors hover:bg-evergreen-dark disabled:opacity-60"
         >
           {pending ? 'Saving…' : 'Change password'}
         </button>

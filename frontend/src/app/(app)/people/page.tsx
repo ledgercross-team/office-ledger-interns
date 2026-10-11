@@ -39,15 +39,15 @@ function PeopleList() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">People</h1>
-        <Link href="/people/new" className="rounded bg-blue-600 px-3 py-1 text-sm text-white">
+        <h1 className="text-xl font-semibold text-charcoal">People</h1>
+        <Link href="/people/new" className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-evergreen-dark">
           Add person
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="flex flex-wrap items-end gap-4 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
         <div className="space-y-1">
-          <label htmlFor="search" className="block text-sm font-medium">
+          <label htmlFor="search" className="block text-sm font-medium text-charcoal">
             Search
           </label>
           <input
@@ -56,12 +56,12 @@ function PeopleList() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Name or email"
-            className="rounded border px-3 py-2"
+            className="rounded-xl border border-charcoal/15 px-3 py-2 outline-none placeholder:text-charcoal-soft focus:border-evergreen"
           />
         </div>
         {user?.role === 'admin' && (
           <div className="space-y-1">
-            <label htmlFor="role" className="block text-sm font-medium">
+            <label htmlFor="role" className="block text-sm font-medium text-charcoal">
               Role
             </label>
             <select
@@ -71,7 +71,7 @@ function PeopleList() {
                 setRole(event.target.value);
                 setPage(1);
               }}
-              className="rounded border bg-background px-3 py-2"
+              className="rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen"
             >
               <option value="">All</option>
               <option value="manager">Managers</option>
@@ -80,7 +80,7 @@ function PeopleList() {
           </div>
         )}
         <div className="space-y-1">
-          <label htmlFor="active" className="block text-sm font-medium">
+          <label htmlFor="active" className="block text-sm font-medium text-charcoal">
             Status
           </label>
           <select
@@ -90,7 +90,7 @@ function PeopleList() {
               setActive(event.target.value);
               setPage(1);
             }}
-            className="rounded border bg-background px-3 py-2"
+            className="rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen"
           >
             <option value="">All</option>
             <option value="true">Active</option>
@@ -99,39 +99,39 @@ function PeopleList() {
         </div>
       </div>
 
-      {query.isLoading && <p className="text-sm text-neutral-500">Loading…</p>}
+      {query.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
       {query.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-alert-deep">
           {errorMessage(query.error)}
         </p>
       )}
       {query.data && query.data.items.length === 0 && (
-        <p className="text-sm text-neutral-500">No people found.</p>
+        <p className="text-sm text-charcoal-soft">No people found.</p>
       )}
       {query.data && query.data.items.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b">
-                <th className="py-2 pr-4">Name</th>
-                <th className="py-2 pr-4">Email</th>
-                <th className="py-2 pr-4">Role</th>
-                <th className="py-2 pr-4">Job title</th>
-                <th className="py-2">Status</th>
+              <tr className="border-b border-charcoal/10 bg-offwhite text-charcoal-soft">
+                <th className="px-4 py-2.5 font-medium">Name</th>
+                <th className="px-4 py-2.5 font-medium">Email</th>
+                <th className="px-4 py-2.5 font-medium">Role</th>
+                <th className="px-4 py-2.5 font-medium">Job title</th>
+                <th className="px-4 py-2.5 font-medium">Status</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-charcoal/5">
               {query.data.items.map((person) => (
-                <tr key={person.id} className="border-b">
-                  <td className="py-2 pr-4">
-                    <Link href={`/people/${person.id}`} className="font-medium hover:underline">
+                <tr key={person.id} className="transition-colors hover:bg-mist/50">
+                  <td className="px-4 py-2.5">
+                    <Link href={`/people/${person.id}`} className="font-medium text-evergreen hover:underline">
                       {person.fullName}
                     </Link>
                   </td>
-                  <td className="py-2 pr-4">{person.email}</td>
-                  <td className="py-2 pr-4 capitalize">{person.role}</td>
-                  <td className="py-2 pr-4">{person.jobTitle ?? '—'}</td>
-                  <td className="py-2">{person.isActive ? 'Active' : 'Inactive'}</td>
+                  <td className="px-4 py-2.5 text-charcoal-soft">{person.email}</td>
+                  <td className="px-4 py-2.5 capitalize">{person.role}</td>
+                  <td className="px-4 py-2.5 text-charcoal-soft">{person.jobTitle ?? '—'}</td>
+                  <td className="px-4 py-2.5">{person.isActive ? 'Active' : 'Inactive'}</td>
                 </tr>
               ))}
             </tbody>

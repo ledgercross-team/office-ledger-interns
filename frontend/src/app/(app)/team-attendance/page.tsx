@@ -4,11 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AttendanceStatus } from '@/components/attendance-status';
 import { CorrectionDialog } from '@/components/correction-dialog';
+import { Reveal } from '@/components/reveal';
 import { RoleGate } from '@/components/role-gate';
+import { AttendanceBars, AttendanceSpotlight, RateDonut, StoryChapter } from '@/components/story';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { buildQuery, errorMessage, formatTime } from '@/lib/format';
-import type { TeamAttendanceRow } from '@/lib/types';
+import type { AttendanceCounts, TeamAttendanceRow } from '@/lib/types';
 
 function TeamAttendance() {
   const { user } = useAuth();
@@ -23,84 +25,119 @@ function TeamAttendance() {
   });
 
   const timezone = query.data?.timezone;
+  const items = query.data?.items ?? [];
+
+  const counts: AttendanceCounts = {
+    total: items.length,
+    present: items.filter((row) => row.status === 'present').length,
+    late: items.filter((row) => row.status === 'late').length,
+    absent: items.filter((row) => row.status === 'absent').length,
+  };
+  const rate = items.length === 0 ? 0 : Math.round(((counts.present + counts.late) / items.length) * 100);
+  const spotlight = items
+    .filter((row) => row.status === 'late' || row.status === 'absent')
+    .slice(0, 5)
+    .map((row) => ({ userId: row.userId, userFullName: row.userFullName, status: row.status as 'late' | 'absent' }));
 
   // Admins correct managers and employees; managers correct employees only.
   const canCorrect = (row: TeamAttendanceRow) =>
     row.record !== null && (user?.role === 'admin' || row.role === 'employee');
 
   return (
-    <div className="max-w-4xl space-y-4">
-      <h1 className="text-xl font-semibold">Team attendance</h1>
-
-      <div className="space-y-1">
-        <label htmlFor="date" className="block text-sm font-medium">
-          Date
-        </label>
-        <input
-          id="date"
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-          className="rounded border bg-background px-3 py-2"
-        />
+    <div className="mx-auto max-w-4xl space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h1 className="text-xl font-semibold text-charcoal">Team attendance</h1>
+        <div className="space-y-1">
+          <label htmlFor="date" className="block text-sm font-medium text-charcoal">
+            Date
+          </label>
+          <input
+            id="date"
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+            className="rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-charcoal outline-none focus:border-evergreen"
+          />
+        </div>
       </div>
 
-      {query.isLoading && <p className="text-sm text-neutral-500">Loading…</p>}
+      {query.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
       {query.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-alert-deep">
           {errorMessage(query.error)}
         </p>
       )}
-      {query.data && query.data.items.length === 0 && (
-        <p className="text-sm text-neutral-500">No people to show.</p>
+
+      {query.data && items.length > 0 && (
+        <StoryChapter step="The day at a glance" title={`${counts.present + counts.late} of ${counts.total} checked in`}>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="space-y-5">
+              <RateDonut rate={rate} label="of the team checked in (on time or late)." />
+              <AttendanceBars attendance={counts} />
+            </div>
+            <div>
+              <h3 className="mb-1 text-sm font-semibold tracking-wide text-charcoal-soft uppercase">
+                Needs attention
+              </h3>
+              <AttendanceSpotlight rows={spotlight} />
+            </div>
+          </div>
+        </StoryChapter>
       )}
-      {query.data && query.data.items.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="py-2 pr-4">Person</th>
-                <th className="py-2 pr-4">Role</th>
-                <th className="py-2 pr-4">Status</th>
-                <th className="py-2 pr-4">Check in</th>
-                <th className="py-2 pr-4">Check out</th>
-                <th className="py-2 pr-4">Note</th>
-                <th className="py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {query.data.items.map((row) => (
-                <tr key={row.userId} className="border-b">
-                  <td className="py-2 pr-4">{row.userFullName}</td>
-                  <td className="py-2 pr-4 capitalize">{row.role}</td>
-                  <td className="py-2 pr-4">
-                    <AttendanceStatus status={row.status} />
-                  </td>
-                  <td className="py-2 pr-4">
-                    {row.checkInAt ? formatTime(row.checkInAt, timezone) : '—'}
-                  </td>
-                  <td className="py-2 pr-4">
-                    {row.checkOutAt ? formatTime(row.checkOutAt, timezone) : '—'}
-                  </td>
-                  <td className="py-2 pr-4">{row.record?.note ?? ''}</td>
-                  <td className="py-2">
-                    {canCorrect(row) && (
-                      <button
-                        type="button"
-                        onClick={() => setEditing(row)}
-                        className="rounded border px-2 py-1 text-xs"
-                      >
-                        Correct
-                      </button>
-                    )}
-                  </td>
+
+      {query.data && items.length === 0 && !query.isLoading && (
+        <p className="text-sm text-charcoal-soft">No people to show.</p>
+      )}
+
+      {items.length > 0 && (
+        <Reveal>
+          <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-charcoal/10 bg-offwhite text-charcoal-soft">
+                  <th className="px-4 py-2.5 font-medium">Person</th>
+                  <th className="px-4 py-2.5 font-medium">Role</th>
+                  <th className="px-4 py-2.5 font-medium">Status</th>
+                  <th className="px-4 py-2.5 font-medium">Check in</th>
+                  <th className="px-4 py-2.5 font-medium">Check out</th>
+                  <th className="px-4 py-2.5 font-medium">Note</th>
+                  <th className="px-4 py-2.5" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-charcoal/5">
+                {items.map((row) => (
+                  <tr key={row.userId} className="transition-colors hover:bg-mist/50">
+                    <td className="px-4 py-2.5 font-medium text-charcoal">{row.userFullName}</td>
+                    <td className="px-4 py-2.5 capitalize text-charcoal-soft">{row.role}</td>
+                    <td className="px-4 py-2.5">
+                      <AttendanceStatus status={row.status} />
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {row.checkInAt ? formatTime(row.checkInAt, timezone) : '—'}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {row.checkOutAt ? formatTime(row.checkOutAt, timezone) : '—'}
+                    </td>
+                    <td className="max-w-48 truncate px-4 py-2.5 text-charcoal-soft">{row.record?.note ?? ''}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      {canCorrect(row) && (
+                        <button
+                          type="button"
+                          onClick={() => setEditing(row)}
+                          className="rounded-lg border border-charcoal/15 px-2.5 py-1 text-xs font-medium text-charcoal hover:bg-mist"
+                        >
+                          Correct
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Reveal>
       )}
-      {timezone && <p className="text-xs text-neutral-500">Times are in {timezone}.</p>}
+      {timezone && <p className="text-xs text-charcoal-soft">Times are in {timezone}.</p>}
 
       {editing?.record && timezone && (
         <CorrectionDialog

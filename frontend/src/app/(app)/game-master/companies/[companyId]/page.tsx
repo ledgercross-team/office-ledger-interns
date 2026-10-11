@@ -36,7 +36,7 @@ function Input({
         type={type}
         defaultValue={defaultValue}
         required={required}
-        className="w-full rounded border bg-background px-3 py-2"
+        className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
       />
     </div>
   );
@@ -119,11 +119,11 @@ function CompanyDetail() {
     notFound();
   }
   if (query.isLoading) {
-    return <p className="text-sm text-neutral-500">Loading…</p>;
+    return <p className="text-sm text-charcoal-soft">Loading…</p>;
   }
   if (query.error || !query.data) {
     return (
-      <p role="alert" className="text-sm text-red-600">
+      <p role="alert" className="text-sm text-alert-deep">
         {errorMessage(query.error)}
       </p>
     );
@@ -173,10 +173,10 @@ function CompanyDetail() {
     <div role="alertdialog" aria-label={title} className="space-y-2 text-sm">
       <p>{title}</p>
       <div className="flex gap-2">
-        <button type="button" onClick={onYes} className="rounded bg-red-600 px-3 py-1 text-white">
+        <button type="button" onClick={onYes} className="rounded-xl bg-alert px-3 py-1 text-white">
           {yes}
         </button>
-        <button type="button" onClick={() => setConfirming(null)} className="rounded border px-3 py-1">
+        <button type="button" onClick={() => setConfirming(null)} className="rounded-xl border border-charcoal/15 px-3 py-1">
           Cancel
         </button>
       </div>
@@ -192,7 +192,7 @@ function CompanyDetail() {
           </Link>
         </p>
         <h1 className="text-xl font-semibold">{company.name}</h1>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-charcoal-soft">
           {company.isActive ? 'Active' : 'Inactive'} · {company.timezone} · starts {company.workStartTime.slice(0, 5)}
           {' · '}
           <Link href={`/game-master/messages/${company.id}`} className="underline">
@@ -202,11 +202,11 @@ function CompanyDetail() {
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-alert-deep">
           {error}
         </p>
       )}
-      {saved && <p className="text-sm text-green-700">{saved}</p>}
+      {saved && <p className="text-sm text-evergreen">{saved}</p>}
       {temporaryPassword && <TemporaryPasswordPanel password={temporaryPassword} />}
 
       <form onSubmit={onSaveCompany} className="space-y-3 rounded-lg border p-4">
@@ -224,7 +224,7 @@ function CompanyDetail() {
         <button
           type="submit"
           disabled={updateCompany.isPending}
-          className="rounded bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-60"
+          className="rounded-xl bg-evergreen px-3 py-1 text-sm text-white disabled:opacity-60"
         >
           Save changes
         </button>
@@ -257,7 +257,7 @@ function CompanyDetail() {
                   setError(null);
                   setConfirming('deactivate');
                 }}
-                className="rounded border px-3 py-1"
+                className="rounded-xl border border-charcoal/15 px-3 py-1"
               >
                 Deactivate company
               </button>
@@ -265,7 +265,7 @@ function CompanyDetail() {
               <button
                 type="button"
                 onClick={() => updateCompany.mutate({ isActive: true })}
-                className="rounded border px-3 py-1"
+                className="rounded-xl border border-charcoal/15 px-3 py-1"
               >
                 Reactivate company
               </button>
@@ -278,7 +278,7 @@ function CompanyDetail() {
                   setTemporaryPassword(null);
                   setConfirming('reset');
                 }}
-                className="rounded border px-3 py-1"
+                className="rounded-xl border border-charcoal/15 px-3 py-1"
               >
                 Reset admin password
               </button>
@@ -289,18 +289,18 @@ function CompanyDetail() {
 
       <section className="space-y-3 rounded-lg border p-4">
         <h2 className="font-semibold">Subscriptions</h2>
-        {subscriptions.length === 0 && <p className="text-sm text-neutral-500">None yet.</p>}
+        {subscriptions.length === 0 && <p className="text-sm text-charcoal-soft">None yet.</p>}
         <ul className="space-y-3">
           {subscriptions.map((item) => {
             const state = subscriptionState(item, today);
             const cancelling = typeof confirming === 'object' && confirming?.cancel === item.id;
             return (
-              <li key={item.id} className="space-y-2 rounded border p-3 text-sm">
+              <li key={item.id} className="space-y-2 rounded-xl border border-charcoal/15 p-3 text-sm">
                 <p>
                   <span className="font-medium">{item.planName}</span> · {formatDate(item.startsOn)} to{' '}
                   {formatDate(item.endsOn)} · {state}
                 </p>
-                {item.notes && <p className="text-neutral-500">{item.notes}</p>}
+                {item.notes && <p className="text-charcoal-soft">{item.notes}</p>}
                 {!item.cancelledAt && (
                   <form
                     onSubmit={(event) => onExtend(event, item.id)}
@@ -316,16 +316,16 @@ function CompanyDetail() {
                         type="date"
                         defaultValue={item.endsOn}
                         required
-                        className="rounded border bg-background px-2 py-1"
+                        className="rounded-xl border border-charcoal/15 bg-white px-2 py-1"
                       />
                     </div>
-                    <button type="submit" className="rounded border px-3 py-1">
+                    <button type="submit" className="rounded-xl border border-charcoal/15 px-3 py-1">
                       Update end date
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirming({ cancel: item.id })}
-                      className="rounded border px-3 py-1"
+                      className="rounded-xl border border-charcoal/15 px-3 py-1"
                     >
                       Cancel subscription
                     </button>
@@ -353,7 +353,7 @@ function CompanyDetail() {
           <button
             type="submit"
             disabled={addSubscription.isPending}
-            className="rounded bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-60"
+            className="rounded-xl bg-evergreen px-3 py-1 text-sm text-white disabled:opacity-60"
           >
             Add subscription
           </button>

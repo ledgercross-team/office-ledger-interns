@@ -15,18 +15,18 @@ const EXPIRING_DAYS = 14;
 // Active, "Ends in ≤14 days", Expired or Inactive.
 export function companyState(company: Pick<GameMasterCompany, 'isActive' | 'daysLeft' | 'subscription'>): CompanyState {
   if (!company.isActive) {
-    return { key: 'inactive', label: 'Inactive', className: 'bg-gray-200 text-gray-800', priority: 2 };
+    return { key: 'inactive', label: 'Inactive', className: 'bg-charcoal/10 text-charcoal', priority: 2 };
   }
   if (!company.subscription || company.daysLeft === null || company.daysLeft < 0) {
-    return { key: 'expired', label: 'Expired', className: 'bg-red-100 text-red-800', priority: 0 };
+    return { key: 'expired', label: 'Expired', className: 'bg-alert-tint text-alert-deep', priority: 0 };
   }
   if (company.daysLeft <= EXPIRING_DAYS) {
     return {
       key: 'expiring',
       label: `Ends in ${company.daysLeft} ${company.daysLeft === 1 ? 'day' : 'days'}`,
-      className: 'bg-amber-100 text-amber-900',
+      className: 'bg-amber-tint text-amber-deep',
       priority: 1,
     };
   }
-  return { key: 'active', label: 'Active', className: 'bg-green-100 text-green-800', priority: 3 };
+  return { key: 'active', label: 'Active', className: 'bg-mist text-forest', priority: 3 };
 }

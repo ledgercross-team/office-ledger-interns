@@ -52,14 +52,14 @@ export function CorrectionDialog({ record, personName, timezone, onClose }: Corr
       aria-labelledby="correction-title"
       className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4"
     >
-      <form onSubmit={onSubmit} className="w-full max-w-md space-y-3 rounded-lg border bg-background p-4">
-        <h2 id="correction-title" className="font-semibold">
+      <form onSubmit={onSubmit} className="w-full max-w-md space-y-3 rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_8px_24px_rgba(19,78,58,0.12)]">
+        <h2 id="correction-title" className="font-semibold text-charcoal">
           Correct attendance: {personName}, {formatDate(record.workDate)}
         </h2>
-        <p className="text-sm text-neutral-500">Times are in the company timezone ({timezone}).</p>
+        <p className="text-sm text-charcoal-soft">Times are in the company timezone ({timezone}).</p>
 
         <div className="space-y-1">
-          <label htmlFor="checkInAt" className="block text-sm font-medium">
+          <label htmlFor="checkInAt" className="block text-sm font-medium text-charcoal">
             Check in
           </label>
           <input
@@ -68,11 +68,11 @@ export function CorrectionDialog({ record, personName, timezone, onClose }: Corr
             type="datetime-local"
             required
             defaultValue={toZonedInput(record.checkInAt, timezone)}
-            className="w-full rounded border bg-background px-3 py-2"
+            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen"
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="checkOutAt" className="block text-sm font-medium">
+          <label htmlFor="checkOutAt" className="block text-sm font-medium text-charcoal">
             Check out
           </label>
           <input
@@ -80,11 +80,11 @@ export function CorrectionDialog({ record, personName, timezone, onClose }: Corr
             name="checkOutAt"
             type="datetime-local"
             defaultValue={record.checkOutAt ? toZonedInput(record.checkOutAt, timezone) : ''}
-            className="w-full rounded border bg-background px-3 py-2"
+            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen"
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="note" className="block text-sm font-medium">
+          <label htmlFor="note" className="block text-sm font-medium text-charcoal">
             Note (required)
           </label>
           <textarea
@@ -94,23 +94,23 @@ export function CorrectionDialog({ record, personName, timezone, onClose }: Corr
             required
             maxLength={500}
             rows={3}
-            className="w-full rounded border px-3 py-2"
+            className="w-full rounded-xl border border-charcoal/15 px-3 py-2 outline-none focus:border-evergreen"
           />
         </div>
 
         {error && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-alert-deep">
             {error}
           </p>
         )}
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded border px-3 py-1 text-sm">
+          <button type="button" onClick={onClose} className="rounded-xl border border-charcoal/15 px-4 py-2 text-sm font-medium hover:bg-mist">
             Close
           </button>
           <button
             type="submit"
             disabled={save.isPending || note.trim() === ''}
-            className="rounded bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-60"
+            className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-evergreen-dark disabled:opacity-60"
           >
             {save.isPending ? 'Saving…' : 'Save correction'}
           </button>

@@ -41,17 +41,17 @@ function TaskList() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">Tasks</h1>
+        <h1 className="text-xl font-semibold text-charcoal">Tasks</h1>
         {canCreate && (
-          <Link href="/tasks/new" className="rounded bg-blue-600 px-3 py-1 text-sm text-white">
+          <Link href="/tasks/new" className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-evergreen-dark">
             New task
           </Link>
         )}
       </div>
 
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="flex flex-wrap items-end gap-4 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
         <div className="space-y-1">
-          <label htmlFor="status" className="block text-sm font-medium">
+          <label htmlFor="status" className="block text-sm font-medium text-charcoal">
             Status
           </label>
           <select
@@ -61,7 +61,7 @@ function TaskList() {
               setStatus(event.target.value);
               setPage(1);
             }}
-            className="rounded border bg-background px-3 py-2"
+            className="rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen"
           >
             <option value="">All</option>
             {STATUS_OPTIONS.map((option) => (
@@ -84,14 +84,14 @@ function TaskList() {
         </label>
       </div>
 
-      {query.isLoading && <p className="text-sm text-neutral-500">Loading…</p>}
+      {query.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
       {query.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-alert-deep">
           {errorMessage(query.error)}
         </p>
       )}
       {query.data && query.data.items.length === 0 && (
-        <p className="text-sm text-neutral-500">No tasks found.</p>
+        <p className="text-sm text-charcoal-soft">No tasks found.</p>
       )}
       <div className="space-y-3">
         {query.data?.items.map((task) => <TaskCard key={task.id} task={task} />)}

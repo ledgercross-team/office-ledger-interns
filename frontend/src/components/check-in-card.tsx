@@ -2,6 +2,8 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { HoldButton } from '@/components/hold-button';
+import { Reveal } from '@/components/reveal';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, formatDate, formatTime } from '@/lib/format';
 import type { DashboardToday } from '@/lib/types';
@@ -29,47 +31,48 @@ export function CheckInCard({ today, timezone }: { today: DashboardToday; timezo
   const checkedOut = today.checkOutAt !== null;
 
   return (
-    <section aria-label="Today" className="space-y-2 rounded-lg border p-4">
-      <h2 className="font-semibold">Today · {formatDate(today.workDate)}</h2>
+    <Reveal>
+      <section
+        aria-label="Today"
+        className="space-y-3 rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_1px_2px_rgba(28,43,37,0.06)]"
+      >
+        <h2 className="font-semibold text-charcoal">Today · {formatDate(today.workDate)}</h2>
 
-      <p className="text-sm">
-        {!checkedIn && 'You have not checked in yet.'}
-        {checkedIn && today.checkInAt && (
-          <>
-            Checked in at {formatTime(today.checkInAt, timezone)}
-            {today.status && today.status !== 'absent' && ` (${STATUS_TEXT[today.status]})`}.
-          </>
-        )}{' '}
-        {checkedOut && today.checkOutAt && `Checked out at ${formatTime(today.checkOutAt, timezone)}.`}
-      </p>
-
-      {error && (
-        <p role="alert" className="text-sm text-red-600">
-          {error}
+        <p className="text-sm text-charcoal-soft">
+          {!checkedIn && 'You have not checked in yet.'}
+          {checkedIn && today.checkInAt && (
+            <>
+              Checked in at {formatTime(today.checkInAt, timezone)}
+              {today.status && today.status !== 'absent' && ` (${STATUS_TEXT[today.status]})`}.
+            </>
+          )}{' '}
+          {checkedOut && today.checkOutAt && `Checked out at ${formatTime(today.checkOutAt, timezone)}.`}
         </p>
-      )}
 
-      {!checkedIn && (
-        <button
-          type="button"
-          disabled={punch.isPending}
-          onClick={() => punch.mutate('check-in')}
-          className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-60"
-        >
-          Check in
-        </button>
-      )}
-      {checkedIn && !checkedOut && (
-        <button
-          type="button"
-          disabled={punch.isPending}
-          onClick={() => punch.mutate('check-out')}
-          className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-60"
-        >
-          Check out
-        </button>
-      )}
-      {checkedIn && checkedOut && <p className="text-sm text-neutral-500">Done for today.</p>}
-    </section>
+        {error && (
+          <p role="alert" className="text-sm text-alert-deep">
+            {error}
+          </p>
+        )}
+
+        {!checkedIn && (
+          <HoldButton
+            label="Hold to check in"
+            holdingLabel="Keep holding…"
+            busy={punch.isPending}
+            onHold={() => punch.mutate('check-in')}
+          />
+        )}
+        {checkedIn && !checkedOut && (
+          <HoldButton
+            label="Hold to check out"
+            holdingLabel="Keep holding…"
+            busy={punch.isPending}
+            onHold={() => punch.mutate('check-out')}
+          />
+        )}
+        {checkedIn && checkedOut && <p className="text-sm text-charcoal-soft">Done for today.</p>}
+      </section>
+    </Reveal>
   );
 }

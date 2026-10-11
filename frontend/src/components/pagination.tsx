@@ -18,18 +18,18 @@ export function Pagination({ page, pageSize, total, onPage }: PaginationProps) {
         type="button"
         disabled={page <= 1}
         onClick={() => onPage(page - 1)}
-        className="rounded border px-3 py-1 disabled:opacity-50"
+        className="rounded-xl border border-charcoal/15 bg-white px-3 py-1.5 font-medium hover:bg-mist disabled:opacity-50"
       >
         Previous
       </button>
-      <span>
+      <span className="text-charcoal-soft">
         Page {page} of {pages}
       </span>
       <button
         type="button"
         disabled={page >= pages}
         onClick={() => onPage(page + 1)}
-        className="rounded border px-3 py-1 disabled:opacity-50"
+        className="rounded-xl border border-charcoal/15 bg-white px-3 py-1.5 font-medium hover:bg-mist disabled:opacity-50"
       >
         Next
       </button>

@@ -6,11 +6,11 @@ import { TaskActionBar } from './task-action-bar';
 
 export function TaskCard({ task, linkTitle = true }: { task: Task; linkTitle?: boolean }) {
   return (
-    <article className="space-y-3 rounded-lg border p-4">
+    <article className="space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="font-semibold">
+        <h2 className="font-semibold text-charcoal">
           {linkTitle ? (
-            <Link href={`/tasks/${task.id}`} className="hover:underline">
+            <Link href={`/tasks/${task.id}`} className="text-evergreen hover:underline">
               {task.title}
             </Link>
           ) : (
@@ -19,7 +19,7 @@ export function TaskCard({ task, linkTitle = true }: { task: Task; linkTitle?: b
         </h2>
         <div className="flex items-center gap-2">
           {task.overdue && (
-            <span className="rounded bg-red-600 px-2 py-0.5 text-xs font-medium text-white">
+            <span className="rounded-full bg-alert px-2.5 py-0.5 text-xs font-medium text-white">
               Overdue
             </span>
           )}
@@ -28,15 +28,15 @@ export function TaskCard({ task, linkTitle = true }: { task: Task; linkTitle?: b
       </div>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
         <div>
-          <dt className="text-neutral-500">Assignee</dt>
+          <dt className="text-charcoal-soft">Assignee</dt>
           <dd>{task.assigneeName ?? '—'}</dd>
         </div>
         <div>
-          <dt className="text-neutral-500">Deadline</dt>
+          <dt className="text-charcoal-soft">Deadline</dt>
           <dd>{formatDateTime(task.deadline)}</dd>
         </div>
         <div>
-          <dt className="text-neutral-500">Priority</dt>
+          <dt className="text-charcoal-soft">Priority</dt>
           <dd className="capitalize">{task.priority}</dd>
         </div>
       </dl>

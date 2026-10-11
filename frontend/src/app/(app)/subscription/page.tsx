@@ -21,11 +21,11 @@ function SubscriptionView() {
   });
 
   if (query.isLoading) {
-    return <p className="text-sm text-neutral-500">Loading…</p>;
+    return <p className="text-sm text-charcoal-soft">Loading…</p>;
   }
   if (query.error || !query.data) {
     return (
-      <p role="alert" className="text-sm text-red-600">
+      <p role="alert" className="text-sm text-alert-deep">
         {errorMessage(query.error)}
       </p>
     );
@@ -38,7 +38,7 @@ function SubscriptionView() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <h1 className="text-xl font-semibold">Subscription</h1>
+      <h1 className="text-xl font-semibold text-charcoal">Subscription</h1>
 
       {current ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -48,35 +48,35 @@ function SubscriptionView() {
           <StatTile label="Days left" value={ended ? 'Ended' : (daysLeft ?? '—')} />
         </div>
       ) : (
-        <p role="status" className="rounded border border-amber-400 bg-amber-50 p-3 text-sm text-amber-950">
+        <p role="status" className="rounded-xl border border-brand-amber/40 bg-amber-tint p-3 text-sm text-amber-deep">
           You have no active subscription. Message the game master to renew.
         </p>
       )}
 
       {ended && current && (
-        <p role="status" className="rounded border border-amber-400 bg-amber-50 p-3 text-sm text-amber-950">
+        <p role="status" className="rounded-xl border border-brand-amber/40 bg-amber-tint p-3 text-sm text-amber-deep">
           Your subscription ended on {formatDate(current.endsOn)}. Message the game master to renew.
         </p>
       )}
 
-      <section className="space-y-2">
-        <h2 className="font-semibold">History</h2>
+      <section className="space-y-3 rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
+        <h2 className="font-semibold text-charcoal">History</h2>
         {items.length === 0 ? (
-          <p className="text-sm text-neutral-500">No subscriptions yet.</p>
+          <p className="text-sm text-charcoal-soft">No subscriptions yet.</p>
         ) : (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b">
-                <th className="py-2 pr-4">Plan</th>
-                <th className="py-2 pr-4">Starts</th>
-                <th className="py-2 pr-4">Ends</th>
-                <th className="py-2">State</th>
+              <tr className="border-b border-charcoal/10 text-charcoal-soft">
+                <th className="py-2 pr-4 font-medium">Plan</th>
+                <th className="py-2 pr-4 font-medium">Starts</th>
+                <th className="py-2 pr-4 font-medium">Ends</th>
+                <th className="py-2 font-medium">State</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-charcoal/5">
               {items.map((item) => (
-                <tr key={item.id} className="border-b">
-                  <td className="py-2 pr-4">{item.planName}</td>
+                <tr key={item.id} className="transition-colors hover:bg-mist/50">
+                  <td className="py-2 pr-4 font-medium text-charcoal">{item.planName}</td>
                   <td className="py-2 pr-4">{formatDate(item.startsOn)}</td>
                   <td className="py-2 pr-4">{formatDate(item.endsOn)}</td>
                   <td className="py-2">

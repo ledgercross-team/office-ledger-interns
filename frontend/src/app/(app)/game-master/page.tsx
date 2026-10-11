@@ -26,67 +26,75 @@ function Companies() {
   return (
     <div className="max-w-5xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">Companies</h1>
+        <h1 className="text-xl font-semibold text-charcoal">Companies</h1>
         <Link
           href="/game-master/companies/new"
-          className="rounded bg-blue-600 px-3 py-1 text-sm text-white"
+          className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-evergreen-dark"
         >
           New company
         </Link>
       </div>
 
-      {query.isLoading && <p className="text-sm text-neutral-500">Loading…</p>}
+      {query.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
       {query.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-alert-deep">
           {errorMessage(query.error)}
         </p>
       )}
       {query.data && rows.length === 0 && (
-        <p className="text-sm text-neutral-500">No companies yet.</p>
+        <p className="text-sm text-charcoal-soft">No companies yet.</p>
       )}
       {rows.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b">
-                <th className="py-2 pr-4">Company</th>
-                <th className="py-2 pr-4">Admin</th>
-                <th className="py-2 pr-4">State</th>
-                <th className="py-2 pr-4">Ends</th>
-                <th className="py-2 pr-4">Unread</th>
-                <th className="py-2" />
+              <tr className="border-b border-charcoal/10 bg-offwhite text-charcoal-soft">
+                <th className="px-4 py-2.5 font-medium">Company</th>
+                <th className="px-4 py-2.5 font-medium">Admin</th>
+                <th className="px-4 py-2.5 font-medium">State</th>
+                <th className="px-4 py-2.5 font-medium">Ends</th>
+                <th className="px-4 py-2.5 font-medium">Unread</th>
+                <th className="px-4 py-2.5" />
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-charcoal/5">
               {rows.map(({ company, state }) => (
-                <tr key={company.id} className="border-b">
-                  <td className="py-2 pr-4">
+                <tr key={company.id} className="transition-colors hover:bg-mist/50">
+                  <td className="px-4 py-2.5">
                     <Link
                       href={`/game-master/companies/${company.id}`}
-                      className="font-medium hover:underline"
+                      className="font-medium text-evergreen hover:underline"
                     >
                       {company.name}
                     </Link>
                   </td>
-                  <td className="py-2 pr-4">
+                  <td className="px-4 py-2.5">
                     {company.adminName ?? '—'}
                     {company.adminEmail && (
-                      <span className="block text-xs text-neutral-500">{company.adminEmail}</span>
+                      <span className="block text-xs text-charcoal-soft">{company.adminEmail}</span>
                     )}
                   </td>
-                  <td className="py-2 pr-4">
-                    <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${state.className}`}>
+                  <td className="px-4 py-2.5">
+                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${state.className}`}>
                       {state.label}
                     </span>
                   </td>
-                  <td className="py-2 pr-4">
+                  <td className="px-4 py-2.5">
                     {company.subscription ? formatDate(company.subscription.endsOn) : '—'}
                   </td>
-                  <td className="py-2 pr-4">{company.unreadCount}</td>
-                  <td className="py-2">
+                  <td className="px-4 py-2.5">
+                    {company.unreadCount > 0 ? (
+                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-alert px-1.5 text-[11px] font-semibold text-white">
+                        {company.unreadCount}
+                      </span>
+                    ) : (
+                      <span className="text-charcoal-soft">0</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
                     <Link
                       href={`/game-master/messages/${company.id}`}
-                      className="rounded border px-2 py-1 text-xs"
+                      className="rounded-lg border border-charcoal/15 px-2.5 py-1 text-xs font-medium text-charcoal hover:bg-mist"
                     >
                       Messages
                     </Link>

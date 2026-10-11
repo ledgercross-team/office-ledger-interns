@@ -20,15 +20,15 @@ export function OpenTaskList({ assigneeId, title }: { assigneeId?: string; title
 
   return (
     <section aria-label={title} className="space-y-3">
-      <h2 className="font-semibold">{title}</h2>
-      {query.isLoading && <p className="text-sm text-neutral-500">Loading…</p>}
+      <h2 className="font-semibold text-charcoal">{title}</h2>
+      {query.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
       {query.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-alert-deep">
           {errorMessage(query.error)}
         </p>
       )}
       {query.data && tasks.length === 0 && (
-        <p className="text-sm text-neutral-500">No tasks assigned to you.</p>
+        <p className="text-sm text-charcoal-soft">No tasks assigned to you.</p>
       )}
       {tasks.map((task) => (
         <TaskCard key={task.id} task={task} />

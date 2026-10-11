@@ -51,11 +51,11 @@ function PersonDetail() {
     notFound();
   }
   if (query.isLoading) {
-    return <p className="text-sm text-neutral-500">Loading…</p>;
+    return <p className="text-sm text-charcoal-soft">Loading…</p>;
   }
   if (query.error || !query.data) {
     return (
-      <p role="alert" className="text-sm text-red-600">
+      <p role="alert" className="text-sm text-alert-deep">
         {errorMessage(query.error)}
       </p>
     );
@@ -82,7 +82,7 @@ function PersonDetail() {
     <div className="max-w-xl space-y-6">
       <div>
         <h1 className="text-xl font-semibold">{person.fullName}</h1>
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-charcoal-soft">
           {person.email} · <span className="capitalize">{person.role}</span> ·{' '}
           {person.isActive ? 'Active' : 'Inactive'}
           {person.lastLoginAt && ` · last login ${formatDateTime(person.lastLoginAt)}`}
@@ -103,7 +103,7 @@ function PersonDetail() {
             defaultValue={person.fullName}
             required
             maxLength={120}
-            className="w-full rounded border px-3 py-2"
+            className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
           />
         </div>
         <div className="space-y-1">
@@ -115,14 +115,14 @@ function PersonDetail() {
             name="jobTitle"
             defaultValue={person.jobTitle ?? ''}
             maxLength={120}
-            className="w-full rounded border px-3 py-2"
+            className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
           />
         </div>
-        {saved && <p className="text-sm text-green-700">Saved.</p>}
+        {saved && <p className="text-sm text-evergreen">Saved.</p>}
         <button
           type="submit"
           disabled={update.isPending}
-          className="rounded bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-60"
+          className="rounded-xl bg-evergreen px-3 py-1 text-sm text-white disabled:opacity-60"
         >
           Save changes
         </button>
@@ -141,14 +141,14 @@ function PersonDetail() {
                 type="button"
                 disabled={update.isPending}
                 onClick={() => update.mutate({ isActive: false })}
-                className="rounded bg-red-600 px-3 py-1 text-white disabled:opacity-60"
+                className="rounded-xl bg-alert px-3 py-1 text-white disabled:opacity-60"
               >
                 Yes, deactivate
               </button>
               <button
                 type="button"
                 onClick={() => setConfirming(null)}
-                className="rounded border px-3 py-1"
+                className="rounded-xl border border-charcoal/15 px-3 py-1"
               >
                 Cancel
               </button>
@@ -164,14 +164,14 @@ function PersonDetail() {
                 type="button"
                 disabled={reset.isPending}
                 onClick={() => reset.mutate()}
-                className="rounded bg-red-600 px-3 py-1 text-white disabled:opacity-60"
+                className="rounded-xl bg-alert px-3 py-1 text-white disabled:opacity-60"
               >
                 Yes, reset password
               </button>
               <button
                 type="button"
                 onClick={() => setConfirming(null)}
-                className="rounded border px-3 py-1"
+                className="rounded-xl border border-charcoal/15 px-3 py-1"
               >
                 Cancel
               </button>
@@ -186,7 +186,7 @@ function PersonDetail() {
                   setError(null);
                   setConfirming('deactivate');
                 }}
-                className="rounded border px-3 py-1"
+                className="rounded-xl border border-charcoal/15 px-3 py-1"
               >
                 Deactivate
               </button>
@@ -195,7 +195,7 @@ function PersonDetail() {
                 type="button"
                 disabled={update.isPending}
                 onClick={() => update.mutate({ isActive: true })}
-                className="rounded border px-3 py-1"
+                className="rounded-xl border border-charcoal/15 px-3 py-1"
               >
                 Reactivate
               </button>
@@ -207,7 +207,7 @@ function PersonDetail() {
                 setTemporaryPassword(null);
                 setConfirming('reset');
               }}
-              className="rounded border px-3 py-1"
+              className="rounded-xl border border-charcoal/15 px-3 py-1"
             >
               Reset password
             </button>
@@ -215,7 +215,7 @@ function PersonDetail() {
         )}
 
         {error && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-alert-deep">
             {error}
           </p>
         )}

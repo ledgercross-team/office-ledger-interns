@@ -52,11 +52,11 @@ function NewPersonForm() {
           <button
             type="button"
             onClick={() => setCreated(null)}
-            className="rounded border px-3 py-1"
+            className="rounded-xl border border-charcoal/15 px-3 py-1"
           >
             Add another
           </button>
-          <Link href="/people" className="rounded border px-3 py-1">
+          <Link href="/people" className="rounded-xl border border-charcoal/15 px-3 py-1">
             Back to people
           </Link>
         </div>
@@ -80,7 +80,7 @@ function NewPersonForm() {
           name="fullName"
           required
           maxLength={120}
-          className="w-full rounded border px-3 py-2"
+          className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
         />
       </div>
       <div className="space-y-1">
@@ -93,7 +93,7 @@ function NewPersonForm() {
           type="email"
           required
           maxLength={254}
-          className="w-full rounded border px-3 py-2"
+          className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
         />
       </div>
       <div className="space-y-1">
@@ -104,7 +104,7 @@ function NewPersonForm() {
           id="role"
           name="role"
           defaultValue="employee"
-          className="w-full rounded border bg-background px-3 py-2"
+          className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
         >
           <option value="employee">Employee</option>
           {canAddManagers && <option value="manager">Manager</option>}
@@ -118,19 +118,19 @@ function NewPersonForm() {
           id="jobTitle"
           name="jobTitle"
           maxLength={120}
-          className="w-full rounded border px-3 py-2"
+          className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
         />
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-alert-deep">
           {error}
         </p>
       )}
       <button
         type="submit"
         disabled={create.isPending}
-        className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-60"
+        className="rounded-xl bg-evergreen px-4 py-2 text-white disabled:opacity-60"
       >
         {create.isPending ? 'Adding…' : 'Add person'}
       </button>

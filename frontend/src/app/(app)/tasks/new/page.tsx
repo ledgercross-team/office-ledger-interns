@@ -64,7 +64,7 @@ function NewTaskForm() {
           name="title"
           required
           maxLength={200}
-          className="w-full rounded border px-3 py-2"
+          className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
         />
       </div>
 
@@ -77,7 +77,7 @@ function NewTaskForm() {
           name="description"
           rows={4}
           maxLength={5000}
-          className="w-full rounded border px-3 py-2"
+          className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
         />
       </div>
 
@@ -90,7 +90,7 @@ function NewTaskForm() {
             id="priority"
             name="priority"
             defaultValue="medium"
-            className="w-full rounded border bg-background px-3 py-2"
+            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
           >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
@@ -106,7 +106,7 @@ function NewTaskForm() {
             name="deadline"
             type="datetime-local"
             required
-            className="w-full rounded border bg-background px-3 py-2"
+            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
           />
         </div>
       </div>
@@ -120,7 +120,7 @@ function NewTaskForm() {
           name="assigneeId"
           required
           defaultValue=""
-          className="w-full rounded border bg-background px-3 py-2"
+          className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
         >
           <option value="" disabled>
             {people.isLoading ? 'Loading…' : 'Select a person'}
@@ -134,14 +134,14 @@ function NewTaskForm() {
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-alert-deep">
           {error}
         </p>
       )}
       <button
         type="submit"
         disabled={create.isPending}
-        className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-60"
+        className="rounded-xl bg-evergreen px-4 py-2 text-white disabled:opacity-60"
       >
         {create.isPending ? 'Creating…' : 'Create task'}
       </button>

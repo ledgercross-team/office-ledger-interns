@@ -13,11 +13,11 @@ export function RoleGate({ allow, children }: RoleGateProps) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return <p className="p-4 text-sm text-neutral-500">Loading…</p>;
+    return <p className="p-4 text-sm text-charcoal-soft">Loading…</p>;
   }
 
   if (!user || !allow.includes(user.role)) {
-    return <p className="p-4 text-sm text-neutral-500">You don&apos;t have access to this page</p>;
+    return <p className="p-4 text-sm text-charcoal-soft">You don&apos;t have access to this page</p>;
   }
 
   return <>{children}</>;

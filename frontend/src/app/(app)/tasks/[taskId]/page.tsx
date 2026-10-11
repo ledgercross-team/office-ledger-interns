@@ -67,7 +67,7 @@ function EditForm({ task }: { task: Task }) {
           defaultValue={task.title}
           required
           maxLength={200}
-          className="w-full rounded border px-3 py-2"
+          className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
         />
       </div>
       <div className="space-y-1">
@@ -80,7 +80,7 @@ function EditForm({ task }: { task: Task }) {
           defaultValue={task.description ?? ''}
           rows={3}
           maxLength={5000}
-          className="w-full rounded border px-3 py-2"
+          className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
         />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -92,7 +92,7 @@ function EditForm({ task }: { task: Task }) {
             id="edit-priority"
             name="priority"
             defaultValue={task.priority}
-            className="w-full rounded border bg-background px-3 py-2"
+            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
           >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
@@ -109,20 +109,20 @@ function EditForm({ task }: { task: Task }) {
             type="datetime-local"
             defaultValue={toLocalInput(task.deadline)}
             required
-            className="w-full rounded border bg-background px-3 py-2"
+            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
           />
         </div>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-alert-deep">
           {error}
         </p>
       )}
-      {saved && <p className="text-sm text-green-700">Saved.</p>}
+      {saved && <p className="text-sm text-evergreen">Saved.</p>}
       <button
         type="submit"
         disabled={save.isPending}
-        className="rounded bg-blue-600 px-3 py-1 text-sm text-white disabled:opacity-60"
+        className="rounded-xl bg-evergreen px-3 py-1 text-sm text-white disabled:opacity-60"
       >
         {save.isPending ? 'Saving…' : 'Save changes'}
       </button>
@@ -139,19 +139,19 @@ function Timeline({ taskId }: { taskId: string }) {
   return (
     <section aria-label="Activity" className="space-y-2">
       <h2 className="font-semibold">Activity</h2>
-      {activity.isLoading && <p className="text-sm text-neutral-500">Loading…</p>}
+      {activity.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
       {activity.data?.items.length === 0 && (
-        <p className="text-sm text-neutral-500">No activity yet.</p>
+        <p className="text-sm text-charcoal-soft">No activity yet.</p>
       )}
       <ol className="space-y-2">
         {activity.data?.items.map((entry) => (
-          <li key={entry.id} className="rounded border p-3 text-sm">
+          <li key={entry.id} className="rounded-xl border border-charcoal/15 p-3 text-sm">
             <p>
               <span className="font-medium">{entry.actorName ?? 'Someone'}</span>{' '}
               {entry.type === 'status_change'
                 ? `changed the status from ${STATUS_LABELS[entry.fromStatus ?? ''] ?? '—'} to ${STATUS_LABELS[entry.toStatus ?? ''] ?? '—'}`
                 : 'commented'}
-              <span className="text-neutral-500"> · {formatDateTime(entry.createdAt)}</span>
+              <span className="text-charcoal-soft"> · {formatDateTime(entry.createdAt)}</span>
             </p>
             {entry.comment && <p className="mt-1 whitespace-pre-wrap">{entry.comment}</p>}
           </li>
@@ -172,11 +172,11 @@ function TaskDetail() {
     notFound();
   }
   if (query.isLoading) {
-    return <p className="text-sm text-neutral-500">Loading…</p>;
+    return <p className="text-sm text-charcoal-soft">Loading…</p>;
   }
   if (query.error || !query.data) {
     return (
-      <p role="alert" className="text-sm text-red-600">
+      <p role="alert" className="text-sm text-alert-deep">
         {errorMessage(query.error)}
       </p>
     );
