@@ -1,6 +1,10 @@
 import { ServiceUnavailableException } from '@nestjs/common';
-import type { ThrottlerStorage, ThrottlerStorageRecord } from '@nestjs/throttler';
+import type { ThrottlerStorage } from '@nestjs/throttler';
 import Redis from 'ioredis';
+
+// `ThrottlerStorageRecord` is not re-exported from the package root in
+// @nestjs/throttler v6, so derive it from the interface's return type.
+type ThrottlerStorageRecord = Awaited<ReturnType<ThrottlerStorage['increment']>>;
 
 const THROTTLE_SCRIPT = `
 local count = redis.call('INCR', KEYS[1])

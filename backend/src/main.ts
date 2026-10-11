@@ -5,23 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-
-function parseTrustProxy(value: string): boolean | number {
-  if (value === 'true') {
-    return true;
-  }
-
-  if (value === 'false' || value === '') {
-    return false;
-  }
-
-  const hops = Number(value);
-  if (Number.isSafeInteger(hops) && hops >= 0) {
-    return hops;
-  }
-
-  throw new Error('TRUST_PROXY must be true, false, or a non-negative integer');
-}
+import { isEnabled } from './common/utils/env';
 
 function positiveInteger(value: string | undefined, fallback: number): number {
   const parsed = value === undefined ? fallback : Number(value);
@@ -44,14 +28,12 @@ async function bootstrap() {
     throw new Error('FRONTEND_URL cannot contain * when credentials are enabled');
   }
 
-  if (
-    config.get<string>('NODE_ENV') === 'production' &&
-    config.get<string>('COOKIE_SECURE') !== 'true'
-  ) {
+  if (config.get<string>('NODE_ENV') === 'production' && !isEnabled(config.get('COOKIE_SECURE'))) {
     throw new Error('COOKIE_SECURE must be true in production');
   }
 
-  httpApp.set('trust proxy', parseTrustProxy(config.get<string>('TRUST_PROXY') ?? 'false'));
+  // Behind exactly one reverse proxy, so req.ip is the client's IP.
+  httpApp.set('trust proxy', isEnabled(config.get('TRUST_PROXY')) ? 1 : false);
   httpApp.use(express.json({ limit: '1mb' }));
   httpApp.use(
     express.urlencoded({
@@ -73,6 +55,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  app.setGlobalPrefix('api/v1');
   app.enableShutdownHooks();
 
   await app.listen(positiveInteger(config.get<string>('PORT'), 4000));

@@ -101,8 +101,14 @@ interface and the existing `ioredis` dependency instead.
 
 The HTTP bootstrap also enables Helmet, an explicit credentialed CORS allowlist from
 `FRONTEND_URL`, bounded JSON/form bodies, strict validation-pipe behavior, cookie parsing, and
-configurable proxy trust. Set `TRUST_PROXY` to a specific proxy hop count in production; do not
-use `true` unless every upstream proxy is trusted.
+configurable proxy trust. `TRUST_PROXY=true` trusts exactly one proxy hop; set it only when the
+API sits behind a reverse proxy you control.
+
+## Production
+
+See [docs/production.md](docs/production.md) for build and start commands, required
+environment, migrations on deploy, creating the first game master, and the pre-launch
+security checklist.
 
 ## Conventions
 

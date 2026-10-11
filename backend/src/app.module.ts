@@ -1,11 +1,23 @@
-import { Module } from '@nestjs/common';
+import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { seconds, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { seconds, ThrottlerModule } from '@nestjs/throttler';
+import { AuthModule } from './auth/auth.module';
+import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
+import { OriginCheckMiddleware } from './common/middleware/origin-check.middleware';
+import { validateEnvironment } from './config/env.validation';
 import { DbModule } from './db/db.module';
+import { AccountStateGuard } from './auth/guards/account-state.guard';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { RolesGuard } from './auth/guards/roles.guard';
+import { AttendanceModule } from './modules/attendance/attendance.module';
+import { CompanyModule } from './modules/company/company.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { GameMasterModule } from './modules/game-master/game-master.module';
 import { HealthModule } from './modules/health/health.module';
+import { MessagesModule } from './modules/messages/messages.module';
+import { TasksModule } from './modules/tasks/tasks.module';
+import { UsersModule } from './modules/users/users.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { RedisService } from './modules/redis/redis.service';
 import { RedisThrottlerStorage } from './modules/redis/redis-throttler.storage';
@@ -23,8 +35,20 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env.local', '.env'] }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env.local', '.env'],
+      validate: validateEnvironment,
+    }),
     DbModule,
+    AuthModule,
+    CompanyModule,
+    GameMasterModule,
+    UsersModule,
+    MessagesModule,
+    TasksModule,
+    DashboardModule,
+    AttendanceModule,
     HealthModule,
     RedisModule,
     ThrottlerModule.forRootAsync({
@@ -46,6 +70,12 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
             },
             {
               name: 'auth',
+              // Only /auth/* routes count against the stricter auth limit.
+              skipIf: (context) =>
+                !context
+                  .switchToHttp()
+                  .getRequest<{ path: string }>()
+                  .path.startsWith('/api/v1/auth'),
               limit: authLimit,
               ttl: seconds(60),
               blockDuration: seconds(authBlockSeconds),
@@ -57,13 +87,27 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
       },
     }),
   ],
-  controllers: [AppController],
   providers: [
-    AppService,
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: AppThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AccountStateGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(OriginCheckMiddleware).forRoutes('{*path}');
+  }
+}
