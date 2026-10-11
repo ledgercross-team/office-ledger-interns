@@ -30,6 +30,23 @@ pnpm typecheck
 pnpm test
 ```
 
+## Database setup
+
+Create the local PostgreSQL role and databases, then configure `backend/.env.local` from
+`backend/.env.example`:
+
+```bash
+psql -U postgres -c "CREATE ROLE office_ledger_app WITH LOGIN PASSWORD 'change_me_locally';"
+psql -U postgres -c "CREATE DATABASE office_ledger_dev OWNER office_ledger_app;"
+psql -U postgres -c "CREATE DATABASE office_ledger_e2e OWNER office_ledger_app;"
+
+pnpm db:migrate
+pnpm db:seed
+```
+
+The seed command is development-only, refuses to run in production, and uses
+`SEED_DEMO_PASSWORD` for all demo accounts without printing the password.
+
 ## Conventions
 
 - Branches: `feat/<issue-number>-short-name`, `fix/…`, `chore/…`, `docs/…`.
