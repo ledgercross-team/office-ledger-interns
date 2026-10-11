@@ -6,7 +6,7 @@ const validEnvironment = {
   DATABASE_URL: 'postgres://user:password@localhost:5432/database',
   REDIS_URL: 'redis://localhost:6379/0',
   FRONTEND_URL: 'http://localhost:3000',
-  JWT_ACCESS_SECRET: 'test-secret',
+  JWT_ACCESS_SECRET: 'test-secret-that-is-at-least-32-chars-long',
   JWT_ACCESS_TTL_SECONDS: '900',
   REFRESH_TOKEN_TTL_DAYS: '7',
   COOKIE_SECURE: 'false',
@@ -37,6 +37,25 @@ describe('validateEnvironment', () => {
         ...validEnvironment,
         PORT: '70000',
         COOKIE_SECURE: 'yes',
+      }),
+    ).toThrow('Environment validation failed');
+  });
+
+  it('rejects a JWT secret shorter than 32 characters', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        JWT_ACCESS_SECRET: 'too-short',
+      }),
+    ).toThrow('Environment validation failed');
+  });
+
+  it('rejects an insecure cookie in production', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        NODE_ENV: 'production',
+        COOKIE_SECURE: 'false',
       }),
     ).toThrow('Environment validation failed');
   });

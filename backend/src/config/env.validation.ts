@@ -10,6 +10,7 @@ import {
   IsUrl,
   Max,
   Min,
+  MinLength,
   validateSync,
 } from 'class-validator';
 
@@ -48,6 +49,7 @@ class EnvironmentVariables {
 
   @IsString()
   @IsNotEmpty()
+  @MinLength(32)
   JWT_ACCESS_SECRET: string;
 
   @Type(() => Number)
@@ -88,8 +90,16 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     skipMissingProperties: false,
   });
 
-  if (errors.length > 0) {
-    const messages = errors.flatMap((error) => Object.values(error.constraints ?? {}));
+  const messages = errors.flatMap((error) => Object.values(error.constraints ?? {}));
+
+  if (
+    validatedConfig.NODE_ENV === NodeEnvironment.Production &&
+    validatedConfig.COOKIE_SECURE === false
+  ) {
+    messages.push('COOKIE_SECURE must be true when NODE_ENV is production');
+  }
+
+  if (messages.length > 0) {
     throw new Error(`Environment validation failed: ${messages.join('; ')}`);
   }
 
