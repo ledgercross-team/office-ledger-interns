@@ -6,6 +6,7 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { OriginCheckMiddleware } from './common/middleware/origin-check.middleware';
 import { validateEnvironment } from './config/env.validation';
 import { DbModule } from './db/db.module';
+import { CompanyModule } from './modules/company/company.module';
 import { HealthModule } from './modules/health/health.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { RedisService } from './modules/redis/redis.service';
@@ -30,6 +31,7 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
       validate: validateEnvironment,
     }),
     DbModule,
+    CompanyModule,
     HealthModule,
     RedisModule,
     ThrottlerModule.forRootAsync({
