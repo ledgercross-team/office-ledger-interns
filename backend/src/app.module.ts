@@ -12,6 +12,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { CompanyModule } from './modules/company/company.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { GameMasterModule } from './modules/game-master/game-master.module';
 import { HealthModule } from './modules/health/health.module';
 import { MessagesModule } from './modules/messages/messages.module';
@@ -46,6 +47,7 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
     UsersModule,
     MessagesModule,
     TasksModule,
+    DashboardModule,
     AttendanceModule,
     HealthModule,
     RedisModule,
