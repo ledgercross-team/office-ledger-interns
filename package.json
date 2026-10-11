@@ -10,7 +10,6 @@
     "db:seed": "pnpm --filter backend db:seed",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm --filter backend test",
-    "e2e": "pnpm --filter e2e test"
+    "test": "pnpm --filter backend test"
   }
 }

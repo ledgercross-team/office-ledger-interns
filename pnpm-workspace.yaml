@@ -1,7 +1,10 @@
 packages:
   - frontend
   - backend
-  - e2e
 onlyBuiltDependencies:
   - argon2
   - '@nestjs/core'
+  - esbuild
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver
