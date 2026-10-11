@@ -80,6 +80,30 @@ that is expected to commit; use a disposable transaction or roll back after each
 The release tag is `v0.1.0-db`. Protect `main` with required pull requests, one approval, and
 squash merges before this tag is published. Required CI checks are added with the later CI issue.
 
+## Redis, hardening and rate limits
+
+Redis is required by the API for distributed throttling. Start Redis locally, then set
+`REDIS_URL` in `backend/.env.local`:
+
+```bash
+redis-server
+```
+
+The API connects with bounded command timeouts, disables the offline command queue, retries
+briefly, and fails startup if Redis cannot be reached. Rate-limit counters use an atomic Redis
+Lua script so concurrent API instances share the same fixed-window counters. The default policy
+is `RATE_LIMIT_GLOBAL_PER_MIN` requests per minute; the reserved `auth` policy is stricter and is
+ready for login routes. Current non-auth routes explicitly skip that reserved policy.
+
+`@nest-lab/throttler-storage-redis@1.2.0` is not used because its Nest peer range stops at
+Nest 11. The project uses a small local adapter against the Nest 12 `ThrottlerStorage`
+interface and the existing `ioredis` dependency instead.
+
+The HTTP bootstrap also enables Helmet, an explicit credentialed CORS allowlist from
+`FRONTEND_URL`, bounded JSON/form bodies, strict validation-pipe behavior, cookie parsing, and
+configurable proxy trust. Set `TRUST_PROXY` to a specific proxy hop count in production; do not
+use `true` unless every upstream proxy is trusted.
+
 ## Conventions
 
 - Branches: `feat/<issue-number>-short-name`, `fix/…`, `chore/…`, `docs/…`.
