@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { CookieOptions, Request, Response } from 'express';
 import { randomBytes } from 'node:crypto';
+import { isEnabled } from '../common/utils/env';
 import { sha256Hex } from '../common/utils/passwords';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { companies } from '../db/schema/companies';
@@ -242,7 +243,7 @@ export class TokenService {
     const options: CookieOptions = {
       httpOnly: true,
       sameSite: 'lax',
-      secure: this.configService.get<string>('COOKIE_SECURE') === 'true',
+      secure: isEnabled(this.configService.get('COOKIE_SECURE')),
       path: '/',
     };
 

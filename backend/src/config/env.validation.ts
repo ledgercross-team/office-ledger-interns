@@ -79,9 +79,10 @@ class EnvironmentVariables {
   @Min(1)
   RATE_LIMIT_GLOBAL_PER_MIN: number;
 
+  // Only the dev seed script reads this; a production deployment does not need it.
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  SEED_DEMO_PASSWORD: string;
+  SEED_DEMO_PASSWORD?: string;
 }
 
 export function validateEnvironment(config: Record<string, unknown>): EnvironmentVariables {

@@ -17,6 +17,12 @@ const validEnvironment = {
 };
 
 describe('validateEnvironment', () => {
+  it('does not require SEED_DEMO_PASSWORD', () => {
+    const { SEED_DEMO_PASSWORD: _unused, ...withoutSeed } = validEnvironment;
+
+    expect(() => validateEnvironment(withoutSeed)).not.toThrow();
+  });
+
   it('parses valid environment values', () => {
     const result = validateEnvironment(validEnvironment);
 
