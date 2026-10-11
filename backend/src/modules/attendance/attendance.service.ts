@@ -96,14 +96,14 @@ export class AttendanceService {
 
   async mine(user: AuthUser, query: MyAttendanceQueryDto) {
     const company = await this.getCompany(user);
-    return { items: await this.daysFor(company, user.id, query) };
+    return { timezone: company.timezone, items: await this.daysFor(company, user.id, query) };
   }
 
   async team(user: AuthUser, query: TeamAttendanceQueryDto) {
     const company = await this.getCompany(user);
 
     if (query.date) {
-      return { items: await this.dayView(user, company, query.date) };
+      return { timezone: company.timezone, items: await this.dayView(user, company, query.date) };
     }
 
     if (!query.userId) {
@@ -111,7 +111,7 @@ export class AttendanceService {
     }
 
     const target = await this.findVisibleUser(user, query.userId);
-    return { items: await this.daysFor(company, target.id, query) };
+    return { timezone: company.timezone, items: await this.daysFor(company, target.id, query) };
   }
 
   async correct(user: AuthUser, recordId: string, dto: CorrectAttendanceDto) {

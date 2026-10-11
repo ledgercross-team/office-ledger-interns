@@ -37,9 +37,15 @@ export class DashboardService {
       throw new NotFoundException('Company not found.');
     }
 
-    if (user.role === 'admin') return this.admin(user, company);
-    if (user.role === 'manager') return this.manager(user, company);
-    return this.employee(user, company);
+    const summary =
+      user.role === 'admin'
+        ? await this.admin(user, company)
+        : user.role === 'manager'
+          ? await this.manager(user, company)
+          : await this.employee(user, company);
+
+    // Times are shown in the company's timezone.
+    return { ...summary, timezone: company.timezone };
   }
 
   private async employee(user: AuthUser, company: Company) {

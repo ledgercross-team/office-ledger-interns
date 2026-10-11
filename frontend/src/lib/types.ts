@@ -150,6 +150,13 @@ export interface AttendanceDay {
   record: AttendanceRecord | null;
 }
 
+// A row of GET /attendance?date= : one person on one day.
+export interface TeamAttendanceRow extends AttendanceDay {
+  userId: string;
+  userFullName: string;
+  role: Role;
+}
+
 export interface Message {
   id: string;
   companyId: string;
@@ -202,6 +209,7 @@ export interface AttendanceCounts {
 // Shape depends on the caller's role (backend GET /dashboard/summary).
 export interface DashboardSummary {
   role: Role;
+  timezone: string;
   openTasks: number;
   overdueTasks: number;
   doneThisWeek: number;

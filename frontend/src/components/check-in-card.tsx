@@ -8,7 +8,7 @@ import type { DashboardToday } from '@/lib/types';
 
 const STATUS_TEXT = { present: 'Present', late: 'Late', absent: 'Absent' } as const;
 
-export function CheckInCard({ today }: { today: DashboardToday }) {
+export function CheckInCard({ today, timezone }: { today: DashboardToday; timezone?: string }) {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
@@ -36,11 +36,11 @@ export function CheckInCard({ today }: { today: DashboardToday }) {
         {!checkedIn && 'You have not checked in yet.'}
         {checkedIn && today.checkInAt && (
           <>
-            Checked in at {formatTime(today.checkInAt)}
+            Checked in at {formatTime(today.checkInAt, timezone)}
             {today.status && today.status !== 'absent' && ` (${STATUS_TEXT[today.status]})`}.
           </>
         )}{' '}
-        {checkedOut && today.checkOutAt && `Checked out at ${formatTime(today.checkOutAt)}.`}
+        {checkedOut && today.checkOutAt && `Checked out at ${formatTime(today.checkOutAt, timezone)}.`}
       </p>
 
       {error && (

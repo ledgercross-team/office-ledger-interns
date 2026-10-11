@@ -58,7 +58,7 @@ function EmployeeDashboard({ summary }: { summary: DashboardSummary }) {
   return (
     <div className="space-y-6">
       <CountTiles summary={summary} />
-      {summary.today && <CheckInCard today={summary.today} />}
+      {summary.today && <CheckInCard today={summary.today} timezone={summary.timezone} />}
       <OpenTaskList title="Open tasks" />
     </div>
   );
@@ -69,7 +69,7 @@ function ManagerDashboard({ summary, userId }: { summary: DashboardSummary; user
 
   return (
     <div className="space-y-6">
-      {summary.today && <CheckInCard today={summary.today} />}
+      {summary.today && <CheckInCard today={summary.today} timezone={summary.timezone} />}
       <section className="space-y-3">
         <h2 className="font-semibold">My tasks</h2>
         <CountTiles summary={summary} />
