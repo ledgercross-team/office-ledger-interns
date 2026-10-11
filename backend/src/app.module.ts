@@ -1,7 +1,9 @@
-import { Module } from '@nestjs/common';
+import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { seconds, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { seconds, ThrottlerModule } from '@nestjs/throttler';
+import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
+import { OriginCheckMiddleware } from './common/middleware/origin-check.middleware';
 import { validateEnvironment } from './config/env.validation';
 import { DbModule } from './db/db.module';
 import { HealthModule } from './modules/health/health.module';
@@ -63,8 +65,12 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
   providers: [
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: AppThrottlerGuard,
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(OriginCheckMiddleware).forRoutes('*');
+  }
+}
