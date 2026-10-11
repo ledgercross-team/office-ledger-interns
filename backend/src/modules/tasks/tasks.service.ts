@@ -314,6 +314,8 @@ export class TasksService {
       ...task,
       overdue: row.deadline.getTime() < Date.now() && !CLOSED.includes(row.status),
       allowedActions: allowedActions(user, row, assigneeRole as Role),
+      // Task managers may edit a task until it is done or cancelled.
+      canEdit: isTaskManager(user, assigneeRole as Role) && !CLOSED.includes(row.status),
     };
   }
 }

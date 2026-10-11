@@ -112,6 +112,7 @@ export interface Task {
   updatedAt: string;
   overdue?: boolean;
   allowedActions?: TaskAction[];
+  canEdit?: boolean;
 }
 
 export interface TaskActivity {
@@ -183,4 +184,9 @@ export interface DashboardSummary {
   subscriptionEndsOn?: string | null;
   daysLeft?: number | null;
   unreadMessages?: number;
+}
+
+export interface CreateUserResponse {
+  user: User;
+  temporaryPassword: string;
 }

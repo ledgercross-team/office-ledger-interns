@@ -2,13 +2,33 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { Suspense, useEffect, type ReactNode } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import type { Role } from '@/lib/types';
 import { NAV_BY_ROLE, ROLE_LABELS } from '@/lib/navigation';
+
+// usePathname() is runtime data, so it lives in its own component under <Suspense>.
+function MainNav({ role }: { role: Role }) {
+  const pathname = usePathname();
+
+  return (
+    <nav aria-label="Main" className="flex flex-wrap gap-4 border-b px-4 py-2 text-sm">
+      {NAV_BY_ROLE[role].map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          aria-current={pathname.startsWith(item.href) ? 'page' : undefined}
+          className={pathname.startsWith(item.href) ? 'font-semibold underline' : ''}
+        >
+          {item.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading, logout } = useAuth();
-  const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
@@ -43,18 +63,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
       </header>
-      <nav aria-label="Main" className="flex flex-wrap gap-4 border-b px-4 py-2 text-sm">
-        {NAV_BY_ROLE[user.role].map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={pathname.startsWith(item.href) ? 'page' : undefined}
-            className={pathname.startsWith(item.href) ? 'font-semibold underline' : ''}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+      <Suspense fallback={null}>
+        <MainNav role={user.role} />
+      </Suspense>
       {subscriptionEnded && (
         <p role="alert" className="bg-amber-100 px-4 py-2 text-sm text-amber-900">
           Your company&apos;s subscription has ended. Managers and employees cannot log in.{' '}
