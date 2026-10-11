@@ -2,10 +2,12 @@ import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { seconds, ThrottlerModule } from '@nestjs/throttler';
+import { AuthModule } from './auth/auth.module';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { OriginCheckMiddleware } from './common/middleware/origin-check.middleware';
 import { validateEnvironment } from './config/env.validation';
 import { DbModule } from './db/db.module';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { HealthModule } from './modules/health/health.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { RedisService } from './modules/redis/redis.service';
@@ -30,6 +32,7 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
       validate: validateEnvironment,
     }),
     DbModule,
+    AuthModule,
     HealthModule,
     RedisModule,
     ThrottlerModule.forRootAsync({
@@ -66,6 +69,10 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
     {
       provide: APP_GUARD,
       useClass: AppThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
   ],
 })

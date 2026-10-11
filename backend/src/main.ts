@@ -33,7 +33,6 @@ function positiveInteger(value: string | undefined, fallback: number): number {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
-  app.setGlobalPrefix('api/v1');
   const config = app.get(ConfigService);
   const httpApp = app.getHttpAdapter().getInstance() as Express;
   const frontendOrigins = (config.get<string>('FRONTEND_URL') ?? '')
@@ -74,6 +73,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  app.setGlobalPrefix('api/v1');
   app.enableShutdownHooks();
 
   await app.listen(positiveInteger(config.get<string>('PORT'), 4000));
