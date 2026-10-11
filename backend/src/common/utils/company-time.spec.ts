@@ -1,4 +1,4 @@
-import { getCompanyDate, getCompanyMinutes } from './company-time';
+import { getCompanyDate, getCompanyMinutes, isValidTimezone } from './company-time';
 
 describe('getCompanyDate', () => {
   it('formats a UTC instant as YYYY-MM-DD', () => {
@@ -26,5 +26,13 @@ describe('getCompanyMinutes', () => {
 
   it('treats local midnight as 0', () => {
     expect(getCompanyMinutes('UTC', new Date('2026-03-10T00:00:00Z'))).toBe(0);
+  });
+});
+
+describe('isValidTimezone', () => {
+  it('accepts IANA names and rejects junk', () => {
+    expect(isValidTimezone('UTC')).toBe(true);
+    expect(isValidTimezone('Asia/Dhaka')).toBe(true);
+    expect(isValidTimezone('Mars/Olympus')).toBe(false);
   });
 });

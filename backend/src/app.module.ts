@@ -10,7 +10,11 @@ import { DbModule } from './db/db.module';
 import { AccountStateGuard } from './auth/guards/account-state.guard';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
+import { AttendanceModule } from './modules/attendance/attendance.module';
+import { CompanyModule } from './modules/company/company.module';
+import { GameMasterModule } from './modules/game-master/game-master.module';
 import { HealthModule } from './modules/health/health.module';
+import { UsersModule } from './modules/users/users.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { RedisService } from './modules/redis/redis.service';
 import { RedisThrottlerStorage } from './modules/redis/redis-throttler.storage';
@@ -35,6 +39,10 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
     }),
     DbModule,
     AuthModule,
+    CompanyModule,
+    GameMasterModule,
+    UsersModule,
+    AttendanceModule,
     HealthModule,
     RedisModule,
     ThrottlerModule.forRootAsync({

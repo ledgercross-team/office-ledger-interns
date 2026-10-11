@@ -32,3 +32,12 @@ export function getCompanyMinutes(timezone: string, at: Date = new Date()): numb
 
   return part('hour') * 60 + part('minute');
 }
+
+export function isValidTimezone(timezone: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+    return true;
+  } catch {
+    return false;
+  }
+}

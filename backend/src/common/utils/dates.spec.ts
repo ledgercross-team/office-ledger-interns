@@ -1,0 +1,27 @@
+import { addDays, daysBetween, eachDate, isWeekday } from './dates';
+
+describe('dates', () => {
+  it('counts days between dates', () => {
+    expect(daysBetween('2026-03-01', '2026-03-11')).toBe(10);
+    expect(daysBetween('2026-03-11', '2026-03-01')).toBe(-10);
+  });
+
+  it('adds days across a month boundary', () => {
+    expect(addDays('2026-02-27', 3)).toBe('2026-03-02');
+  });
+
+  it('detects weekdays', () => {
+    expect(isWeekday('2026-10-09')).toBe(true); // Friday
+    expect(isWeekday('2026-10-10')).toBe(false); // Saturday
+    expect(isWeekday('2026-10-11')).toBe(false); // Sunday
+  });
+
+  it('lists an inclusive range', () => {
+    expect(eachDate('2026-10-09', '2026-10-12')).toEqual([
+      '2026-10-09',
+      '2026-10-10',
+      '2026-10-11',
+      '2026-10-12',
+    ]);
+  });
+});
