@@ -203,6 +203,7 @@ export class TokenService {
         tv: tokenVersion,
       },
       {
+        secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
         issuer: JWT_ISSUER,
         audience: JWT_AUDIENCE,
         algorithm: 'HS256',

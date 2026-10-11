@@ -1,14 +1,20 @@
-import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { and, eq, gte, isNull, lte } from 'drizzle-orm';
 import { getCompanyDate } from '../common/utils/company-time';
-import { verifyPassword } from '../common/utils/passwords';
+import { hashPassword, verifyPassword } from '../common/utils/passwords';
 import { DRIZZLE, type Database } from '../db/db.module';
 import { companies } from '../db/schema/companies';
 import { subscriptions } from '../db/schema/subscriptions';
 import { users } from '../db/schema/users';
 import { RedisService } from '../modules/redis/redis.service';
 import type { AuthUser, LoginUser, PublicUser, Role } from './auth.types';
+import type { ChangePasswordDto } from './dto/change-password.dto';
 
 const SUBSCRIPTION_ACTIVE_TTL_SECONDS = 300;
 const GENERIC_LOGIN_MESSAGE = 'Email or password is incorrect.';
@@ -114,6 +120,71 @@ export class AuthService {
     }
 
     return { user: result };
+  }
+
+  // Verifies the current password and stores the new one. The caller revokes the
+  // user's tokens afterwards (TokenService.revokeAllForUser) and issues fresh ones.
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+    const rows = await this.database
+      .select({ email: users.email, passwordHash: users.passwordHash })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+      .execute();
+
+    const row = rows[0];
+
+    if (!row) {
+      throw new UnauthorizedException();
+    }
+
+    if (!(await verifyPassword(row.passwordHash, dto.currentPassword))) {
+      throw new BadRequestException('Current password is incorrect.');
+    }
+
+    if (dto.newPassword.toLowerCase() === row.email.toLowerCase()) {
+      throw new BadRequestException('New password must not be your email address.');
+    }
+
+    await this.database
+      .update(users)
+      .set({ passwordHash: await hashPassword(dto.newPassword), mustChangePassword: false })
+      .where(eq(users.id, userId))
+      .execute();
+  }
+
+  async getLoginUser(userId: string): Promise<LoginUser> {
+    const rows = await this.database
+      .select({
+        id: users.id,
+        role: users.role,
+        companyId: users.companyId,
+        email: users.email,
+        fullName: users.fullName,
+        mustChangePassword: users.mustChangePassword,
+        tokenVersion: users.tokenVersion,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+      .execute();
+
+    const row = rows[0];
+
+    if (!row) {
+      throw new UnauthorizedException();
+    }
+
+    return { ...row, role: row.role as Role };
+  }
+
+  // Call after every subscription write (create, edit, cancel), once it has committed.
+  async invalidateCompanySubscription(companyId: string): Promise<void> {
+    try {
+      await this.redis.client.del(`company:${companyId}:subscription-active`);
+    } catch {
+      // Best-effort; the key expires on its own within five minutes.
+    }
   }
 
   private async isCompanyActive(companyId: string): Promise<boolean> {

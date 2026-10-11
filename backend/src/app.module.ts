@@ -7,7 +7,9 @@ import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { OriginCheckMiddleware } from './common/middleware/origin-check.middleware';
 import { validateEnvironment } from './config/env.validation';
 import { DbModule } from './db/db.module';
+import { AccountStateGuard } from './auth/guards/account-state.guard';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { RolesGuard } from './auth/guards/roles.guard';
 import { HealthModule } from './modules/health/health.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { RedisService } from './modules/redis/redis.service';
@@ -54,6 +56,12 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
             },
             {
               name: 'auth',
+              // Only /auth/* routes count against the stricter auth limit.
+              skipIf: (context) =>
+                !context
+                  .switchToHttp()
+                  .getRequest<{ path: string }>()
+                  .path.startsWith('/api/v1/auth'),
               limit: authLimit,
               ttl: seconds(60),
               blockDuration: seconds(authBlockSeconds),
@@ -74,10 +82,18 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
+    {
+      provide: APP_GUARD,
+      useClass: AccountStateGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(OriginCheckMiddleware).forRoutes('*');
+    consumer.apply(OriginCheckMiddleware).forRoutes('{*path}');
   }
 }

@@ -16,11 +16,14 @@ import { AuthService } from './auth.service';
 import { TokenService } from './token.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
+import { ALL_ROLES, Roles } from './decorators/roles.decorator';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 
 const LOGIN_RATE = { limit: 5, ttl: 15 * 60 * 1000 };
 const REFRESH_RATE = { limit: 30, ttl: 15 * 60 * 1000 };
+const CHANGE_PASSWORD_RATE = { limit: 5, ttl: 15 * 60 * 1000 };
 
 @Controller('auth')
 export class AuthController {
@@ -67,12 +70,30 @@ export class AuthController {
     await this.tokenService.refresh(req, res);
   }
 
+  @Roles(...ALL_ROLES)
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
     await this.tokenService.logout(req, res);
   }
 
+  @Roles(...ALL_ROLES)
+  @Throttle({ default: CHANGE_PASSWORD_RATE })
+  @Post('change-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ChangePasswordDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    await this.authService.changePassword(user.id, dto);
+    // Every other session is signed out; this browser gets fresh tokens.
+    await this.tokenService.revokeAllForUser(user.id);
+    await this.tokenService.issueTokens(await this.authService.getLoginUser(user.id), req, res);
+  }
+
+  @Roles(...ALL_ROLES)
   @Get('me')
   async me(
     @CurrentUser() user: AuthUser,

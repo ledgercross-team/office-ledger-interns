@@ -1,7 +1,14 @@
-import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { hashPassword } from '../common/utils/passwords';
 import { RedisService } from '../modules/redis/redis.service';
-import { type FakeDbConfig, fakeDatabase, fakeRedisClient } from '../test-support/fake-db';
+import {
+  type FakeDbConfig,
+  createFakeDatabase,
+  fakeDatabase,
+  fakeRedisClient,
+} from '../test-support/fake-db';
+import type { Database } from '../db/db.module';
+import { users } from '../db/schema/users';
 import { AuthService } from './auth.service';
 
 const GENERIC_LOGIN_MESSAGE = 'Email or password is incorrect.';
@@ -287,6 +294,75 @@ describe('AuthService', () => {
           subscriptionActive: true,
         },
       });
+    });
+  });
+
+  describe('changePassword', () => {
+    async function setup() {
+      const passwordHash = await hashPassword('old-password-1');
+      const db = createFakeDatabase({
+        users: [{ id: 'u1', email: 'alice@example.com', passwordHash, mustChangePassword: true }],
+      });
+      const service = new AuthService(
+        db as unknown as Database,
+        {
+          client: fakeRedisClient(),
+        } as unknown as RedisService,
+      );
+      return { db, service };
+    }
+
+    it('rejects a wrong current password with 400', async () => {
+      const { service, db } = await setup();
+
+      await expect(
+        service.changePassword('u1', {
+          currentPassword: 'nope',
+          newPassword: 'brand-new-password',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(db.updates).toHaveLength(0);
+    });
+
+    it('rejects a new password equal to the email with 400', async () => {
+      const { service } = await setup();
+
+      await expect(
+        service.changePassword('u1', {
+          currentPassword: 'old-password-1',
+          newPassword: 'Alice@Example.com',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('stores a new hash and clears mustChangePassword', async () => {
+      const { service, db } = await setup();
+
+      await service.changePassword('u1', {
+        currentPassword: 'old-password-1',
+        newPassword: 'brand-new-password',
+      });
+
+      expect(db.updates).toHaveLength(1);
+      const update = db.updates[0];
+      expect(update.table).toBe(users);
+      const set = update.set as { passwordHash: string; mustChangePassword: boolean };
+      expect(set.mustChangePassword).toBe(false);
+      expect(set.passwordHash).not.toBe('brand-new-password');
+      expect(set.passwordHash.startsWith('$argon2id$')).toBe(true);
+    });
+  });
+
+  describe('invalidateCompanySubscription', () => {
+    it('deletes the company subscription key', async () => {
+      const redis = fakeRedisClient();
+      const service = new AuthService(fakeDatabase({}), {
+        client: redis,
+      } as unknown as RedisService);
+
+      await service.invalidateCompanySubscription('c1');
+
+      expect(redis.del).toHaveBeenCalledWith('company:c1:subscription-active');
     });
   });
 });
