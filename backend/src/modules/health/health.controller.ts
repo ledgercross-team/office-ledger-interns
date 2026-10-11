@@ -1,9 +1,14 @@
 import { Controller, Get } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
+import { HealthService } from './health.service';
 
-@Controller('health')
+@SkipThrottle({ auth: true })
+@Controller()
 export class HealthController {
-  @Get()
-  getHealth(): { status: string } {
-    return { status: 'ok' };
+  constructor(private readonly healthService: HealthService) {}
+
+  @Get('health')
+  check(): Promise<{ status: 'ok' }> {
+    return this.healthService.check();
   }
 }
