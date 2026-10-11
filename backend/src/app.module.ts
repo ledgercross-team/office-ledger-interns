@@ -14,6 +14,7 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
 import { CompanyModule } from './modules/company/company.module';
 import { GameMasterModule } from './modules/game-master/game-master.module';
 import { HealthModule } from './modules/health/health.module';
+import { MessagesModule } from './modules/messages/messages.module';
 import { UsersModule } from './modules/users/users.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { RedisService } from './modules/redis/redis.service';
@@ -42,6 +43,7 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
     CompanyModule,
     GameMasterModule,
     UsersModule,
+    MessagesModule,
     AttendanceModule,
     HealthModule,
     RedisModule,
