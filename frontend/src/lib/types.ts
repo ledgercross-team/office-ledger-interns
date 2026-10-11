@@ -247,3 +247,16 @@ export interface CreateUserResponse {
   user: User;
   temporaryPassword: string;
 }
+
+export interface GameMasterCompanyDetail {
+  company: Company;
+  admin: { id: string; fullName: string; email: string } | null;
+  subscriptions: Subscription[];
+}
+
+export interface CreateCompanyResponse {
+  company: Company;
+  admin: { id: string; fullName: string; email: string };
+  subscription: Subscription;
+  temporaryPassword: string;
+}
