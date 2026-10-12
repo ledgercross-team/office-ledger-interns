@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/role-gate';
@@ -8,19 +8,33 @@ import { TemporaryPasswordPanel } from '@/components/temporary-password-panel';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { errorMessage } from '@/lib/format';
-import type { CreateUserResponse } from '@/lib/types';
+import type { CreateUserResponse, ManagerOption } from '@/lib/types';
 
 function NewPersonForm() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreateUserResponse | null>(null);
+  const [role, setRole] = useState('employee');
 
   // Next keeps a page's state when you navigate away, so drop the password explicitly on leave.
   useEffect(() => () => setCreated(null), []);
 
+  // Admins choose who a new employee reports to; a manager's hires report to themselves.
+  const managers = useQuery({
+    queryKey: ['people', 'managers'],
+    queryFn: () => apiFetch<{ items: ManagerOption[] }>('/users/managers'),
+    enabled: user?.role === 'admin',
+  });
+
   const create = useMutation({
-    mutationFn: (body: { fullName: string; email: string; role: string; jobTitle?: string }) =>
+    mutationFn: (body: {
+      fullName: string;
+      email: string;
+      role: string;
+      jobTitle?: string;
+      managerId?: string;
+    }) =>
       apiFetch<CreateUserResponse>('/users', { method: 'POST', body }),
     onSuccess: async (result) => {
       setCreated(result);
@@ -33,6 +47,7 @@ function NewPersonForm() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const jobTitle = String(form.get('jobTitle')).trim();
+    const managerId = String(form.get('managerId') ?? '');
 
     setError(null);
     create.mutate({
@@ -40,6 +55,7 @@ function NewPersonForm() {
       email: String(form.get('email')).trim(),
       role: String(form.get('role')),
       jobTitle: jobTitle || undefined,
+      managerId: role === 'employee' && managerId ? managerId : undefined,
     });
   }
 
@@ -65,7 +81,7 @@ function NewPersonForm() {
   }
 
   // A manager can only add employees; the API enforces this too.
-  const canAddManagers = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   return (
     <form onSubmit={onSubmit} className="max-w-xl space-y-4">
@@ -103,13 +119,35 @@ function NewPersonForm() {
         <select
           id="role"
           name="role"
-          defaultValue="employee"
+          value={role}
+          onChange={(event) => setRole(event.target.value)}
           className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
         >
           <option value="employee">Employee</option>
-          {canAddManagers && <option value="manager">Manager</option>}
+          {isAdmin && <option value="manager">Manager</option>}
+          {isAdmin && <option value="admin">Admin</option>}
         </select>
       </div>
+      {isAdmin && role === 'employee' && (
+        <div className="space-y-1">
+          <label htmlFor="managerId" className="block text-sm font-medium">
+            Reports to (optional)
+          </label>
+          <select
+            id="managerId"
+            name="managerId"
+            defaultValue=""
+            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+          >
+            <option value="">Assign later</option>
+            {managers.data?.items.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.fullName}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="space-y-1">
         <label htmlFor="jobTitle" className="block text-sm font-medium">
           Job title (optional)

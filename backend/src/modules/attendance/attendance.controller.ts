@@ -17,6 +17,7 @@ import { AttendanceService } from './attendance.service';
 import {
   CorrectAttendanceDto,
   MyAttendanceQueryDto,
+  StatsQueryDto,
   TeamAttendanceQueryDto,
 } from './dto/attendance.dto';
 
@@ -41,6 +42,28 @@ export class AttendanceController {
   @Get('me')
   mine(@CurrentUser() user: AuthUser, @Query() query: MyAttendanceQueryDto) {
     return this.service.mine(user, query);
+  }
+
+  @Roles('manager', 'employee')
+  @Get('stats/me')
+  statsMe(@CurrentUser() user: AuthUser, @Query() query: StatsQueryDto) {
+    return this.service.statsMe(user, query.days);
+  }
+
+  @Roles('admin', 'manager')
+  @Get('stats/team')
+  statsTeam(@CurrentUser() user: AuthUser, @Query() query: StatsQueryDto) {
+    return this.service.statsTeam(user, query.days);
+  }
+
+  @Roles('admin', 'manager')
+  @Get('stats/users/:userId')
+  statsForUser(
+    @CurrentUser() user: AuthUser,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Query() query: StatsQueryDto,
+  ) {
+    return this.service.statsForUser(user, userId, query.days);
   }
 
   @Roles('admin', 'manager')

@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { RoleGate } from '@/components/role-gate';
 import { StatTile } from '@/components/stat-tile';
 import { apiFetch } from '@/lib/api-client';
-import { errorMessage, formatDate } from '@/lib/format';
+import { useAuth } from '@/lib/auth-context';
+import { errorMessage, formatDate, todayIn } from '@/lib/format';
 import type { CompanySubscription, Subscription } from '@/lib/types';
 
 function stateOf(item: Subscription, today: string): string {
@@ -15,6 +16,7 @@ function stateOf(item: Subscription, today: string): string {
 }
 
 function SubscriptionView() {
+  const { user } = useAuth();
   const query = useQuery({
     queryKey: ['subscription'],
     queryFn: () => apiFetch<CompanySubscription>('/company/subscription'),
@@ -32,7 +34,7 @@ function SubscriptionView() {
   }
 
   const { current, daysLeft, items } = query.data;
-  const today = new Date().toLocaleDateString('en-CA');
+  const today = todayIn(user?.companyTimezone);
   // The API returns the latest subscription when none is current, so check it has not ended.
   const ended = current !== null && daysLeft !== null && daysLeft < 0;
 

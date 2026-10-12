@@ -1,5 +1,9 @@
-export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+export function formatDateTime(iso: string, timezone?: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: timezone,
+  });
 }
 
 /** YYYY-MM-DD as a calendar date, with no timezone shift. */
@@ -63,3 +67,29 @@ export function buildQuery(params: Record<string, string | number | boolean | un
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.';
 }
+
+/** Today's calendar date (YYYY-MM-DD) on the company's clock, not the browser's. */
+export function todayIn(timezone?: string): string {
+  return new Date().toLocaleDateString('en-CA', timezone ? { timeZone: timezone } : undefined);
+}
+
+/** Minutes since midnight as "9:05 AM". */
+export function formatMinutes(minutes: number | null): string {
+  if (minutes === null) return '—';
+  const hours24 = Math.floor(minutes / 60) % 24;
+  const mins = Math.round(minutes % 60);
+  const suffix = hours24 >= 12 ? 'PM' : 'AM';
+  const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  return `${hours12}:${String(mins).padStart(2, '0')} ${suffix}`;
+}
+
+/** "12 min early", "on time", "8 min late". */
+export function formatOffset(offset: number | null): string {
+  if (offset === null) return '—';
+  if (Math.abs(offset) < 1) return 'on time';
+  return `${Math.abs(offset)} min ${offset < 0 ? 'early' : 'late'}`;
+}
+
+/** The supported calendar window for subscriptions and attendance filters. */
+export const MIN_DATE = '2024-01-01';
+export const MAX_DATE = '2050-12-31';

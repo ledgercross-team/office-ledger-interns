@@ -1,35 +1,35 @@
-import {
-  IsDateString,
-  IsISO8601,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Length,
-  Matches,
-} from 'class-validator';
-import { DATE_PATTERN } from '../../../common/utils/dates';
+import { Transform } from 'class-transformer';
+import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
+import { IsAppDate } from '../../../common/validators/app-date';
 
 export class MyAttendanceQueryDto {
   @IsOptional()
-  @Matches(DATE_PATTERN)
-  @IsISO8601({ strict: true })
+  @IsAppDate()
   from?: string;
 
   @IsOptional()
-  @Matches(DATE_PATTERN)
-  @IsISO8601({ strict: true })
+  @IsAppDate()
   to?: string;
 }
 
 export class TeamAttendanceQueryDto extends MyAttendanceQueryDto {
   @IsOptional()
-  @Matches(DATE_PATTERN)
-  @IsISO8601({ strict: true })
+  @IsAppDate()
   date?: string;
 
   @IsOptional()
   @IsUUID()
   userId?: string;
+}
+
+export class StatsQueryDto {
+  // Look-back window in days; defaults to 30.
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? Number(value) : value))
+  @IsInt()
+  @Min(7)
+  @Max(90)
+  days?: number;
 }
 
 export class CorrectAttendanceDto {

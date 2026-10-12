@@ -70,14 +70,23 @@ export interface TaskForRules {
   assigneeId: string;
 }
 
-// The company's admin, or a manager when the assignee is an employee.
-export function isTaskManager(actor: TaskActor, assigneeRole: Role): boolean {
-  return actor.role === 'admin' || (actor.role === 'manager' && assigneeRole === 'employee');
+// The person a task is assigned to, and who they report to.
+export interface TaskAssignee {
+  role: Role;
+  managerId: string | null;
+}
+
+// A company admin, or the manager the assignee reports to.
+export function isTaskManager(actor: TaskActor, assignee: TaskAssignee): boolean {
+  return (
+    actor.role === 'admin' ||
+    (actor.role === 'manager' && assignee.role === 'employee' && assignee.managerId === actor.id)
+  );
 }
 
 // The assignee or a task manager.
-export function isTaskActor(actor: TaskActor, task: TaskForRules, assigneeRole: Role): boolean {
-  return actor.id === task.assigneeId || isTaskManager(actor, assigneeRole);
+export function isTaskActor(actor: TaskActor, task: TaskForRules, assignee: TaskAssignee): boolean {
+  return actor.id === task.assigneeId || isTaskManager(actor, assignee);
 }
 
 export function nextStatus(action: TaskAction): TaskStatus {
@@ -92,13 +101,13 @@ export function commentRequired(action: TaskAction): boolean {
 export function denialFor(
   actor: TaskActor,
   task: TaskForRules,
-  assigneeRole: Role,
+  assignee: TaskAssignee,
   action: TaskAction,
 ): 'forbidden' | 'invalid_status' | null {
   const rule = RULES[action];
   const permitted = rule.managerOnly
-    ? isTaskManager(actor, assigneeRole)
-    : isTaskActor(actor, task, assigneeRole);
+    ? isTaskManager(actor, assignee)
+    : isTaskActor(actor, task, assignee);
 
   if (!permitted) return 'forbidden';
   if (!rule.from.includes(task.status)) return 'invalid_status';
@@ -108,16 +117,16 @@ export function denialFor(
 export function canApplyAction(
   actor: TaskActor,
   task: TaskForRules,
-  assigneeRole: Role,
+  assignee: TaskAssignee,
   action: TaskAction,
 ): boolean {
-  return denialFor(actor, task, assigneeRole, action) === null;
+  return denialFor(actor, task, assignee, action) === null;
 }
 
 export function allowedActions(
   actor: TaskActor,
   task: TaskForRules,
-  assigneeRole: Role,
+  assignee: TaskAssignee,
 ): TaskAction[] {
-  return TASK_ACTIONS.filter((action) => canApplyAction(actor, task, assigneeRole, action));
+  return TASK_ACTIONS.filter((action) => canApplyAction(actor, task, assignee, action));
 }

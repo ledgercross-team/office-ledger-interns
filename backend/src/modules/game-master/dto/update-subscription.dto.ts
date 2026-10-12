@@ -1,10 +1,19 @@
-import { Equals, IsISO8601, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
-import { DATE_PATTERN } from '../../../common/utils/dates';
+import { Equals, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsAppDate } from '../../../common/validators/app-date';
 
+// Every field is optional: send only what changes.
 export class UpdateSubscriptionDto {
   @IsOptional()
-  @Matches(DATE_PATTERN)
-  @IsISO8601({ strict: true })
+  @IsString()
+  @Length(1, 60)
+  planName?: string;
+
+  @IsOptional()
+  @IsAppDate()
+  startsOn?: string;
+
+  @IsOptional()
+  @IsAppDate()
   endsOn?: string;
 
   @IsOptional()

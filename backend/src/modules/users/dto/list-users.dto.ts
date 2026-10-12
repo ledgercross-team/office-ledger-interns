@@ -1,14 +1,17 @@
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/utils/pagination';
+
+const toBoolean = ({ value }: { value: unknown }) =>
+  value === 'true' ? true : value === 'false' ? false : value;
 
 export class ListUsersDto extends PaginationQueryDto {
   @IsOptional()
-  @IsIn(['manager', 'employee'])
-  role?: 'manager' | 'employee';
+  @IsIn(['admin', 'manager', 'employee'])
+  role?: 'admin' | 'manager' | 'employee';
 
   @IsOptional()
-  @Transform(({ value }) => (value === 'true' ? true : value === 'false' ? false : value))
+  @Transform(toBoolean)
   @IsBoolean()
   isActive?: boolean;
 
@@ -16,4 +19,15 @@ export class ListUsersDto extends PaginationQueryDto {
   @IsString()
   @MaxLength(100)
   search?: string;
+
+  // Employees reporting to this manager.
+  @IsOptional()
+  @IsUUID()
+  managerId?: string;
+
+  // Employees with no manager yet.
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  unassigned?: boolean;
 }

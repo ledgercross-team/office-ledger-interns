@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { AttendanceStatus } from '@/components/attendance-status';
+import { PersonInsights } from '@/components/attendance-insights';
 import { CheckInCard } from '@/components/check-in-card';
 import { Reveal } from '@/components/reveal';
 import { RoleGate } from '@/components/role-gate';
@@ -23,7 +24,7 @@ function MyAttendance() {
   const timezone = history.data?.timezone ?? summary.data?.timezone;
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <h1 className="text-xl font-semibold text-charcoal">Attendance</h1>
 
       {summary.data?.today && <CheckInCard today={summary.data.today} timezone={timezone} />}
@@ -73,6 +74,11 @@ function MyAttendance() {
         {timezone && <p className="text-xs text-charcoal-soft">Times are in {timezone}.</p>}
       </section>
       </Reveal>
+
+      <section aria-label="Your tendencies" className="max-w-5xl space-y-3">
+        <h2 className="text-lg font-semibold text-charcoal">Your check-in and check-out tendencies</h2>
+        <PersonInsights path="/attendance/stats/me" />
+      </section>
     </div>
   );
 }

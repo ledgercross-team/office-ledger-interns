@@ -12,7 +12,6 @@ import {
   asc,
   count,
   eq,
-  inArray,
   lt,
   notInArray,
   or,
@@ -21,7 +20,7 @@ import {
 import type { AuthUser, Role } from '../../auth/auth.types';
 import { DRIZZLE, type Database } from '../../db/db.module';
 import { taskActivity, tasks, users } from '../../db/schema';
-import { manageableRoles } from '../users/visibility';
+import { managedPeople } from '../users/visibility';
 import type {
   CommentDto,
   CreateTaskDto,
@@ -35,6 +34,7 @@ import {
   denialFor,
   isTaskManager,
   nextStatus,
+  type TaskAssignee,
   type TaskStatus,
 } from './task-rules';
 
@@ -48,12 +48,14 @@ const TASK_COLUMNS = {
   companyId: tasks.companyId,
   title: tasks.title,
   description: tasks.description,
+  category: tasks.category,
   priority: tasks.priority,
   status: tasks.status,
   deadline: tasks.deadline,
   assigneeId: tasks.assigneeId,
   assigneeName: assignee.fullName,
   assigneeRole: assignee.role,
+  assigneeManagerId: assignee.managerId,
   createdById: tasks.createdById,
   creatorName: creator.fullName,
   completedAt: tasks.completedAt,
@@ -66,17 +68,23 @@ interface TaskRow {
   companyId: string;
   title: string;
   description: string | null;
+  category: (typeof tasks.category.enumValues)[number];
   priority: 'low' | 'medium' | 'high';
   status: TaskStatus;
   deadline: Date;
   assigneeId: string;
   assigneeName: string;
-  assigneeRole: string;
+  assigneeRole: Role;
+  assigneeManagerId: string | null;
   createdById: string;
   creatorName: string;
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+function assigneeOf(task: TaskRow): TaskAssignee {
+  return { role: task.assigneeRole, managerId: task.assigneeManagerId };
 }
 
 @Injectable()
@@ -88,6 +96,7 @@ export class TasksService {
       eq(tasks.companyId, user.companyId as string),
       this.visibleTo(user),
       query.status ? eq(tasks.status, query.status) : undefined,
+      query.category ? eq(tasks.category, query.category) : undefined,
       query.assigneeId ? eq(tasks.assigneeId, query.assigneeId) : undefined,
       query.dueBefore ? lt(tasks.deadline, new Date(query.dueBefore)) : undefined,
       query.overdue === true
@@ -120,6 +129,7 @@ export class TasksService {
   }
 
   async create(user: AuthUser, dto: CreateTaskDto) {
+    this.assertNotInThePast(dto.deadline);
     await this.assertAssignable(user, dto.assigneeId);
 
     const [created] = await this.database
@@ -128,6 +138,7 @@ export class TasksService {
         companyId: user.companyId as string,
         title: dto.title,
         description: dto.description,
+        category: dto.category,
         priority: dto.priority,
         deadline: new Date(dto.deadline),
         assigneeId: dto.assigneeId,
@@ -141,7 +152,7 @@ export class TasksService {
   async update(user: AuthUser, taskId: string, dto: UpdateTaskDto) {
     const task = await this.findVisible(user, taskId);
 
-    if (!isTaskManager(user, task.assigneeRole as Role)) {
+    if (!isTaskManager(user, assigneeOf(task))) {
       throw new ForbiddenException('You cannot edit this task.');
     }
     if (CLOSED.includes(task.status)) {
@@ -150,12 +161,16 @@ export class TasksService {
     if (dto.assigneeId && dto.assigneeId !== task.assigneeId) {
       await this.assertAssignable(user, dto.assigneeId);
     }
+    if (dto.deadline && new Date(dto.deadline).getTime() !== task.deadline.getTime()) {
+      this.assertNotInThePast(dto.deadline);
+    }
 
     await this.database
       .update(tasks)
       .set({
         title: dto.title,
         description: dto.description,
+        category: dto.category,
         priority: dto.priority,
         deadline: dto.deadline ? new Date(dto.deadline) : undefined,
         assigneeId: dto.assigneeId,
@@ -167,7 +182,7 @@ export class TasksService {
 
   async changeStatus(user: AuthUser, taskId: string, dto: StatusChangeDto) {
     const task = await this.findVisible(user, taskId);
-    const denial = denialFor(user, task, task.assigneeRole as Role, dto.action);
+    const denial = denialFor(user, task, assigneeOf(task), dto.action);
 
     if (denial === 'forbidden') {
       throw new ForbiddenException('You cannot do that on this task.');
@@ -260,11 +275,11 @@ export class TasksService {
       .innerJoin(creator, eq(creator.id, tasks.createdById));
   }
 
-  // Admin: every company task. Manager: tasks of employees plus their own. Employee: their own.
+  // Admin: every company task. Manager: their own plus their team's. Employee: their own.
   private visibleTo(user: AuthUser): SQL | undefined {
     if (user.role === 'admin') return undefined;
     if (user.role === 'manager') {
-      return or(eq(assignee.role, 'employee'), eq(tasks.assigneeId, user.id));
+      return or(managedPeople(user, assignee), eq(tasks.assigneeId, user.id));
     }
     return eq(tasks.assigneeId, user.id);
   }
@@ -287,7 +302,14 @@ export class TasksService {
     return row;
   }
 
-  // Active, in the caller's company, and a role the caller may assign to.
+  private assertNotInThePast(deadline: string): void {
+    if (new Date(deadline).getTime() < Date.now()) {
+      throw new BadRequestException('The deadline must not be in the past.');
+    }
+  }
+
+  // Active, in the caller's company, and someone the caller manages: an admin assigns to any
+  // manager or employee, a manager only to the employees who report to them.
   private async assertAssignable(user: AuthUser, assigneeId: string): Promise<void> {
     const [person] = await this.database
       .select({ id: users.id })
@@ -297,7 +319,7 @@ export class TasksService {
           eq(users.id, assigneeId),
           eq(users.companyId, user.companyId as string),
           eq(users.isActive, true),
-          inArray(users.role, manageableRoles(user.role)),
+          managedPeople(user),
         ),
       )
       .limit(1);
@@ -308,14 +330,15 @@ export class TasksService {
   }
 
   private present(row: TaskRow, user: AuthUser) {
-    const { assigneeRole, ...task } = row;
+    const { assigneeRole: _role, assigneeManagerId: _managerId, ...task } = row;
+    const owner = assigneeOf(row);
 
     return {
       ...task,
       overdue: row.deadline.getTime() < Date.now() && !CLOSED.includes(row.status),
-      allowedActions: allowedActions(user, row, assigneeRole as Role),
+      allowedActions: allowedActions(user, row, owner),
       // Task managers may edit a task until it is done or cancelled.
-      canEdit: isTaskManager(user, assigneeRole as Role) && !CLOSED.includes(row.status),
+      canEdit: isTaskManager(user, owner) && !CLOSED.includes(row.status),
     };
   }
 }

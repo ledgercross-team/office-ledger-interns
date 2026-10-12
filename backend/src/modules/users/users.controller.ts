@@ -26,6 +26,12 @@ export class UsersController {
     return this.service.create(user, dto);
   }
 
+  // Active managers of the caller's company: the choices when handing an employee over.
+  @Get('managers')
+  managers(@CurrentUser() user: AuthUser) {
+    return this.service.listManagers(user);
+  }
+
   @Get(':userId')
   get(@CurrentUser() user: AuthUser, @Param('userId', ParseUUIDPipe) userId: string) {
     return this.service.get(user, userId);

@@ -18,6 +18,7 @@ function PeopleList() {
   const [debounced, setDebounced] = useState('');
   const [role, setRole] = useState('');
   const [active, setActive] = useState('');
+  const [unassigned, setUnassigned] = useState(false);
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -29,10 +30,17 @@ function PeopleList() {
   }, [search]);
 
   const query = useQuery({
-    queryKey: ['people', 'list', { debounced, role, active, page }],
+    queryKey: ['people', 'list', { debounced, role, active, unassigned, page }],
     queryFn: () =>
       apiFetch<Paginated<User>>(
-        `/users${buildQuery({ search: debounced, role, isActive: active, page, pageSize: PAGE_SIZE })}`,
+        `/users${buildQuery({
+          search: debounced,
+          role,
+          isActive: active,
+          unassigned: unassigned || undefined,
+          page,
+          pageSize: PAGE_SIZE,
+        })}`,
       ),
   });
 
@@ -74,10 +82,24 @@ function PeopleList() {
               className="rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen"
             >
               <option value="">All</option>
+              <option value="admin">Admins</option>
               <option value="manager">Managers</option>
               <option value="employee">Employees</option>
             </select>
           </div>
+        )}
+        {user?.role === 'admin' && (
+          <label className="flex items-center gap-2 pb-2 text-sm">
+            <input
+              type="checkbox"
+              checked={unassigned}
+              onChange={(event) => {
+                setUnassigned(event.target.checked);
+                setPage(1);
+              }}
+            />
+            Without a manager
+          </label>
         )}
         <div className="space-y-1">
           <label htmlFor="active" className="block text-sm font-medium text-charcoal">
@@ -116,6 +138,7 @@ function PeopleList() {
                 <th className="px-4 py-2.5 font-medium">Name</th>
                 <th className="px-4 py-2.5 font-medium">Email</th>
                 <th className="px-4 py-2.5 font-medium">Role</th>
+                <th className="px-4 py-2.5 font-medium">Reports to</th>
                 <th className="px-4 py-2.5 font-medium">Job title</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
               </tr>
@@ -130,6 +153,9 @@ function PeopleList() {
                   </td>
                   <td className="px-4 py-2.5 text-charcoal-soft">{person.email}</td>
                   <td className="px-4 py-2.5 capitalize">{person.role}</td>
+                  <td className="px-4 py-2.5 text-charcoal-soft">
+                    {person.role === 'employee' ? (person.managerName ?? 'Not assigned') : '—'}
+                  </td>
                   <td className="px-4 py-2.5 text-charcoal-soft">{person.jobTitle ?? '—'}</td>
                   <td className="px-4 py-2.5">{person.isActive ? 'Active' : 'Inactive'}</td>
                 </tr>

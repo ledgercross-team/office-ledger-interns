@@ -8,6 +8,13 @@
       "when": 1791698330853,
       "tag": "0000_unknown_romulus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791755080982,
+      "tag": "0001_nosy_guardian",
+      "breakpoints": true
     }
   ]
 }

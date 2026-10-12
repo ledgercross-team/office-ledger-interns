@@ -1,4 +1,10 @@
-import { attendanceStatus, buildDays, rangeError, workDateFor } from './attendance.rules';
+import {
+  attendanceStatus,
+  buildDays,
+  computeStats,
+  rangeError,
+  workDateFor,
+} from './attendance.rules';
 
 describe('attendanceStatus', () => {
   const at = (time: string) => new Date(`2026-03-10T${time}:00Z`);
@@ -71,5 +77,90 @@ describe('rangeError', () => {
 
   it('accepts exactly 62 days', () => {
     expect(rangeError('2026-01-01', '2026-03-03')).toBeNull();
+  });
+});
+
+describe('computeStats', () => {
+  const base = { timezone: 'UTC', workStartTime: '09:00', today: '2026-10-12' };
+  const at = (date: string, time: string) => new Date(`${date}T${time}:00.000Z`);
+  const record = (date: string, inTime: string, outTime: string | null, status: 'present' | 'late') => ({
+    workDate: date,
+    status,
+    checkInAt: at(date, inTime),
+    checkOutAt: outTime ? at(date, outTime) : null,
+  });
+
+  it('counts on-time, late and absent weekdays and averages the check-in', () => {
+    // Mon 5 Oct to Fri 9 Oct 2026: on time, late, absent, on time, on time.
+    const stats = computeStats({
+      ...base,
+      from: '2026-10-05',
+      to: '2026-10-09',
+      records: [
+        record('2026-10-05', '08:50', '17:00', 'present'),
+        record('2026-10-06', '09:30', '17:30', 'late'),
+        record('2026-10-08', '09:00', '17:00', 'present'),
+        record('2026-10-09', '08:55', '16:55', 'present'),
+      ],
+    });
+
+    expect(stats.expectedDays).toBe(5);
+    expect(stats.daysOnTime).toBe(3);
+    expect(stats.daysLate).toBe(1);
+    expect(stats.daysAbsent).toBe(1);
+    expect(stats.attendanceRate).toBe(80);
+    expect(stats.punctualityRate).toBe(75);
+    expect(stats.avgCheckInMinutes).toBe(9 * 60 + 4); // 09:04 average
+    expect(stats.avgArrivalOffset).toBe(4);
+    expect(stats.tendency).toBe('on_time');
+    expect(stats.series).toHaveLength(5);
+  });
+
+  it('does not mark today absent before they check in, and ignores weekends', () => {
+    const stats = computeStats({
+      ...base,
+      from: '2026-10-09', // Friday
+      to: '2026-10-12', // Monday, which is today
+      records: [record('2026-10-09', '09:00', '17:00', 'present')],
+    });
+
+    expect(stats.expectedDays).toBe(1);
+    expect(stats.daysAbsent).toBe(0);
+  });
+
+  it('calls someone who usually arrives early an early bird', () => {
+    const stats = computeStats({
+      ...base,
+      from: '2026-10-05',
+      to: '2026-10-07',
+      records: ['05', '06', '07'].map((d) => record(`2026-10-${d}`, '08:40', '17:00', 'present')),
+    });
+
+    expect(stats.tendency).toBe('early_bird');
+    expect(stats.avgArrivalOffset).toBe(-20);
+  });
+
+  it('reports a slipping trend when later days are later', () => {
+    const stats = computeStats({
+      ...base,
+      from: '2026-10-05',
+      to: '2026-10-08',
+      records: [
+        record('2026-10-05', '08:55', '17:00', 'present'),
+        record('2026-10-06', '08:58', '17:00', 'present'),
+        record('2026-10-07', '09:10', '17:00', 'present'),
+        record('2026-10-08', '09:14', '17:00', 'present'),
+      ],
+    });
+
+    expect(stats.trend).toBe('slipping');
+  });
+
+  it('has no tendency without any check-ins', () => {
+    const stats = computeStats({ ...base, from: '2026-10-05', to: '2026-10-06', records: [] });
+
+    expect(stats.tendency).toBe('no_data');
+    expect(stats.score).toBe(0);
+    expect(stats.avgCheckInMinutes).toBeNull();
   });
 });

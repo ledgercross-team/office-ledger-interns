@@ -4,6 +4,7 @@ import type { AuthUser } from '../../auth/auth.types';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { PaginationQueryDto } from '../../common/utils/pagination';
+import { CreateAdminDto, UpdateAdminDto } from './dto/admins.dto';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
@@ -38,9 +39,31 @@ export class GameMasterController {
   }
 
   @Throttle({ default: RESET_RATE })
-  @Post('companies/:companyId/reset-admin-password')
-  resetAdminPassword(@Param('companyId', ParseUUIDPipe) companyId: string) {
-    return this.service.resetAdminPassword(companyId);
+  @Post('companies/:companyId/admins')
+  createAdmin(
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateAdminDto,
+  ) {
+    return this.service.createAdmin(companyId, user.id, dto);
+  }
+
+  @Patch('companies/:companyId/admins/:adminId')
+  updateAdmin(
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+    @Param('adminId', ParseUUIDPipe) adminId: string,
+    @Body() dto: UpdateAdminDto,
+  ) {
+    return this.service.updateAdmin(companyId, adminId, dto);
+  }
+
+  @Throttle({ default: RESET_RATE })
+  @Post('companies/:companyId/admins/:adminId/reset-password')
+  resetAdminPassword(
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+    @Param('adminId', ParseUUIDPipe) adminId: string,
+  ) {
+    return this.service.resetAdminPassword(companyId, adminId);
   }
 
   @Post('companies/:companyId/subscriptions')

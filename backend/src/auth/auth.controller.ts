@@ -41,7 +41,7 @@ export class AuthController {
     @Body() _body: LoginDto,
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ user: PublicUser & { subscriptionActive?: boolean } }> {
+  ): Promise<{ user: PublicUser & { subscriptionActive?: boolean; companyTimezone?: string } }> {
     const user = req.user as LoginUser;
     await this.tokenService.issueTokens(user, req, res);
 
@@ -97,7 +97,7 @@ export class AuthController {
   @Get('me')
   async me(
     @CurrentUser() user: AuthUser,
-  ): Promise<{ user: PublicUser & { subscriptionActive?: boolean } }> {
+  ): Promise<{ user: PublicUser & { subscriptionActive?: boolean; companyTimezone?: string } }> {
     return this.authService.me(user);
   }
 }

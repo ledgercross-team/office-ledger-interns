@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/role-gate';
 import { apiFetch } from '@/lib/api-client';
-import { errorMessage } from '@/lib/format';
-import type { Paginated, Task, TaskPriority, User } from '@/lib/types';
+import { useAuth } from '@/lib/auth-context';
+import { errorMessage, fromZonedInput, MAX_DATE, toZonedInput } from '@/lib/format';
+import { TASK_CATEGORIES } from '@/lib/task-meta';
+import type { Paginated, Task, TaskCategory, TaskPriority, User } from '@/lib/types';
 
 interface NewTask {
   title: string;
   description?: string;
+  category: TaskCategory;
   priority: TaskPriority;
   deadline: string;
   assigneeId: string;
@@ -19,9 +22,13 @@ interface NewTask {
 function NewTaskForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const timezone = user?.companyTimezone ?? 'UTC';
+  // The earliest deadline the form allows: right now, on the company's clock.
+  const earliest = toZonedInput(new Date().toISOString(), timezone);
 
-  // The API only returns people this user may assign tasks to.
+  // Managers see only their own team here; admins see every manager and employee.
   const people = useQuery({
     queryKey: ['people', 'assignable'],
     queryFn: () => apiFetch<Paginated<User>>('/users?isActive=true&pageSize=100'),
@@ -45,8 +52,10 @@ function NewTaskForm() {
     create.mutate({
       title: String(form.get('title')).trim(),
       description: description || undefined,
+      category: String(form.get('category')) as TaskCategory,
       priority: String(form.get('priority')) as TaskPriority,
-      deadline: new Date(String(form.get('deadline'))).toISOString(),
+      // Typed on the company's clock, whatever timezone this browser is in.
+      deadline: fromZonedInput(String(form.get('deadline')), timezone),
       assigneeId: String(form.get('assigneeId')),
     });
   }
@@ -81,6 +90,24 @@ function NewTaskForm() {
         />
       </div>
 
+      <div className="space-y-1">
+        <label htmlFor="category" className="block text-sm font-medium">
+          Type of work
+        </label>
+        <select
+          id="category"
+          name="category"
+          defaultValue="general"
+          className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+        >
+          {TASK_CATEGORIES.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1">
           <label htmlFor="priority" className="block text-sm font-medium">
@@ -99,13 +126,15 @@ function NewTaskForm() {
         </div>
         <div className="space-y-1">
           <label htmlFor="deadline" className="block text-sm font-medium">
-            Deadline
+            Deadline ({timezone})
           </label>
           <input
             id="deadline"
             name="deadline"
             type="datetime-local"
             required
+            min={earliest}
+            max={`${MAX_DATE}T23:59`}
             className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
           />
         </div>
@@ -113,7 +142,7 @@ function NewTaskForm() {
 
       <div className="space-y-1">
         <label htmlFor="assigneeId" className="block text-sm font-medium">
-          Assignee
+          Assign to
         </label>
         <select
           id="assigneeId"
@@ -125,11 +154,14 @@ function NewTaskForm() {
           <option value="" disabled>
             {people.isLoading ? 'Loading…' : 'Select a person'}
           </option>
-          {people.data?.items.map((person) => (
-            <option key={person.id} value={person.id}>
-              {person.fullName} ({person.role})
-            </option>
-          ))}
+          {people.data?.items
+            .filter((person) => person.role !== 'admin')
+            .map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.fullName} ({person.role}
+                {person.managerName ? `, reports to ${person.managerName}` : ''})
+              </option>
+            ))}
         </select>
       </div>
 

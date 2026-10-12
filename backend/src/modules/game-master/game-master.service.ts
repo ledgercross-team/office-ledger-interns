@@ -15,6 +15,7 @@ import { hashPassword, generateTempPassword } from '../../common/utils/passwords
 import { type Paginated } from '../../common/utils/pagination';
 import { DRIZZLE, type Database } from '../../db/db.module';
 import { companies, messages, subscriptions, users } from '../../db/schema';
+import type { CreateAdminDto, UpdateAdminDto } from './dto/admins.dto';
 import type { CreateCompanyDto } from './dto/create-company.dto';
 import type { CreateSubscriptionDto } from './dto/create-subscription.dto';
 import type { UpdateCompanyDto } from './dto/update-company.dto';
@@ -24,6 +25,7 @@ import { daysLeft, pickSubscription } from './subscription-utils';
 type Company = typeof companies.$inferSelect;
 
 const ADMIN_COLUMNS = { id: users.id, fullName: users.fullName, email: users.email };
+const ADMIN_LIST_COLUMNS = { ...ADMIN_COLUMNS, isActive: users.isActive };
 
 @Injectable()
 export class GameMasterService {
@@ -52,7 +54,8 @@ export class GameMasterService {
       this.database
         .select({ ...ADMIN_COLUMNS, companyId: users.companyId })
         .from(users)
-        .where(and(inArray(users.companyId, ids), eq(users.role, 'admin'))),
+        .where(and(inArray(users.companyId, ids), eq(users.role, 'admin')))
+        .orderBy(asc(users.createdAt)),
       this.database.select().from(subscriptions).where(inArray(subscriptions.companyId, ids)),
       // Unread = messages the admin sent that the game master has not read.
       this.database
@@ -71,12 +74,14 @@ export class GameMasterService {
         subs.filter((row) => row.companyId === company.id),
         today,
       );
-      const admin = admins.find((row) => row.companyId === company.id);
+      const companyAdmins = admins.filter((row) => row.companyId === company.id);
+      const admin = companyAdmins[0];
 
       return {
         ...company,
         adminName: admin?.fullName ?? null,
         adminEmail: admin?.email ?? null,
+        adminCount: companyAdmins.length,
         subscription,
         daysLeft: daysLeft(subscription, today),
         unreadCount: unread.find((row) => row.companyId === company.id)?.unread ?? 0,
@@ -145,18 +150,18 @@ export class GameMasterService {
 
   async getCompany(companyId: string) {
     const company = await this.findCompany(companyId);
-    const [admin] = await this.database
-      .select(ADMIN_COLUMNS)
+    const admins = await this.database
+      .select(ADMIN_LIST_COLUMNS)
       .from(users)
       .where(and(eq(users.companyId, companyId), eq(users.role, 'admin')))
-      .limit(1);
+      .orderBy(asc(users.createdAt));
     const subs = await this.database
       .select()
       .from(subscriptions)
       .where(eq(subscriptions.companyId, companyId))
       .orderBy(desc(subscriptions.startsOn));
 
-    return { company, admin: admin ?? null, subscriptions: subs };
+    return { company, admins, subscriptions: subs };
   }
 
   async updateCompany(companyId: string, dto: UpdateCompanyDto) {
@@ -199,17 +204,57 @@ export class GameMasterService {
     return company;
   }
 
-  async resetAdminPassword(companyId: string) {
+  async createAdmin(companyId: string, creatorId: string, dto: CreateAdminDto) {
     await this.findCompany(companyId);
-    const [admin] = await this.database
-      .select(ADMIN_COLUMNS)
-      .from(users)
-      .where(and(eq(users.companyId, companyId), eq(users.role, 'admin')))
-      .limit(1);
 
-    if (!admin) {
-      throw new NotFoundException('This company has no admin.');
+    const email = dto.email.trim().toLowerCase();
+    await this.assertEmailFree(email);
+
+    const temporaryPassword = generateTempPassword();
+
+    try {
+      const [admin] = await this.database
+        .insert(users)
+        .values({
+          companyId,
+          role: 'admin',
+          email,
+          passwordHash: await hashPassword(temporaryPassword),
+          fullName: dto.fullName,
+          mustChangePassword: true,
+          createdById: creatorId,
+        })
+        .returning(ADMIN_LIST_COLUMNS);
+
+      return { admin, temporaryPassword };
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException('A user with this email already exists.');
+      }
+      throw error;
     }
+  }
+
+  async updateAdmin(companyId: string, adminId: string, dto: UpdateAdminDto) {
+    await this.findAdmin(companyId, adminId);
+
+    const [admin] = await this.database
+      .update(users)
+      .set({ isActive: dto.isActive })
+      .where(eq(users.id, adminId))
+      .returning(ADMIN_LIST_COLUMNS);
+
+    if (dto.isActive) {
+      await this.authState.invalidate(adminId);
+    } else {
+      await this.tokenService.revokeAllForUser(adminId);
+    }
+
+    return admin;
+  }
+
+  async resetAdminPassword(companyId: string, adminId: string) {
+    const admin = await this.findAdmin(companyId, adminId);
 
     const temporaryPassword = generateTempPassword();
     await this.database
@@ -253,17 +298,21 @@ export class GameMasterService {
       throw new NotFoundException('Subscription not found.');
     }
 
+    const startsOn = dto.startsOn ?? existing.startsOn;
     const endsOn = dto.endsOn ?? existing.endsOn;
-    this.assertDates(existing.startsOn, endsOn);
+    this.assertDates(startsOn, endsOn);
 
-    if (dto.endsOn !== undefined && existing.cancelledAt === null) {
-      await this.assertNoOverlap(existing.companyId, existing.startsOn, endsOn, existing.id);
+    const datesChanged = dto.startsOn !== undefined || dto.endsOn !== undefined;
+    if (datesChanged && existing.cancelledAt === null && !dto.cancel) {
+      await this.assertNoOverlap(existing.companyId, startsOn, endsOn, existing.id);
     }
 
     const [subscription] = await this.database
       .update(subscriptions)
       .set({
-        endsOn,
+        planName: dto.planName,
+        startsOn: dto.startsOn,
+        endsOn: dto.endsOn,
         notes: dto.notes,
         cancelledAt: dto.cancel ? (existing.cancelledAt ?? new Date()) : undefined,
       })
@@ -272,6 +321,19 @@ export class GameMasterService {
 
     await this.authService.invalidateCompanySubscription(existing.companyId);
     return subscription;
+  }
+
+  private async findAdmin(companyId: string, adminId: string) {
+    const [admin] = await this.database
+      .select(ADMIN_LIST_COLUMNS)
+      .from(users)
+      .where(and(eq(users.id, adminId), eq(users.companyId, companyId), eq(users.role, 'admin')))
+      .limit(1);
+
+    if (!admin) {
+      throw new NotFoundException('Admin not found.');
+    }
+    return admin;
   }
 
   private async findCompany(companyId: string): Promise<Company> {

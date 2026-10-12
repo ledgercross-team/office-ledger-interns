@@ -9,6 +9,7 @@ import { TaskCard } from '@/components/task-card';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { buildQuery, errorMessage } from '@/lib/format';
+import { TASK_CATEGORIES } from '@/lib/task-meta';
 import type { Paginated, Task, TaskStatus } from '@/lib/types';
 
 const PAGE_SIZE = 10;
@@ -25,14 +26,21 @@ const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
 function TaskList() {
   const { user } = useAuth();
   const [status, setStatus] = useState('');
+  const [category, setCategory] = useState('');
   const [overdue, setOverdue] = useState(false);
   const [page, setPage] = useState(1);
 
   const query = useQuery({
-    queryKey: ['tasks', 'list', { status, overdue, page }],
+    queryKey: ['tasks', 'list', { status, category, overdue, page }],
     queryFn: () =>
       apiFetch<Paginated<Task>>(
-        `/tasks${buildQuery({ status, overdue: overdue || undefined, page, pageSize: PAGE_SIZE })}`,
+        `/tasks${buildQuery({
+          status,
+          category,
+          overdue: overdue || undefined,
+          page,
+          pageSize: PAGE_SIZE,
+        })}`,
       ),
   });
 
@@ -71,6 +79,27 @@ function TaskList() {
             ))}
           </select>
         </div>
+        <div className="space-y-1">
+          <label htmlFor="category" className="block text-sm font-medium text-charcoal">
+            Type of work
+          </label>
+          <select
+            id="category"
+            value={category}
+            onChange={(event) => {
+              setCategory(event.target.value);
+              setPage(1);
+            }}
+            className="rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen"
+          >
+            <option value="">All</option>
+            {TASK_CATEGORIES.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <label className="flex items-center gap-2 pb-2 text-sm">
           <input
             type="checkbox"
@@ -94,7 +123,9 @@ function TaskList() {
         <p className="text-sm text-charcoal-soft">No tasks found.</p>
       )}
       <div className="space-y-3">
-        {query.data?.items.map((task) => <TaskCard key={task.id} task={task} />)}
+        {query.data?.items.map((task) => (
+          <TaskCard key={task.id} task={task} timezone={user?.companyTimezone} />
+        ))}
       </div>
       {query.data && (
         <Pagination

@@ -6,6 +6,7 @@ import { addDays, daysBetween, isWeekday } from '../../common/utils/dates';
 import { DRIZZLE, type Database } from '../../db/db.module';
 import { attendanceRecords, companies, subscriptions, tasks, users } from '../../db/schema';
 import { pickSubscription } from '../game-master/subscription-utils';
+import { managedPeople } from '../users/visibility';
 import { MessagesService } from '../messages/messages.service';
 
 const assignee = aliasedTable(users, 'assignee');
@@ -58,23 +59,25 @@ export class DashboardService {
 
   // Own counts at the top level; the employees they manage under `team`.
   private async manager(user: AuthUser, company: Company) {
-    const teamTasks = and(eq(tasks.companyId, company.id), eq(assignee.role, 'employee'));
+    // Only the employees who report to this manager.
+    const teamTasks = and(eq(tasks.companyId, company.id), managedPeople(user, assignee));
     const people = and(
       eq(users.companyId, company.id),
-      eq(users.role, 'employee'),
+      managedPeople(user),
       eq(users.isActive, true),
     );
+    const attendance = await this.attendanceToday(company, people);
 
     return {
       role: user.role,
       ...(await this.taskCounts(company, eq(tasks.assigneeId, user.id))),
       today: await this.myToday(user, company),
       team: {
-        people: (await this.attendanceToday(company, people)).total,
+        people: attendance.total,
         ...(await this.taskCounts(company, teamTasks)),
         tasksByStatus: await this.tasksByStatus(teamTasks),
         overdueList: await this.overdueList(teamTasks),
-        attendance: await this.attendanceToday(company, people),
+        attendance,
       },
     };
   }

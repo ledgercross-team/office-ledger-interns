@@ -22,6 +22,14 @@ import { RedisModule } from './modules/redis/redis.module';
 import { RedisService } from './modules/redis/redis.service';
 import { RedisThrottlerStorage } from './modules/redis/redis-throttler.storage';
 
+// Only credential endpoints count against the strict auth limit. /auth/me runs on every
+// page load, so counting it would lock people out after a few refreshes.
+const STRICT_AUTH_PATHS = [
+  '/api/v1/auth/login',
+  '/api/v1/auth/refresh',
+  '/api/v1/auth/change-password',
+];
+
 function positiveInteger(config: ConfigService, name: string, fallback: number): number {
   const value = config.get<string>(name);
   const parsed = value === undefined ? fallback : Number(value);
@@ -70,12 +78,10 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
             },
             {
               name: 'auth',
-              // Only /auth/* routes count against the stricter auth limit.
               skipIf: (context) =>
-                !context
-                  .switchToHttp()
-                  .getRequest<{ path: string }>()
-                  .path.startsWith('/api/v1/auth'),
+                !STRICT_AUTH_PATHS.includes(
+                  context.switchToHttp().getRequest<{ path: string }>().path,
+                ),
               limit: authLimit,
               ttl: seconds(60),
               blockDuration: seconds(authBlockSeconds),

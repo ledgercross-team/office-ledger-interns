@@ -11,19 +11,24 @@ import { getCompanyDate } from '../../common/utils/company-time';
 import { isUniqueViolation } from '../../common/utils/db-errors';
 import { DRIZZLE, type Database } from '../../db/db.module';
 import { attendanceRecords, companies, users } from '../../db/schema';
-import { manageableRoles } from '../users/visibility';
+import { addDays } from '../../common/utils/dates';
+import { managedPeople } from '../users/visibility';
 import {
   attendanceStatus,
   buildDays,
+  computeStats,
   defaultRange,
   rangeError,
   workDateFor,
+  workStartMinutes as workStartMinutesOf,
 } from './attendance.rules';
 import type {
   CorrectAttendanceDto,
   MyAttendanceQueryDto,
   TeamAttendanceQueryDto,
 } from './dto/attendance.dto';
+
+const DEFAULT_STATS_DAYS = 30;
 
 @Injectable()
 export class AttendanceService {
@@ -125,7 +130,7 @@ export class AttendanceService {
         and(
           eq(attendanceRecords.id, recordId),
           eq(attendanceRecords.companyId, company.id),
-          inArray(users.role, manageableRoles(user.role)),
+          managedPeople(user),
         ),
       )
       .limit(1);
@@ -153,6 +158,170 @@ export class AttendanceService {
       .where(eq(attendanceRecords.id, recordId))
       .returning();
     return updated;
+  }
+
+  // The caller's own tendencies, with the per-day series for charts.
+  async statsMe(user: AuthUser, days = DEFAULT_STATS_DAYS) {
+    const company = await this.getCompany(user);
+    const [me] = await this.database
+      .select({ id: users.id, fullName: users.fullName, role: users.role, createdAt: users.createdAt })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
+
+    return this.statsFor(company, me, days);
+  }
+
+  // One visible person's tendencies.
+  async statsForUser(caller: AuthUser, userId: string, days = DEFAULT_STATS_DAYS) {
+    const company = await this.getCompany(caller);
+    const [person] = await this.database
+      .select({
+        id: users.id,
+        fullName: users.fullName,
+        role: users.role,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(
+        and(
+          eq(users.id, userId),
+          eq(users.companyId, company.id),
+          or(this.visibleTo(caller), eq(users.id, caller.id)),
+        ),
+      )
+      .limit(1);
+
+    if (!person) {
+      throw new NotFoundException('User not found.');
+    }
+    return this.statsFor(company, person, days);
+  }
+
+  // Everyone the caller can see, best score first. No per-day series, to keep it light.
+  async statsTeam(caller: AuthUser, days = DEFAULT_STATS_DAYS) {
+    const company = await this.getCompany(caller);
+    const people = await this.database
+      .select({
+        id: users.id,
+        fullName: users.fullName,
+        role: users.role,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .where(and(eq(users.companyId, company.id), eq(users.isActive, true), this.visibleTo(caller)))
+      .orderBy(users.fullName);
+
+    const today = getCompanyDate(company.timezone);
+    const from = addDays(today, -(days - 1));
+    const records = people.length
+      ? await this.database
+          .select()
+          .from(attendanceRecords)
+          .where(
+            and(
+              eq(attendanceRecords.companyId, company.id),
+              inArray(
+                attendanceRecords.userId,
+                people.map((person) => person.id),
+              ),
+              gte(attendanceRecords.workDate, from),
+              lte(attendanceRecords.workDate, today),
+            ),
+          )
+      : [];
+
+    const rows = people.map((person) => {
+      const mine = records.filter((record) => record.userId === person.id);
+      const stats = computeStats({
+        records: mine,
+        from: this.windowStart(from, person.createdAt, company.timezone, mine),
+        to: today,
+        today,
+        timezone: company.timezone,
+        workStartTime: company.workStartTime,
+      });
+      const { series: _series, ...summary } = stats;
+      return { userId: person.id, fullName: person.fullName, role: person.role, ...summary };
+    });
+
+    rows.sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || a.fullName.localeCompare(b.fullName));
+
+    const scored = rows.filter((row) => row.score !== null);
+    const offsets = rows.filter((row) => row.avgArrivalOffset !== null);
+    const average = (values: number[]) =>
+      values.length === 0
+        ? null
+        : Math.round(values.reduce((sum, n) => sum + n, 0) / values.length);
+
+    return {
+      timezone: company.timezone,
+      days,
+      from,
+      to: today,
+      workStartMinutes: workStartMinutesOf(company.workStartTime),
+      summary: {
+        people: rows.length,
+        avgScore: average(scored.map((row) => row.score as number)),
+        avgArrivalOffset: average(offsets.map((row) => row.avgArrivalOffset as number)),
+        onTimeRate: average(
+          rows.filter((row) => row.punctualityRate !== null).map((r) => r.punctualityRate as number),
+        ),
+      },
+      people: rows,
+    };
+  }
+
+  private async statsFor(
+    company: { id: string; timezone: string; workStartTime: string },
+    person: { id: string; fullName: string; role: string; createdAt: Date },
+    days: number,
+  ) {
+    const today = getCompanyDate(company.timezone);
+    const from = addDays(today, -(days - 1));
+
+    const records = await this.database
+      .select()
+      .from(attendanceRecords)
+      .where(
+        and(
+          eq(attendanceRecords.userId, person.id),
+          eq(attendanceRecords.companyId, company.id),
+          gte(attendanceRecords.workDate, from),
+          lte(attendanceRecords.workDate, today),
+        ),
+      );
+
+    const stats = computeStats({
+      records,
+      from: this.windowStart(from, person.createdAt, company.timezone, records),
+      to: today,
+      today,
+      timezone: company.timezone,
+      workStartTime: company.workStartTime,
+    });
+
+    return {
+      timezone: company.timezone,
+      days,
+      user: { id: person.id, fullName: person.fullName, role: person.role },
+      ...stats,
+    };
+  }
+
+  // Nobody is "absent" on days before they joined (or before their first record, which
+  // covers people whose history was imported).
+  private windowStart(
+    from: string,
+    joinedAt: Date,
+    timezone: string,
+    records: { workDate: string }[],
+  ): string {
+    const first = records.reduce(
+      (min, record) => (record.workDate < min ? record.workDate : min),
+      getCompanyDate(timezone, joinedAt),
+    );
+    return first > from ? first : from;
   }
 
   // Everyone the caller can see on a date, including absent people.
@@ -230,7 +399,7 @@ export class AttendanceService {
     return buildDays(records, from, to, today);
   }
 
-  // Admin: managers and employees. Manager: employees and themselves. Else 404.
+  // Admin: managers and employees. Manager: their team and themselves. Else 404.
   private async findVisibleUser(caller: AuthUser, userId: string) {
     const [target] = await this.database
       .select({ id: users.id })
@@ -250,10 +419,10 @@ export class AttendanceService {
     return target;
   }
 
-  // Admin sees managers and employees; a manager sees employees and themselves.
+  // Admin sees managers and employees; a manager sees their own team and themselves.
   private visibleTo(caller: AuthUser) {
-    const roles = inArray(users.role, manageableRoles(caller.role));
-    return caller.role === 'manager' ? or(roles, eq(users.id, caller.id)) : roles;
+    const managed = managedPeople(caller);
+    return caller.role === 'manager' ? or(managed, eq(users.id, caller.id)) : managed;
   }
 
   private async getCompany(user: AuthUser) {

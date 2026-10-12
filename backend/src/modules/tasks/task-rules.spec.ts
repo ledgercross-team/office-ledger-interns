@@ -38,44 +38,37 @@ const TO: Record<TaskAction, TaskStatus> = {
 const MANAGER_ONLY: TaskAction[] = ['reopen', 'cancel'];
 const COMMENT_REQUIRED: TaskAction[] = ['delayed', 'incomplete', 'reopen', 'cancel'];
 
-// People relative to a task assigned to `assignee`.
+// People relative to a task assigned to `assignee`. Employee e1 reports to manager m1.
+const E1 = { role: 'employee' as const, managerId: 'm1' };
 const people = {
-  admin: {
-    actor: { id: 'a', role: 'admin' as const },
-    assignee: 'e1',
-    assigneeRole: 'employee' as const,
-  },
-  managerOverEmployee: {
+  admin: { actor: { id: 'a', role: 'admin' as const }, assignee: 'e1', info: E1 },
+  managerOverEmployee: { actor: { id: 'm1', role: 'manager' as const }, assignee: 'e1', info: E1 },
+  managerOverOtherTeam: { actor: { id: 'm2', role: 'manager' as const }, assignee: 'e1', info: E1 },
+  managerOverUnassigned: {
     actor: { id: 'm1', role: 'manager' as const },
-    assignee: 'e1',
-    assigneeRole: 'employee' as const,
+    assignee: 'e9',
+    info: { role: 'employee' as const, managerId: null },
   },
   managerOwnTask: {
     actor: { id: 'm1', role: 'manager' as const },
     assignee: 'm1',
-    assigneeRole: 'manager' as const,
+    info: { role: 'manager' as const, managerId: null },
   },
   managerOverManager: {
     actor: { id: 'm1', role: 'manager' as const },
     assignee: 'm2',
-    assigneeRole: 'manager' as const,
+    info: { role: 'manager' as const, managerId: null },
   },
-  assigneeEmployee: {
-    actor: { id: 'e1', role: 'employee' as const },
-    assignee: 'e1',
-    assigneeRole: 'employee' as const,
-  },
-  otherEmployee: {
-    actor: { id: 'e2', role: 'employee' as const },
-    assignee: 'e1',
-    assigneeRole: 'employee' as const,
-  },
+  assigneeEmployee: { actor: { id: 'e1', role: 'employee' as const }, assignee: 'e1', info: E1 },
+  otherEmployee: { actor: { id: 'e2', role: 'employee' as const }, assignee: 'e1', info: E1 },
 };
 
 // Who may press each kind of button.
 const CAN_ACT = {
   admin: true,
   managerOverEmployee: true,
+  managerOverOtherTeam: false, // not their direct report
+  managerOverUnassigned: false,
   managerOwnTask: true, // assignee
   managerOverManager: false,
   assigneeEmployee: true,
@@ -84,6 +77,8 @@ const CAN_ACT = {
 const CAN_MANAGE = {
   admin: true,
   managerOverEmployee: true,
+  managerOverOtherTeam: false,
+  managerOverUnassigned: false,
   managerOwnTask: false, // a manager's own task has a manager assignee
   managerOverManager: false,
   assigneeEmployee: false,
@@ -110,12 +105,12 @@ describe('task rules (section 12)', () => {
 
           it(`${action} on ${status} by ${name}: ${statusOk && personOk ? 'allowed' : 'denied'}`, () => {
             const task = { status, assigneeId: p.assignee };
-            expect(canApplyAction(p.actor, task, p.assigneeRole, action)).toBe(
+            expect(canApplyAction(p.actor, task, p.info, action)).toBe(
               statusOk && personOk,
             );
 
             const expected = !personOk ? 'forbidden' : !statusOk ? 'invalid_status' : null;
-            expect(denialFor(p.actor, task, p.assigneeRole, action)).toBe(expected);
+            expect(denialFor(p.actor, task, p.info, action)).toBe(expected);
           });
         }
       }
@@ -126,21 +121,21 @@ describe('task rules (section 12)', () => {
     it('lists what an employee may do on their in-progress task', () => {
       const p = people.assigneeEmployee;
       expect(
-        allowedActions(p.actor, { status: 'in_progress', assigneeId: p.assignee }, p.assigneeRole),
+        allowedActions(p.actor, { status: 'in_progress', assigneeId: p.assignee }, p.info),
       ).toEqual(['done', 'delayed', 'incomplete']);
     });
 
     it('lets an admin reopen a done task', () => {
       const p = people.admin;
       expect(
-        allowedActions(p.actor, { status: 'done', assigneeId: p.assignee }, p.assigneeRole),
+        allowedActions(p.actor, { status: 'done', assigneeId: p.assignee }, p.info),
       ).toEqual(['reopen']);
     });
 
     it('gives another employee nothing', () => {
       const p = people.otherEmployee;
       expect(
-        allowedActions(p.actor, { status: 'todo', assigneeId: p.assignee }, p.assigneeRole),
+        allowedActions(p.actor, { status: 'todo', assigneeId: p.assignee }, p.info),
       ).toEqual([]);
     });
   });

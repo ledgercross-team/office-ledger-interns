@@ -2,7 +2,7 @@ import argon2 from 'argon2';
 import { config } from 'dotenv';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import * as schema from './schema';
 
 config({ path: '.env.local' });
@@ -176,6 +176,23 @@ async function main(): Promise<void> {
         throw new Error('Acme employee seed users were not created as expected.');
       }
 
+      // Employees report to a manager: 1 and 2 to manager one, 3 and 4 to manager two.
+      const managerFor = [acmeManager1, acmeManager1, acmeManager2, acmeManager2];
+      for (const [index, employee] of acmeEmployees.entries()) {
+        await tx
+          .update(users)
+          .set({ managerId: managerFor[index]!.id })
+          .where(eq(users.id, employee.id));
+      }
+      const globexManager = userByEmail.get('manager1@globex.local');
+      const globexEmployee = userByEmail.get('employee1@globex.local');
+      if (globexManager && globexEmployee) {
+        await tx
+          .update(users)
+          .set({ managerId: globexManager.id })
+          .where(eq(users.id, globexEmployee.id));
+      }
+
       await tx.insert(subscriptions).values([
         {
           companyId: insertedAcme.id,
@@ -199,6 +216,7 @@ async function main(): Promise<void> {
           {
             companyId: insertedAcme.id,
             title: 'Prepare monthly operations report',
+            category: 'general',
             status: 'todo',
             assigneeId: acmeEmployees[0]!.id,
             createdById: acmeAdmin.id,
@@ -207,6 +225,7 @@ async function main(): Promise<void> {
           {
             companyId: insertedAcme.id,
             title: 'Review onboarding checklist',
+            category: 'onboarding',
             status: 'todo',
             assigneeId: acmeEmployees[1]!.id,
             createdById: acmeAdmin.id,
@@ -215,6 +234,7 @@ async function main(): Promise<void> {
           {
             companyId: insertedAcme.id,
             title: 'Update client contact records',
+            category: 'general',
             status: 'in_progress',
             assigneeId: acmeEmployees[2]!.id,
             createdById: acmeManager1.id,
@@ -223,6 +243,7 @@ async function main(): Promise<void> {
           {
             companyId: insertedAcme.id,
             title: 'Audit attendance exceptions',
+            category: 'leave_attendance',
             status: 'in_progress',
             assigneeId: acmeManager1.id,
             createdById: acmeAdmin.id,
@@ -231,6 +252,7 @@ async function main(): Promise<void> {
           {
             companyId: insertedAcme.id,
             title: 'Publish the office calendar',
+            category: 'general',
             status: 'delayed',
             assigneeId: acmeManager2.id,
             createdById: acmeAdmin.id,
@@ -239,6 +261,7 @@ async function main(): Promise<void> {
           {
             companyId: insertedAcme.id,
             title: 'Complete payroll handoff',
+            category: 'payroll',
             status: 'done',
             assigneeId: acmeEmployees[3]!.id,
             createdById: acmeManager1.id,
@@ -248,6 +271,7 @@ async function main(): Promise<void> {
           {
             companyId: insertedAcme.id,
             title: 'Archive last quarter documents',
+            category: 'compliance',
             status: 'done',
             assigneeId: acmeEmployees[0]!.id,
             createdById: acmeAdmin.id,
@@ -257,6 +281,7 @@ async function main(): Promise<void> {
           {
             companyId: insertedAcme.id,
             title: 'Resolve an incomplete handover',
+            category: 'performance_review',
             status: 'incomplete',
             assigneeId: acmeEmployees[1]!.id,
             createdById: acmeManager2.id,
@@ -292,17 +317,35 @@ async function main(): Promise<void> {
       );
       await tx.insert(taskActivity).values(activityValues);
 
-      const attendanceDates = recentWeekdays(5);
+      const attendanceDates = recentWeekdays(20);
       const attendanceUsers = [acmeManager1, acmeManager2, ...acmeEmployees] as const;
       const attendanceValues: (typeof attendanceRecords.$inferInsert)[] = [];
 
-      for (const user of attendanceUsers) {
+      // Each person has a habit (minutes after 09:00 they usually arrive) plus a small
+      // deterministic wobble, so the charts show real tendencies.
+      const habit: Record<string, number> = {
+        'manager1@acme.local': -6,
+        'manager2@acme.local': 2,
+        'employee1@acme.local': -12,
+        'employee2@acme.local': 22,
+        'employee3@acme.local': 4,
+        'employee4@acme.local': 9,
+      };
+
+      for (const [userIndex, user] of attendanceUsers.entries()) {
         for (const [dateIndex, workDate] of attendanceDates.entries()) {
           if (user.email === 'employee4@acme.local' && dateIndex === 4) continue;
 
-          const isLate = user.email === 'employee2@acme.local' && dateIndex < 2;
-          const checkInAt = new Date(`${workDate}T${isLate ? '09:30' : '09:00'}:00.000Z`);
+          const wobble = ((dateIndex * 7 + userIndex * 5) % 11) - 5;
+          // dateIndex 0 is the most recent day, so employee2 is improving over time.
+          const drift = user.email === 'employee2@acme.local' ? dateIndex - 10 : 0;
+          const arrival = (habit[user.email] ?? 0) + wobble + drift;
+          const leave = ((dateIndex * 3 + userIndex) % 7) * 6 - 10;
+
+          const checkInAt = new Date(`${workDate}T09:00:00.000Z`);
+          checkInAt.setUTCMinutes(arrival);
           const checkOutAt = new Date(`${workDate}T17:00:00.000Z`);
+          checkOutAt.setUTCMinutes(leave);
 
           attendanceValues.push({
             companyId: insertedAcme.id,
@@ -310,7 +353,7 @@ async function main(): Promise<void> {
             workDate,
             checkInAt,
             checkOutAt,
-            status: isLate ? 'late' : 'present',
+            status: arrival > 15 ? 'late' : 'present',
           });
         }
       }

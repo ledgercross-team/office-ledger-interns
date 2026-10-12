@@ -1,5 +1,13 @@
 export const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+// Subscriptions and attendance queries accept dates in this window only.
+export const MIN_DATE = '2024-01-01';
+export const MAX_DATE = '2050-12-31';
+
+export function isSupportedDate(date: string): boolean {
+  return date >= MIN_DATE && date <= MAX_DATE;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function toUtcMs(date: string): number {

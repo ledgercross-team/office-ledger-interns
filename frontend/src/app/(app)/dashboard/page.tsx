@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { motion } from 'motion/react';
+import { PersonInsights, TeamInsights, useTeamStats } from '@/components/attendance-insights';
 import { CheckInCard } from '@/components/check-in-card';
 import { OpenTaskList } from '@/components/open-task-list';
 import { OverdueList } from '@/components/overdue-list';
@@ -20,7 +21,7 @@ import {
 } from '@/components/story';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
-import { buildQuery, errorMessage, formatDate } from '@/lib/format';
+import { buildQuery, errorMessage, formatDate, todayIn } from '@/lib/format';
 import type {
   AttendanceCounts,
   DashboardSummary,
@@ -117,8 +118,9 @@ function AttendanceStory({
 }
 
 // Late/absent names for the story, from the same endpoint the team page uses.
-function useTodaySpotlight(enabled: boolean) {
-  const date = new Date().toLocaleDateString('en-CA');
+function useTodaySpotlight(enabled: boolean, timezone: string) {
+  // The company's "today", which can differ from the browser's.
+  const date = todayIn(timezone);
   const query = useQuery({
     queryKey: ['attendance', 'team', date],
     queryFn: () =>
@@ -154,13 +156,21 @@ function EmployeeDashboard({ summary }: { summary: DashboardSummary }) {
           <OpenTaskList title="Open tasks" />
         </div>
       </Reveal>
+      <StoryChapter
+        step="Your attendance"
+        title="How do your days look?"
+        lede="Scroll through your last 30 days of check-ins and check-outs."
+      >
+        <PersonInsights path="/attendance/stats/me" />
+      </StoryChapter>
     </div>
   );
 }
 
 function ManagerDashboard({ summary, userId }: { summary: DashboardSummary; userId: string }) {
   const team = summary.team;
-  const spotlight = useTodaySpotlight(team !== undefined);
+  const spotlight = useTodaySpotlight(team !== undefined, summary.timezone);
+  const teamStats = useTeamStats(30, team !== undefined);
 
   return (
     <div className="space-y-8">
@@ -190,6 +200,20 @@ function ManagerDashboard({ summary, userId }: { summary: DashboardSummary; user
               <OverdueList items={team.overdueList} />
             </div>
           </StoryChapter>
+
+          <StoryChapter
+            step="Chapter 3"
+            title="Who keeps good time?"
+            lede="Average arrival and reliability for your team over the last 30 days."
+          >
+            {teamStats.data ? (
+              <TeamInsights data={teamStats.data} />
+            ) : (
+              <p className="text-sm text-charcoal-soft">
+                {teamStats.error ? errorMessage(teamStats.error) : 'Loading…'}
+              </p>
+            )}
+          </StoryChapter>
         </>
       )}
 
@@ -198,13 +222,22 @@ function ManagerDashboard({ summary, userId }: { summary: DashboardSummary; user
           <OpenTaskList title="My open tasks" assigneeId={userId} />
         </div>
       </Reveal>
+
+      <StoryChapter
+        step="Your attendance"
+        title="How do your own days look?"
+        lede="Your last 30 days of check-ins and check-outs."
+      >
+        <PersonInsights path="/attendance/stats/me" />
+      </StoryChapter>
     </div>
   );
 }
 
 function AdminDashboard({ summary }: { summary: DashboardSummary }) {
   const people = summary.peopleByRole;
-  const spotlight = useTodaySpotlight(summary.attendance !== undefined);
+  const spotlight = useTodaySpotlight(summary.attendance !== undefined, summary.timezone);
+  const teamStats = useTeamStats(30, summary.attendance !== undefined);
 
   return (
     <div className="space-y-8">
@@ -239,7 +272,21 @@ function AdminDashboard({ summary }: { summary: DashboardSummary }) {
         </div>
       </StoryChapter>
 
-      <StoryChapter step="Chapter 3" title="Is the account healthy?" lede="Subscription and unread messages.">
+      <StoryChapter
+        step="Chapter 3"
+        title="Who keeps good time?"
+        lede="Average arrival and reliability across the company over the last 30 days."
+      >
+        {teamStats.data ? (
+          <TeamInsights data={teamStats.data} />
+        ) : (
+          <p className="text-sm text-charcoal-soft">
+            {teamStats.error ? errorMessage(teamStats.error) : 'Loading…'}
+          </p>
+        )}
+      </StoryChapter>
+
+      <StoryChapter step="Chapter 4" title="Is the account healthy?" lede="Subscription and unread messages.">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatTile
             label="Subscription ends"

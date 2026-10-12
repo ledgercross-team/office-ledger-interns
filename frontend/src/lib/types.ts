@@ -10,6 +10,17 @@ export type TaskStatus =
 
 export type TaskPriority = 'low' | 'medium' | 'high';
 
+export type TaskCategory =
+  | 'general'
+  | 'onboarding'
+  | 'recruitment'
+  | 'payroll'
+  | 'leave_attendance'
+  | 'training'
+  | 'performance_review'
+  | 'compliance'
+  | 'it_support';
+
 export type TaskActivityType = 'comment' | 'status_change';
 
 export type TaskAction =
@@ -39,6 +50,8 @@ export interface AuthUser {
   companyId: string | null;
   mustChangePassword: boolean;
   subscriptionActive?: boolean;
+  // IANA timezone of the user's company; "today" and deadlines are shown on its clock.
+  companyTimezone?: string;
 }
 
 export interface AuthSession {
@@ -91,6 +104,9 @@ export interface User {
   isActive: boolean;
   mustChangePassword: boolean;
   lastLoginAt: string | null;
+  // Employees only: who they report to.
+  managerId: string | null;
+  managerName: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -100,6 +116,7 @@ export interface Task {
   companyId: string;
   title: string;
   description: string | null;
+  category: TaskCategory;
   priority: TaskPriority;
   status: TaskStatus;
   deadline: string;
@@ -175,6 +192,7 @@ export interface GameMasterCompany {
   isActive: boolean;
   adminName: string | null;
   adminEmail: string | null;
+  adminCount: number;
   subscription: Subscription | null;
   daysLeft: number | null;
   unreadCount: number;
@@ -248,9 +266,16 @@ export interface CreateUserResponse {
   temporaryPassword: string;
 }
 
+export interface CompanyAdmin {
+  id: string;
+  fullName: string;
+  email: string;
+  isActive: boolean;
+}
+
 export interface GameMasterCompanyDetail {
   company: Company;
-  admin: { id: string; fullName: string; email: string } | null;
+  admins: CompanyAdmin[];
   subscriptions: Subscription[];
 }
 
@@ -259,4 +284,69 @@ export interface CreateCompanyResponse {
   admin: { id: string; fullName: string; email: string };
   subscription: Subscription;
   temporaryPassword: string;
+}
+
+export type Tendency = 'no_data' | 'early_bird' | 'on_time' | 'cutting_it_close' | 'often_late';
+export type Trend = 'unknown' | 'improving' | 'steady' | 'slipping';
+
+export interface StatsDay {
+  date: string;
+  status: AttendanceDayStatus;
+  // Minutes since local midnight, in the company's timezone.
+  checkInMinutes: number | null;
+  checkOutMinutes: number | null;
+  hours: number | null;
+}
+
+// GET /attendance/stats/me and /attendance/stats/users/:id
+export interface AttendanceStats {
+  timezone: string;
+  days: number;
+  user: { id: string; fullName: string; role: Role };
+  from: string;
+  to: string;
+  workStartMinutes: number;
+  expectedDays: number;
+  daysOnTime: number;
+  daysLate: number;
+  daysAbsent: number;
+  missedCheckOuts: number;
+  attendanceRate: number | null;
+  punctualityRate: number | null;
+  avgCheckInMinutes: number | null;
+  avgCheckOutMinutes: number | null;
+  // Minutes after (+) or before (-) the work start time.
+  avgArrivalOffset: number | null;
+  avgHoursWorked: number | null;
+  score: number | null;
+  tendency: Tendency;
+  trend: Trend;
+  series: StatsDay[];
+}
+
+export interface TeamStatsRow extends Omit<AttendanceStats, 'series' | 'user' | 'timezone' | 'days'> {
+  userId: string;
+  fullName: string;
+  role: Role;
+}
+
+// GET /attendance/stats/team
+export interface TeamStats {
+  timezone: string;
+  days: number;
+  from: string;
+  to: string;
+  workStartMinutes: number;
+  summary: {
+    people: number;
+    avgScore: number | null;
+    avgArrivalOffset: number | null;
+    onTimeRate: number | null;
+  };
+  people: TeamStatsRow[];
+}
+
+export interface ManagerOption {
+  id: string;
+  fullName: string;
 }

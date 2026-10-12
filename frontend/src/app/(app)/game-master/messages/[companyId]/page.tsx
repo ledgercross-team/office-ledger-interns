@@ -38,7 +38,7 @@ function Thread() {
     notFound();
   }
 
-  const adminName = company.data?.admin?.fullName ?? 'Company admin';
+  const adminName = company.data?.admins[0]?.fullName ?? 'Company admin';
   const rows = [...(companies.data?.items ?? [])].sort((a, b) =>
     a.name.localeCompare(b.name),
   );

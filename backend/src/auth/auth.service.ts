@@ -85,7 +85,9 @@ export class AuthService {
     };
   }
 
-  async me(user: AuthUser): Promise<{ user: PublicUser & { subscriptionActive?: boolean } }> {
+  async me(
+    user: AuthUser,
+  ): Promise<{ user: PublicUser & { subscriptionActive?: boolean; companyTimezone?: string } }> {
     const rows = await this.database
       .select({
         id: users.id,
@@ -106,7 +108,7 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
-    const result: PublicUser & { subscriptionActive?: boolean } = {
+    const result: PublicUser & { subscriptionActive?: boolean; companyTimezone?: string } = {
       id: row.id,
       role: row.role as Role,
       fullName: row.fullName,
@@ -117,6 +119,15 @@ export class AuthService {
 
     if (row.companyId) {
       result.subscriptionActive = await this.getSubscriptionActive(row.companyId);
+
+      // The browser shows "today" and deadlines on the company's clock, not its own.
+      const companyRows = await this.database
+        .select({ timezone: companies.timezone })
+        .from(companies)
+        .where(eq(companies.id, row.companyId))
+        .limit(1)
+        .execute();
+      result.companyTimezone = companyRows[0]?.timezone ?? 'UTC';
     }
 
     return { user: result };

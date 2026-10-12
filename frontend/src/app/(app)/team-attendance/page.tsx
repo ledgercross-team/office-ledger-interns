@@ -6,15 +6,16 @@ import { AttendanceStatus } from '@/components/attendance-status';
 import { CorrectionDialog } from '@/components/correction-dialog';
 import { Reveal } from '@/components/reveal';
 import { RoleGate } from '@/components/role-gate';
+import { TeamInsights, useTeamStats } from '@/components/attendance-insights';
 import { AttendanceBars, AttendanceSpotlight, RateDonut, StoryChapter } from '@/components/story';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
-import { buildQuery, errorMessage, formatTime } from '@/lib/format';
+import { buildQuery, errorMessage, formatTime, MAX_DATE, MIN_DATE, todayIn } from '@/lib/format';
 import type { AttendanceCounts, TeamAttendanceRow } from '@/lib/types';
 
 function TeamAttendance() {
   const { user } = useAuth();
-  const [date, setDate] = useState(() => new Date().toLocaleDateString('en-CA'));
+  const [date, setDate] = useState(() => todayIn(user?.companyTimezone));
   const [editing, setEditing] = useState<TeamAttendanceRow | null>(null);
 
   const query = useQuery({
@@ -26,6 +27,7 @@ function TeamAttendance() {
 
   const timezone = query.data?.timezone;
   const items = query.data?.items ?? [];
+  const teamStats = useTeamStats(30);
 
   const counts: AttendanceCounts = {
     total: items.length,
@@ -44,7 +46,7 @@ function TeamAttendance() {
     row.record !== null && (user?.role === 'admin' || row.role === 'employee');
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-xl font-semibold text-charcoal">Team attendance</h1>
         <div className="space-y-1">
@@ -54,6 +56,8 @@ function TeamAttendance() {
           <input
             id="date"
             type="date"
+            min={MIN_DATE}
+            max={MAX_DATE}
             value={date}
             onChange={(event) => setDate(event.target.value)}
             className="rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-charcoal outline-none focus:border-evergreen"
@@ -138,6 +142,16 @@ function TeamAttendance() {
         </Reveal>
       )}
       {timezone && <p className="text-xs text-charcoal-soft">Times are in {timezone}.</p>}
+
+      {teamStats.data && teamStats.data.people.length > 0 && (
+        <StoryChapter
+          step="Tendencies · last 30 days"
+          title="How does the team arrive and leave?"
+          lede="Open a name to see their day-by-day check-in and check-out chart."
+        >
+          <TeamInsights data={teamStats.data} />
+        </StoryChapter>
+      )}
 
       {editing?.record && timezone && (
         <CorrectionDialog

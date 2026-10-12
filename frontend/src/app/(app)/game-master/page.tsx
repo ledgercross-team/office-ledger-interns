@@ -70,6 +70,9 @@ function Companies() {
                   </td>
                   <td className="px-4 py-2.5">
                     {company.adminName ?? '—'}
+                    {company.adminCount > 1 && (
+                      <span className="text-xs text-charcoal-soft"> +{company.adminCount - 1} more</span>
+                    )}
                     {company.adminEmail && (
                       <span className="block text-xs text-charcoal-soft">{company.adminEmail}</span>
                     )}

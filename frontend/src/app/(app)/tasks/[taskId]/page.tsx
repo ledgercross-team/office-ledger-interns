@@ -6,8 +6,10 @@ import { useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/role-gate';
 import { TaskCard } from '@/components/task-card';
 import { ApiError, apiFetch } from '@/lib/api-client';
-import { errorMessage, formatDateTime } from '@/lib/format';
-import type { Task, TaskActivity, TaskPriority } from '@/lib/types';
+import { useAuth } from '@/lib/auth-context';
+import { errorMessage, formatDateTime, fromZonedInput, MAX_DATE, toZonedInput } from '@/lib/format';
+import { TASK_CATEGORIES } from '@/lib/task-meta';
+import type { Paginated, Task, TaskActivity, TaskCategory, TaskPriority, User } from '@/lib/types';
 
 const STATUS_LABELS: Record<string, string> = {
   todo: 'To do',
@@ -18,17 +20,16 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-// <input type="datetime-local"> wants local time without a zone.
-function toLocalInput(iso: string): string {
-  const date = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function EditForm({ task }: { task: Task }) {
+function EditForm({ task, timezone }: { task: Task; timezone: string }) {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+
+  // Whoever may edit the task may hand it to someone else they manage.
+  const people = useQuery({
+    queryKey: ['people', 'assignable'],
+    queryFn: () => apiFetch<Paginated<User>>('/users?isActive=true&pageSize=100'),
+  });
 
   const save = useMutation({
     mutationFn: (body: Record<string, unknown>) =>
@@ -36,6 +37,7 @@ function EditForm({ task }: { task: Task }) {
     onSuccess: async () => {
       setSaved(true);
       await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
     onError: (err) => setError(errorMessage(err)),
   });
@@ -49,8 +51,10 @@ function EditForm({ task }: { task: Task }) {
     save.mutate({
       title: String(form.get('title')).trim(),
       description: String(form.get('description')).trim(),
+      category: String(form.get('category')) as TaskCategory,
       priority: String(form.get('priority')) as TaskPriority,
-      deadline: new Date(String(form.get('deadline'))).toISOString(),
+      deadline: fromZonedInput(String(form.get('deadline')), timezone),
+      assigneeId: String(form.get('assigneeId')),
     });
   }
 
@@ -85,6 +89,46 @@ function EditForm({ task }: { task: Task }) {
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
+          <label htmlFor="edit-category" className="block text-sm font-medium">
+            Type of work
+          </label>
+          <select
+            id="edit-category"
+            name="category"
+            defaultValue={task.category}
+            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+          >
+            {TASK_CATEGORIES.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="edit-assignee" className="block text-sm font-medium">
+            Assigned to
+          </label>
+          <select
+            id="edit-assignee"
+            name="assigneeId"
+            defaultValue={task.assigneeId}
+            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+          >
+            {/* The current assignee stays selectable even if the list has not loaded. */}
+            {!people.data?.items.some((person) => person.id === task.assigneeId) && (
+              <option value={task.assigneeId}>{task.assigneeName ?? 'Current assignee'}</option>
+            )}
+            {people.data?.items
+              .filter((person) => person.role !== 'admin')
+              .map((person) => (
+                <option key={person.id} value={person.id}>
+                  {person.fullName} ({person.role})
+                </option>
+              ))}
+          </select>
+        </div>
+        <div className="space-y-1">
           <label htmlFor="edit-priority" className="block text-sm font-medium">
             Priority
           </label>
@@ -101,13 +145,14 @@ function EditForm({ task }: { task: Task }) {
         </div>
         <div className="space-y-1">
           <label htmlFor="edit-deadline" className="block text-sm font-medium">
-            Deadline
+            Deadline ({timezone})
           </label>
           <input
             id="edit-deadline"
             name="deadline"
             type="datetime-local"
-            defaultValue={toLocalInput(task.deadline)}
+            defaultValue={toZonedInput(task.deadline, timezone)}
+            max={`${MAX_DATE}T23:59`}
             required
             className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
           />
@@ -130,7 +175,7 @@ function EditForm({ task }: { task: Task }) {
   );
 }
 
-function Timeline({ taskId }: { taskId: string }) {
+function Timeline({ taskId, timezone }: { taskId: string; timezone: string }) {
   const activity = useQuery({
     queryKey: ['tasks', 'activity', taskId],
     queryFn: () => apiFetch<{ items: TaskActivity[] }>(`/tasks/${taskId}/activity`),
@@ -151,7 +196,7 @@ function Timeline({ taskId }: { taskId: string }) {
               {entry.type === 'status_change'
                 ? `changed the status from ${STATUS_LABELS[entry.fromStatus ?? ''] ?? '—'} to ${STATUS_LABELS[entry.toStatus ?? ''] ?? '—'}`
                 : 'commented'}
-              <span className="text-charcoal-soft"> · {formatDateTime(entry.createdAt)}</span>
+              <span className="text-charcoal-soft"> · {formatDateTime(entry.createdAt, timezone)}</span>
             </p>
             {entry.comment && <p className="mt-1 whitespace-pre-wrap">{entry.comment}</p>}
           </li>
@@ -163,6 +208,8 @@ function Timeline({ taskId }: { taskId: string }) {
 
 function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
+  const { user } = useAuth();
+  const timezone = user?.companyTimezone ?? 'UTC';
   const query = useQuery({
     queryKey: ['tasks', 'detail', taskId],
     queryFn: () => apiFetch<Task>(`/tasks/${taskId}`),
@@ -186,15 +233,15 @@ function TaskDetail() {
 
   return (
     <div className="max-w-3xl space-y-4">
-      <TaskCard task={task} linkTitle={false} />
+      <TaskCard task={task} linkTitle={false} timezone={timezone} />
       {task.description && (
         <section className="space-y-1">
           <h2 className="font-semibold">Description</h2>
           <p className="whitespace-pre-wrap text-sm">{task.description}</p>
         </section>
       )}
-      {task.canEdit && <EditForm task={task} />}
-      <Timeline taskId={task.id} />
+      {task.canEdit && <EditForm task={task} timezone={timezone} />}
+      <Timeline taskId={task.id} timezone={timezone} />
     </div>
   );
 }

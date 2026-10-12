@@ -10,6 +10,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/utils/pagination';
+import { TASK_CATEGORIES } from '../../../db/schema/enums';
 
 const PRIORITIES = ['low', 'medium', 'high'] as const;
 const STATUSES = ['todo', 'in_progress', 'delayed', 'done', 'incomplete', 'cancelled'] as const;
@@ -26,6 +27,10 @@ export class CreateTaskDto {
   @IsString()
   @MaxLength(5000)
   description?: string;
+
+  @IsOptional()
+  @IsIn(TASK_CATEGORIES)
+  category?: (typeof TASK_CATEGORIES)[number];
 
   @IsIn(PRIORITIES)
   priority!: (typeof PRIORITIES)[number];
@@ -49,6 +54,10 @@ export class UpdateTaskDto {
   description?: string;
 
   @IsOptional()
+  @IsIn(TASK_CATEGORIES)
+  category?: (typeof TASK_CATEGORIES)[number];
+
+  @IsOptional()
   @IsIn(PRIORITIES)
   priority?: (typeof PRIORITIES)[number];
 
@@ -65,6 +74,10 @@ export class ListTasksQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(STATUSES)
   status?: (typeof STATUSES)[number];
+
+  @IsOptional()
+  @IsIn(TASK_CATEGORIES)
+  category?: (typeof TASK_CATEGORIES)[number];
 
   @IsOptional()
   @IsUUID()

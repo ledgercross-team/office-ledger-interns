@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, IsUUID, Length, MaxLength } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -9,12 +9,17 @@ export class CreateUserDto {
   @MaxLength(254)
   email!: string;
 
-  // Only managers and employees can be created here; admins come with a company.
-  @IsIn(['manager', 'employee'])
-  role!: 'manager' | 'employee';
+  // Admins can add other admins; managers can only add employees (checked in the service).
+  @IsIn(['admin', 'manager', 'employee'])
+  role!: 'admin' | 'manager' | 'employee';
 
   @IsOptional()
   @IsString()
   @MaxLength(120)
   jobTitle?: string;
+
+  // Employees only. A manager's new employees always report to that manager.
+  @IsOptional()
+  @IsUUID()
+  managerId?: string;
 }

@@ -292,6 +292,7 @@ describe('AuthService', () => {
           fullName: 'Alice',
           mustChangePassword: false,
           subscriptionActive: true,
+          companyTimezone: 'UTC',
         },
       });
     });
