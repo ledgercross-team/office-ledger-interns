@@ -35,4 +35,9 @@ describe('isValidTimezone', () => {
     expect(isValidTimezone('Asia/Dhaka')).toBe(true);
     expect(isValidTimezone('Mars/Olympus')).toBe(false);
   });
+
+  it('accepts fixed whole-hour offsets represented as IANA zones', () => {
+    expect(isValidTimezone('Etc/GMT-6')).toBe(true); // UTC+06:00
+    expect(isValidTimezone('Etc/GMT+8')).toBe(true); // UTC-08:00
+  });
 });

@@ -6,6 +6,7 @@ import { notFound, useParams } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/role-gate';
 import { TemporaryPasswordPanel } from '@/components/temporary-password-panel';
+import { TimezoneSelect, timezoneLabel } from '@/components/timezone-select';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { errorMessage, formatDate, MAX_DATE, MIN_DATE, todayIn } from '@/lib/format';
 import type { Company, CompanyAdmin, GameMasterCompanyDetail, Subscription } from '@/lib/types';
@@ -248,7 +249,8 @@ function CompanyDetail() {
         </p>
         <h1 className="text-xl font-semibold">{company.name}</h1>
         <p className="text-sm text-charcoal-soft">
-          {company.isActive ? 'Active' : 'Inactive'} · {company.timezone} · starts {company.workStartTime.slice(0, 5)}
+          {company.isActive ? 'Active' : 'Inactive'} · {timezoneLabel(company.timezone)} · starts{' '}
+          {company.workStartTime.slice(0, 5)}
           {' · '}
           <Link href={`/game-master/messages/${company.id}`} className="underline">
             Messages
@@ -268,7 +270,7 @@ function CompanyDetail() {
         <h2 className="font-semibold">Company</h2>
         <Input id="name" label="Name" defaultValue={company.name} />
         <div className="grid gap-3 sm:grid-cols-2">
-          <Input id="timezone" label="Timezone" defaultValue={company.timezone} />
+          <TimezoneSelect id="timezone" label="Timezone" defaultValue={company.timezone} />
           <Input
             id="workStartTime"
             label="Work start time"
