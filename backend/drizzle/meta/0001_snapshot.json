@@ -1,5 +1,5 @@
 {
-  "id": "fb7c41c8-2299-4176-ab70-fff6cf624e23",
+  "id": "158f1f2f-0ac8-41fc-945b-81699d27df9c",
   "prevId": "239df31b-f575-4c26-b539-9c581105302e",
   "version": "7",
   "dialect": "postgresql",
@@ -168,6 +168,22 @@
         }
       },
       "indexes": {
+        "users_one_admin_per_company": {
+          "name": "users_one_admin_per_company",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "role = 'admin'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "users_company_role_idx": {
           "name": "users_company_role_idx",
           "columns": [
@@ -229,22 +245,20 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "users_manager_same_company_fk": {
-          "name": "users_manager_same_company_fk",
+        "users_manager_id_users_id_fk": {
+          "name": "users_manager_id_users_id_fk",
           "tableFrom": "users",
           "tableTo": "users",
           "columnsFrom": [
-            "manager_id",
-            "company_id"
+            "manager_id"
           ],
           "columnsTo": [
-            "id",
-            "company_id"
+            "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -577,14 +591,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "category": {
-          "name": "category",
-          "type": "task_category",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'general'"
-        },
         "priority": {
           "name": "priority",
           "type": "task_priority",
@@ -673,27 +679,6 @@
             },
             {
               "expression": "deadline",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "tasks_company_category_idx": {
-          "name": "tasks_company_category_idx",
-          "columns": [
-            {
-              "expression": "company_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "category",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1158,21 +1143,6 @@
       "values": [
         "comment",
         "status_change"
-      ]
-    },
-    "public.task_category": {
-      "name": "task_category",
-      "schema": "public",
-      "values": [
-        "general",
-        "onboarding",
-        "recruitment",
-        "payroll",
-        "leave_attendance",
-        "training",
-        "performance_review",
-        "compliance",
-        "it_support"
       ]
     },
     "public.task_priority": {

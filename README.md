@@ -47,6 +47,10 @@ pnpm db:seed
 The seed command is development-only, refuses to run in production, and uses
 `SEED_DEMO_PASSWORD` for all demo accounts without printing the password.
 
+After pulling changes that add a migration, stop the backend, run `pnpm db:migrate`, and then
+restart it. Applied migration files are immutable: add a new numbered migration instead of
+replacing or editing one that may already exist in another developer's database.
+
 ### Database release gate
 
 Run the migration and seed twice against `office_ledger_dev`; the second seed must also
@@ -61,10 +65,10 @@ pnpm db:seed
 Verify the database-level safety rules before releasing:
 
 ```sql
--- A second admin for one company must fail with users_one_admin_per_company.
-INSERT INTO users (company_id, role, email, password_hash, full_name)
-SELECT company_id, 'admin', 'duplicate-admin@acme.local', 'test-only', 'Duplicate Admin'
-FROM users WHERE email = 'admin@acme.local';
+-- A manager cannot be assigned to an employee from another company.
+UPDATE users AS e SET manager_id = m.id
+FROM users AS m
+WHERE e.email = 'employee1@globex.local' AND m.email = 'manager1@acme.local';
 
 -- A task cannot link users from different companies.
 INSERT INTO tasks (company_id, title, deadline, assignee_id, created_by_id)

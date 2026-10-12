@@ -12,8 +12,15 @@
     {
       "idx": 1,
       "version": "7",
-      "when": 1791755080982,
-      "tag": "0001_nosy_guardian",
+      "when": 1791716905569,
+      "tag": "0001_dapper_marrow",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791787496546,
+      "tag": "0002_task_categories_multi_admin",
       "breakpoints": true
     }
   ]
