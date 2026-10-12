@@ -16,6 +16,7 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import { AttendanceService } from './attendance.service';
 import {
   CorrectAttendanceDto,
+  CreateAttendanceCorrectionDto,
   MyAttendanceQueryDto,
   StatsQueryDto,
   TeamAttendanceQueryDto,
@@ -80,5 +81,11 @@ export class AttendanceController {
     @Body() dto: CorrectAttendanceDto,
   ) {
     return this.service.correct(user, recordId, dto);
+  }
+
+  @Roles('admin', 'manager')
+  @Post('corrections')
+  createCorrection(@CurrentUser() user: AuthUser, @Body() dto: CreateAttendanceCorrectionDto) {
+    return this.service.createCorrection(user, dto);
   }
 }

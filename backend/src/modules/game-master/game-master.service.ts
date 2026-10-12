@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, gte, inArray, isNull, lte, ne } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { AuthStateService } from '../../auth/auth-state.service';
 import { AuthService } from '../../auth/auth.service';
 import { TokenService } from '../../auth/token.service';
@@ -269,7 +269,6 @@ export class GameMasterService {
   async createSubscription(companyId: string, creatorId: string, dto: CreateSubscriptionDto) {
     await this.findCompany(companyId);
     this.assertDates(dto.startsOn, dto.endsOn);
-    await this.assertNoOverlap(companyId, dto.startsOn, dto.endsOn);
 
     const [subscription] = await this.database
       .insert(subscriptions)
@@ -301,11 +300,6 @@ export class GameMasterService {
     const startsOn = dto.startsOn ?? existing.startsOn;
     const endsOn = dto.endsOn ?? existing.endsOn;
     this.assertDates(startsOn, endsOn);
-
-    const datesChanged = dto.startsOn !== undefined || dto.endsOn !== undefined;
-    if (datesChanged && existing.cancelledAt === null && !dto.cancel) {
-      await this.assertNoOverlap(existing.companyId, startsOn, endsOn, existing.id);
-    }
 
     const [subscription] = await this.database
       .update(subscriptions)
@@ -373,29 +367,4 @@ export class GameMasterService {
     }
   }
 
-  // Cancelled subscriptions do not count.
-  private async assertNoOverlap(
-    companyId: string,
-    startsOn: string,
-    endsOn: string,
-    ignoreId?: string,
-  ): Promise<void> {
-    const [overlap] = await this.database
-      .select({ id: subscriptions.id })
-      .from(subscriptions)
-      .where(
-        and(
-          eq(subscriptions.companyId, companyId),
-          isNull(subscriptions.cancelledAt),
-          lte(subscriptions.startsOn, endsOn),
-          gte(subscriptions.endsOn, startsOn),
-          ignoreId ? ne(subscriptions.id, ignoreId) : undefined,
-        ),
-      )
-      .limit(1);
-
-    if (overlap) {
-      throw new ConflictException('These dates overlap an existing subscription.');
-    }
-  }
 }

@@ -232,12 +232,12 @@ function TaskDetail() {
   const task = query.data;
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="w-full max-w-3xl space-y-4">
       <TaskCard task={task} linkTitle={false} timezone={timezone} />
       {task.description && (
         <section className="space-y-1">
           <h2 className="font-semibold">Description</h2>
-          <p className="whitespace-pre-wrap text-sm">{task.description}</p>
+          <p className="break-words whitespace-pre-wrap text-sm">{task.description}</p>
         </section>
       )}
       {task.canEdit && <EditForm task={task} timezone={timezone} />}

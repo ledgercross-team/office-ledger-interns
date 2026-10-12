@@ -24,6 +24,7 @@ import {
 } from './attendance.rules';
 import type {
   CorrectAttendanceDto,
+  CreateAttendanceCorrectionDto,
   MyAttendanceQueryDto,
   TeamAttendanceQueryDto,
 } from './dto/attendance.dto';
@@ -164,6 +165,69 @@ export class AttendanceService {
       .where(eq(attendanceRecords.id, recordId))
       .returning();
     return updated;
+  }
+
+  async createCorrection(user: AuthUser, dto: CreateAttendanceCorrectionDto) {
+    const company = await this.getCompany(user);
+    const [target] = await this.database
+      .select({ id: users.id })
+      .from(users)
+      .where(
+        and(
+          eq(users.id, dto.userId),
+          eq(users.companyId, company.id),
+          managedPeople(user),
+        ),
+      )
+      .limit(1);
+
+    if (!target) {
+      throw new NotFoundException('User not found.');
+    }
+
+    const [existing] = await this.database
+      .select({ id: attendanceRecords.id })
+      .from(attendanceRecords)
+      .where(
+        and(
+          eq(attendanceRecords.companyId, company.id),
+          eq(attendanceRecords.userId, dto.userId),
+          eq(attendanceRecords.workDate, dto.workDate),
+        ),
+      )
+      .limit(1);
+
+    if (existing) {
+      return this.correct(user, existing.id, dto);
+    }
+
+    const checkInAt = new Date(dto.checkInAt);
+    const checkOutAt = dto.checkOutAt ? new Date(dto.checkOutAt) : null;
+    if (checkOutAt && checkOutAt <= checkInAt) {
+      throw new BadRequestException('checkOutAt must be after checkInAt.');
+    }
+
+    try {
+      const [created] = await this.database
+        .insert(attendanceRecords)
+        .values({
+          companyId: company.id,
+          userId: dto.userId,
+          workDate: dto.workDate,
+          checkInAt,
+          checkOutAt,
+          status: attendanceStatus(company.timezone, company.workStartTime, checkInAt),
+          note: dto.note,
+          editedById: user.id,
+        })
+        .returning();
+      return created;
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException('Attendance for this person and date already exists.');
+      }
+      throw error;
+    }
   }
 
   // The caller's own tendencies, with the per-day series for charts.

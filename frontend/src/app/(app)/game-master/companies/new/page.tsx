@@ -69,7 +69,7 @@ function NewCompanyForm() {
 
   if (created) {
     return (
-      <div className="max-w-xl space-y-4">
+      <div className="w-full max-w-xl space-y-4">
         <h1 className="text-xl font-semibold">{created.company.name} was created</h1>
         <p className="text-sm">
           Admin: {created.admin.fullName} ({created.admin.email})
@@ -91,7 +91,7 @@ function NewCompanyForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-xl space-y-4">
+    <form onSubmit={onSubmit} className="w-full max-w-xl space-y-4">
       <h1 className="text-xl font-semibold">New company</h1>
 
       <Field id="companyName" label="Company name" />

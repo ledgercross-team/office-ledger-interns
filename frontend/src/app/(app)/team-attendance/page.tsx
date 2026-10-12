@@ -6,17 +6,20 @@ import { AttendanceStatus } from '@/components/attendance-status';
 import { CorrectionDialog } from '@/components/correction-dialog';
 import { Reveal } from '@/components/reveal';
 import { RoleGate } from '@/components/role-gate';
-import { TeamInsights, useTeamStats } from '@/components/attendance-insights';
 import { AttendanceBars, AttendanceSpotlight, RateDonut, StoryChapter } from '@/components/story';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { buildQuery, errorMessage, formatTime, MAX_DATE, MIN_DATE, todayIn } from '@/lib/format';
 import type { AttendanceCounts, TeamAttendanceRow } from '@/lib/types';
 
+const PAGE_SIZE_OPTIONS = [5, 10] as const;
+
 function TeamAttendance() {
   const { user } = useAuth();
   const [date, setDate] = useState(() => todayIn(user?.companyTimezone));
   const [editing, setEditing] = useState<TeamAttendanceRow | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const query = useQuery({
     queryKey: ['attendance', 'team', date],
@@ -27,8 +30,12 @@ function TeamAttendance() {
 
   const timezone = query.data?.timezone;
   const items = query.data?.items ?? [];
-  const teamStats = useTeamStats(30);
-
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const firstItem = (currentPage - 1) * pageSize;
+  const visibleItems = items.slice(firstItem, currentPage * pageSize);
+  const firstShown = items.length === 0 ? 0 : firstItem + 1;
+  const lastShown = Math.min(currentPage * pageSize, items.length);
   const counts: AttendanceCounts = {
     total: items.length,
     present: items.filter((row) => row.status === 'present').length,
@@ -41,9 +48,8 @@ function TeamAttendance() {
     .slice(0, 5)
     .map((row) => ({ userId: row.userId, userFullName: row.userFullName, status: row.status as 'late' | 'absent' }));
 
-  // Admins correct managers and employees; managers correct employees only.
-  const canCorrect = (row: TeamAttendanceRow) =>
-    row.record !== null && (user?.role === 'admin' || row.role === 'employee');
+  // Admins edit managers and employees; managers edit employees only.
+  const canEdit = (row: TeamAttendanceRow) => user?.role === 'admin' || row.role === 'employee';
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -59,7 +65,10 @@ function TeamAttendance() {
             min={MIN_DATE}
             max={MAX_DATE}
             value={date}
-            onChange={(event) => setDate(event.target.value)}
+            onChange={(event) => {
+              setDate(event.target.value);
+              setPage(1);
+            }}
             className="rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-charcoal outline-none focus:border-evergreen"
           />
         </div>
@@ -109,7 +118,7 @@ function TeamAttendance() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-charcoal/5">
-                {items.map((row) => (
+                {visibleItems.map((row) => (
                   <tr key={row.userId} className="transition-colors hover:bg-mist/50">
                     <td className="px-4 py-2.5 font-medium text-charcoal">{row.userFullName}</td>
                     <td className="px-4 py-2.5 capitalize text-charcoal-soft">{row.role}</td>
@@ -124,13 +133,13 @@ function TeamAttendance() {
                     </td>
                     <td className="max-w-48 truncate px-4 py-2.5 text-charcoal-soft">{row.record?.note ?? ''}</td>
                     <td className="px-4 py-2.5 text-right">
-                      {canCorrect(row) && (
+                      {canEdit(row) && (
                         <button
                           type="button"
                           onClick={() => setEditing(row)}
                           className="rounded-lg border border-charcoal/15 px-2.5 py-1 text-xs font-medium text-charcoal hover:bg-mist"
                         >
-                          Correct
+                          Edit
                         </button>
                       )}
                     </td>
@@ -141,26 +150,101 @@ function TeamAttendance() {
           </div>
         </Reveal>
       )}
-      {timezone && <p className="text-xs text-charcoal-soft">Times are in {timezone}.</p>}
-
-      {teamStats.data && teamStats.data.people.length > 0 && (
-        <StoryChapter
-          step="Tendencies · last 30 days"
-          title="How does the team arrive and leave?"
-          lede="Open a name to see their day-by-day check-in and check-out chart."
-        >
-          <TeamInsights data={teamStats.data} />
-        </StoryChapter>
+      {items.length > 0 && (
+        <TeamAttendancePagination
+          page={currentPage}
+          pageSize={pageSize}
+          total={items.length}
+          firstShown={firstShown}
+          lastShown={lastShown}
+          totalPages={totalPages}
+          onPage={setPage}
+          onPageSize={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          }}
+        />
       )}
 
-      {editing?.record && timezone && (
+      {editing && timezone && (
         <CorrectionDialog
           record={editing.record}
+          userId={editing.userId}
+          workDate={editing.workDate}
           personName={editing.userFullName}
           timezone={timezone}
           onClose={() => setEditing(null)}
         />
       )}
+    </div>
+  );
+}
+
+function TeamAttendancePagination({
+  page,
+  pageSize,
+  total,
+  firstShown,
+  lastShown,
+  totalPages,
+  onPage,
+  onPageSize,
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  firstShown: number;
+  lastShown: number;
+  totalPages: number;
+  onPage: (page: number) => void;
+  onPageSize: (pageSize: number) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-charcoal/10 pt-4">
+      <div>
+        <p className="text-sm font-medium text-charcoal">
+          Showing {firstShown}–{lastShown} of {total}
+        </p>
+        <p className="text-xs text-charcoal-soft">Adjust the page size or move through the result set.</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <label htmlFor="team-attendance-page-size" className="font-medium text-charcoal">
+          Page size
+        </label>
+        <select
+          id="team-attendance-page-size"
+          value={pageSize}
+          onChange={(event) => onPageSize(Number(event.target.value))}
+          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 outline-none focus:border-evergreen"
+        >
+          {PAGE_SIZE_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option} rows
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          aria-label="Previous team attendance page"
+          disabled={page <= 1}
+          onClick={() => onPage(Math.max(1, page - 1))}
+          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          ‹ <span className="sr-only">Previous</span>
+        </button>
+        <span className="rounded-lg bg-evergreen px-3 py-1.5 font-medium text-white" aria-current="page">
+          {page}
+        </span>
+        <button
+          type="button"
+          aria-label="Next team attendance page"
+          disabled={page >= totalPages}
+          onClick={() => onPage(Math.min(totalPages, page + 1))}
+          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span className="sr-only">Next</span> ›
+        </button>
+      </div>
     </div>
   );
 }

@@ -61,7 +61,7 @@ function NewPersonForm() {
 
   if (created) {
     return (
-      <div className="max-w-xl space-y-4">
+      <div className="w-full max-w-xl space-y-4">
         <h1 className="text-xl font-semibold">{created.user.fullName} was added</h1>
         <TemporaryPasswordPanel password={created.temporaryPassword} />
         <div className="flex flex-wrap gap-3 text-sm">
@@ -84,7 +84,7 @@ function NewPersonForm() {
   const isAdmin = user?.role === 'admin';
 
   return (
-    <form onSubmit={onSubmit} className="max-w-xl space-y-4">
+    <form onSubmit={onSubmit} className="w-full max-w-xl space-y-4">
       <h1 className="text-xl font-semibold">Add person</h1>
 
       <div className="space-y-1">

@@ -12,6 +12,7 @@ import { Scrolly } from './scrolly';
 import { RateDonut } from './story';
 
 const MIN_ATTENDANCE_MONTH = '2022-01';
+const TEAM_PAGE_SIZE_OPTIONS = [5, 10];
 
 function shiftMonth(month: string, offset: number): string {
   const [year, monthNumber] = month.split('-').map(Number);
@@ -258,7 +259,10 @@ export function TeamInsights({
             );
 
             return (
-              <li key={row.userId} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-center gap-3 py-2.5 text-sm">
+              <li
+                key={row.userId}
+                className="grid grid-cols-1 gap-2 py-2.5 text-sm min-[420px]:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] min-[420px]:items-center min-[420px]:gap-3"
+              >
                 <div className="min-w-0">
                   <p className="truncate">{name}</p>
                   <p className="text-xs text-charcoal-soft">
@@ -313,6 +317,8 @@ function PercentageCard({
 export function MonthlyTeamInsights({ timezone }: { timezone: string }) {
   const currentMonth = todayIn(timezone).slice(0, 7);
   const [month, setMonth] = useState(currentMonth);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const validationError =
     month < MIN_ATTENDANCE_MONTH
       ? `Data prior to ${MIN_ATTENDANCE_MONTH} is not accessible.`
@@ -325,11 +331,19 @@ export function MonthlyTeamInsights({ timezone }: { timezone: string }) {
   const navigationMonth = validationError === null ? month : currentMonth;
   const canGoPrevious = navigationMonth > MIN_ATTENDANCE_MONTH;
   const canGoNext = navigationMonth < currentMonth;
+  const totalPeople = data?.people.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalPeople / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const firstPerson = (currentPage - 1) * pageSize;
+  const visiblePeople = data?.people.slice(firstPerson, currentPage * pageSize) ?? [];
+  const firstShown = totalPeople === 0 ? 0 : firstPerson + 1;
+  const lastShown = Math.min(currentPage * pageSize, totalPeople);
 
   function moveMonth(offset: number) {
     const nextMonth = shiftMonth(navigationMonth, offset);
     if (nextMonth >= MIN_ATTENDANCE_MONTH && nextMonth <= currentMonth) {
       setMonth(nextMonth);
+      setPage(1);
     }
   }
 
@@ -356,7 +370,10 @@ export function MonthlyTeamInsights({ timezone }: { timezone: string }) {
               min={MIN_ATTENDANCE_MONTH}
               max={currentMonth}
               value={month}
-              onChange={(event) => setMonth(event.target.value || currentMonth)}
+              onChange={(event) => {
+                setMonth(event.target.value || currentMonth);
+                setPage(1);
+              }}
               required
               className="rounded-lg border border-charcoal/15 bg-white px-3 py-2 text-sm"
             />
@@ -412,10 +429,10 @@ export function MonthlyTeamInsights({ timezone }: { timezone: string }) {
               Monthly reliability
             </p>
             <ul className="divide-y divide-charcoal/5">
-              {data.people.map((row) => (
+              {visiblePeople.map((row) => (
                 <li
                   key={row.userId}
-                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-center gap-3 py-2.5 text-sm"
+                  className="grid grid-cols-1 gap-2 py-2.5 text-sm min-[420px]:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] min-[420px]:items-center min-[420px]:gap-3"
                 >
                   <div className="min-w-0">
                     <Link
@@ -435,6 +452,55 @@ export function MonthlyTeamInsights({ timezone }: { timezone: string }) {
                 <li className="py-3 text-sm text-charcoal-soft">No people to show yet.</li>
               )}
             </ul>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-charcoal/10 pt-4">
+              <div>
+                <p className="text-sm font-medium text-charcoal">
+                  Showing {firstShown}–{lastShown} of {totalPeople}
+                </p>
+                <p className="text-xs text-charcoal-soft">Adjust the page size or move through the result set.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <label htmlFor="team-page-size" className="font-medium text-charcoal">
+                  Page size
+                </label>
+                <select
+                  id="team-page-size"
+                  value={pageSize}
+                  onChange={(event) => {
+                    setPageSize(Number(event.target.value));
+                    setPage(1);
+                  }}
+                  className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 outline-none focus:border-evergreen"
+                >
+                  {TEAM_PAGE_SIZE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option} rows
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  aria-label="Previous people page"
+                  disabled={page <= 1}
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  ‹ <span className="sr-only">Previous</span>
+                </button>
+                <span className="rounded-lg bg-evergreen px-3 py-1.5 font-medium text-white" aria-current="page">
+                  {currentPage}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Next people page"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <span className="sr-only">Next</span> ›
+                </button>
+              </div>
+            </div>
           </div>
         </>
       ) : null}

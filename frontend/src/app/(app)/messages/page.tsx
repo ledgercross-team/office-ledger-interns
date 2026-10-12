@@ -10,7 +10,7 @@ export default function MessagesPage() {
 
   return (
     <RoleGate allow={['admin']}>
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto w-full max-w-3xl">
         <Reveal>
           {user?.companyId && (
             <MessageThread

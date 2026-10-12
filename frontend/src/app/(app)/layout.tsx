@@ -59,7 +59,7 @@ function Sidebar({ role, fullName }: { role: Role; fullName: string }) {
   const { logout } = useAuth();
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-forest p-4 text-white md:flex">
+    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col overflow-y-auto bg-forest p-4 text-white md:flex">
       <p className="px-2 py-3 text-lg font-semibold tracking-tight">office-ledger</p>
       <nav aria-label="Main" className="mt-2 flex-1">
         <Suspense fallback={null}>
@@ -107,16 +107,18 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const subscriptionEnded = user.role === 'admin' && user.subscriptionActive === false;
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-dvh">
       <Sidebar role={user.role} fullName={user.fullName} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-charcoal/10 bg-white px-4 py-3 sm:px-6">
+        <header className="border-b border-charcoal/10 bg-white px-3 py-3 sm:px-6 sm:py-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-lg font-semibold text-charcoal">{greeting(user.fullName, user.companyTimezone)}</p>
+            <div className="min-w-0">
+              <p className="break-words text-lg font-semibold text-charcoal">
+                {greeting(user.fullName, user.companyTimezone)}
+              </p>
               <p className="text-sm text-charcoal-soft">{todayLine(user.companyTimezone)}</p>
             </div>
-            <div className="flex items-center gap-3 text-sm md:hidden">
+            <div className="flex flex-wrap items-center justify-end gap-2 text-sm md:hidden">
               <span className="text-charcoal-soft">{ROLE_LABELS[user.role]}</span>
               <button
                 type="button"
@@ -136,7 +138,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </nav>
         </header>
         {subscriptionEnded && (
-          <p role="alert" className="border-b border-brand-amber/40 bg-amber-tint px-4 py-2 text-sm text-amber-deep sm:px-6">
+          <p role="alert" className="break-words border-b border-brand-amber/40 bg-amber-tint px-3 py-2 text-sm text-amber-deep sm:px-6">
             Your company&apos;s subscription has ended. Managers and employees cannot log in.{' '}
             <Link href="/subscription" className="font-medium underline">
               View subscription
@@ -144,7 +146,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             or message the game master to renew.
           </p>
         )}
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">{children}</main>
+        <main className="min-w-0 flex-1 px-3 py-4 sm:px-6 sm:py-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

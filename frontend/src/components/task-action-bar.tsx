@@ -98,16 +98,16 @@ export function TaskActionBar({ task }: { task: Task }) {
           role="dialog"
           aria-modal="true"
           aria-labelledby={`dialog-title-${task.id}`}
-          className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-10 flex items-center justify-center overflow-y-auto bg-black/40 p-4"
         >
           <form
-            className="w-full max-w-md space-y-3 rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_8px_24px_rgba(19,78,58,0.12)]"
+            className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md space-y-3 overflow-y-auto rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_8px_24px_rgba(19,78,58,0.12)]"
             onSubmit={(event) => {
               event.preventDefault();
               mutation.mutate({ spec: dialog, text: comment.trim() });
             }}
           >
-            <h2 id={`dialog-title-${task.id}`} className="font-semibold text-charcoal">
+            <h2 id={`dialog-title-${task.id}`} className="break-words font-semibold text-charcoal">
               {dialog.label}: {task.title}
             </h2>
             <label htmlFor={`comment-${task.id}`} className="block text-sm font-medium text-charcoal">

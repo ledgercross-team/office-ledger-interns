@@ -48,7 +48,7 @@ export function RateDonut({ rate, label }: { rate: number; label: string }) {
   const circumference = 2 * Math.PI * r;
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-wrap items-center gap-4">
       <div className="relative h-28 w-28 shrink-0">
         <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
           <circle cx="60" cy="60" r={r} fill="none" strokeWidth="12" className="stroke-mist" />
@@ -71,7 +71,7 @@ export function RateDonut({ rate, label }: { rate: number; label: string }) {
           {clamped}%
         </p>
       </div>
-      <p className="text-sm text-charcoal-soft">{label}</p>
+      <p className="min-w-0 flex-1 text-sm text-charcoal-soft">{label}</p>
     </div>
   );
 }
@@ -128,8 +128,8 @@ export function AttendanceSpotlight({
   return (
     <ul className="divide-y divide-charcoal/5">
       {rows.map((row) => (
-        <li key={row.userId} className="flex items-center justify-between gap-2 py-2.5 text-sm">
-          <span className="font-medium text-charcoal">{row.userFullName}</span>
+        <li key={row.userId} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+          <span className="min-w-0 break-words font-medium text-charcoal">{row.userFullName}</span>
           <AttendanceStatus status={row.status} />
         </li>
       ))}

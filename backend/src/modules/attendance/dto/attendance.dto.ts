@@ -62,3 +62,22 @@ export class CorrectAttendanceDto {
   @Length(1, 500)
   note!: string;
 }
+
+export class CreateAttendanceCorrectionDto {
+  @IsUUID()
+  userId!: string;
+
+  @IsAppDate()
+  workDate!: string;
+
+  @IsDateString()
+  checkInAt!: string;
+
+  @IsOptional()
+  @IsDateString()
+  checkOutAt?: string;
+
+  @IsString()
+  @Length(1, 500)
+  note!: string;
+}

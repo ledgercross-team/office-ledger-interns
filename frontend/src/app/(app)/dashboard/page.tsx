@@ -247,7 +247,7 @@ function AdminDashboard({ summary }: { summary: DashboardSummary }) {
   return (
     <div className="space-y-8">
       <Reveal>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-4">
           <StatTile label="Active people" value={summary.activePeople ?? 0} />
           <StatTile label="Attendance rate" value={`${summary.todayAttendanceRate ?? 0}%`} />
           <StatTile label="Open tasks" value={summary.openTasks} />

@@ -3,14 +3,13 @@
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Pagination } from '@/components/pagination';
 import { RoleGate } from '@/components/role-gate';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { buildQuery, errorMessage } from '@/lib/format';
 import type { Paginated, User } from '@/lib/types';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [5, 10] as const;
 
 function PeopleList() {
   const { user } = useAuth();
@@ -20,6 +19,7 @@ function PeopleList() {
   const [active, setActive] = useState('');
   const [unassigned, setUnassigned] = useState(false);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -30,7 +30,7 @@ function PeopleList() {
   }, [search]);
 
   const query = useQuery({
-    queryKey: ['people', 'list', { debounced, role, active, unassigned, page }],
+    queryKey: ['people', 'list', { debounced, role, active, unassigned, page, pageSize }],
     queryFn: () =>
       apiFetch<Paginated<User>>(
         `/users${buildQuery({
@@ -39,7 +39,7 @@ function PeopleList() {
           isActive: active,
           unassigned: unassigned || undefined,
           page,
-          pageSize: PAGE_SIZE,
+          pageSize,
         })}`,
       ),
   });
@@ -165,13 +165,84 @@ function PeopleList() {
         </div>
       )}
       {query.data && (
-        <Pagination
+        <PeoplePagination
           page={query.data.page}
           pageSize={query.data.pageSize}
           total={query.data.total}
           onPage={setPage}
+          onPageSize={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(1);
+          }}
         />
       )}
+    </div>
+  );
+}
+
+function PeoplePagination({
+  page,
+  pageSize,
+  total,
+  onPage,
+  onPageSize,
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  onPage: (page: number) => void;
+  onPageSize: (pageSize: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const firstShown = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const lastShown = Math.min(page * pageSize, total);
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-charcoal/10 pt-4">
+      <div>
+        <p className="text-sm font-medium text-charcoal">
+          Showing {firstShown}–{lastShown} of {total}
+        </p>
+        <p className="text-xs text-charcoal-soft">Adjust the page size or move through the result set.</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <label htmlFor="people-page-size" className="font-medium text-charcoal">
+          Page size
+        </label>
+        <select
+          id="people-page-size"
+          value={pageSize}
+          onChange={(event) => onPageSize(Number(event.target.value))}
+          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 outline-none focus:border-evergreen"
+        >
+          {PAGE_SIZE_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option} rows
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          aria-label="Previous people page"
+          disabled={page <= 1}
+          onClick={() => onPage(Math.max(1, page - 1))}
+          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          ‹ <span className="sr-only">Previous</span>
+        </button>
+        <span className="rounded-lg bg-evergreen px-3 py-1.5 font-medium text-white" aria-current="page">
+          {page}
+        </span>
+        <button
+          type="button"
+          aria-label="Next people page"
+          disabled={page >= totalPages}
+          onClick={() => onPage(Math.min(totalPages, page + 1))}
+          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <span className="sr-only">Next</span> ›
+        </button>
+      </div>
     </div>
   );
 }
