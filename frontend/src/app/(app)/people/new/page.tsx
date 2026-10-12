@@ -64,7 +64,7 @@ function NewPersonForm() {
       <div className="max-w-xl space-y-4">
         <h1 className="text-xl font-semibold">{created.user.fullName} was added</h1>
         <TemporaryPasswordPanel password={created.temporaryPassword} />
-        <div className="flex gap-3 text-sm">
+        <div className="flex flex-wrap gap-3 text-sm">
           <button
             type="button"
             onClick={() => setCreated(null)}

@@ -53,7 +53,7 @@ export class AttendanceController {
   @Roles('admin', 'manager')
   @Get('stats/team')
   statsTeam(@CurrentUser() user: AuthUser, @Query() query: StatsQueryDto) {
-    return this.service.statsTeam(user, query.days);
+    return this.service.statsTeam(user, query.days, query.month);
   }
 
   @Roles('admin', 'manager')

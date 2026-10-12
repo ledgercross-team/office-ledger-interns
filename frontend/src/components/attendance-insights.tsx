@@ -3,12 +3,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion, useReducedMotion } from 'motion/react';
 import Link from 'next/link';
+import { useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
-import { errorMessage, formatMinutes, formatOffset } from '@/lib/format';
+import { buildQuery, errorMessage, formatDate, formatMinutes, formatOffset, todayIn } from '@/lib/format';
 import type { AttendanceStats, TeamStats, TeamStatsRow, Tendency, Trend } from '@/lib/types';
 import { AttendanceChart, type ChartMode } from './attendance-chart';
 import { Scrolly } from './scrolly';
 import { RateDonut } from './story';
+
+const MIN_ATTENDANCE_MONTH = '2022-01';
+
+function shiftMonth(month: string, offset: number): string {
+  const [year, monthNumber] = month.split('-').map(Number);
+  return new Date(Date.UTC(year, monthNumber - 1 + offset, 1)).toISOString().slice(0, 7);
+}
 
 export const TENDENCY_TEXT: Record<Tendency, { label: string; className: string }> = {
   no_data: { label: 'Not enough data', className: 'bg-charcoal/10 text-charcoal' },
@@ -115,7 +123,7 @@ export function AttendanceStory({ stats, name }: { stats: AttendanceStats; name?
         ) : (
           <div className="space-y-4">
             <RateDonut rate={stats.score ?? 0} label="reliability score for this window." />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Figure label="On time" value={`${stats.daysOnTime}`} />
               <Figure label="Late" value={`${stats.daysLate}`} />
               <Figure label="Absent" value={`${stats.daysAbsent}`} />
@@ -272,10 +280,173 @@ export function TeamInsights({
   );
 }
 
-export function useTeamStats(days = 30, enabled = true) {
+function PercentageCard({
+  label,
+  percentage,
+  count,
+  className,
+}: {
+  label: string;
+  percentage: number | null;
+  count: number;
+  className: string;
+}) {
+  return (
+    <div className="rounded-xl border border-charcoal/10 p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-sm font-medium text-charcoal">{label}</p>
+        <p className="text-xl font-semibold text-charcoal">
+          {percentage === null ? '—' : `${percentage}%`}
+        </p>
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-charcoal/10">
+        <div
+          className={`h-full rounded-full ${className}`}
+          style={{ width: `${percentage ?? 0}%` }}
+        />
+      </div>
+      <p className="mt-2 text-xs text-charcoal-soft">{count} employee-days</p>
+    </div>
+  );
+}
+
+export function MonthlyTeamInsights({ timezone }: { timezone: string }) {
+  const currentMonth = todayIn(timezone).slice(0, 7);
+  const [month, setMonth] = useState(currentMonth);
+  const validationError =
+    month < MIN_ATTENDANCE_MONTH
+      ? `Data prior to ${MIN_ATTENDANCE_MONTH} is not accessible.`
+      : month > currentMonth
+        ? 'month cannot be in the future.'
+        : null;
+  const query = useTeamStats(30, validationError === null, month);
+  const data = query.data;
+  const queryError = validationError ?? (query.error ? errorMessage(query.error) : null);
+  const navigationMonth = validationError === null ? month : currentMonth;
+  const canGoPrevious = navigationMonth > MIN_ATTENDANCE_MONTH;
+  const canGoNext = navigationMonth < currentMonth;
+
+  function moveMonth(offset: number) {
+    const nextMonth = shiftMonth(navigationMonth, offset);
+    if (nextMonth >= MIN_ATTENDANCE_MONTH && nextMonth <= currentMonth) {
+      setMonth(nextMonth);
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <label htmlFor="attendance-month" className="block text-sm font-medium text-charcoal">
+            Attendance month
+          </label>
+          <div className="mt-1 flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Previous month"
+              disabled={!canGoPrevious}
+              onClick={() => moveMonth(-1)}
+              className="rounded-lg border border-charcoal/15 px-2 py-2 text-lg leading-none text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              ‹
+            </button>
+            <input
+              type="month"
+              id="attendance-month"
+              min={MIN_ATTENDANCE_MONTH}
+              max={currentMonth}
+              value={month}
+              onChange={(event) => setMonth(event.target.value || currentMonth)}
+              required
+              className="rounded-lg border border-charcoal/15 bg-white px-3 py-2 text-sm"
+            />
+            <button
+              type="button"
+              aria-label="Next month"
+              disabled={!canGoNext}
+              onClick={() => moveMonth(1)}
+              className="rounded-lg border border-charcoal/15 px-2 py-2 text-lg leading-none text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+        {data && !queryError && (
+          <p className="text-sm text-charcoal-soft">
+            {formatDate(data.from)} – {formatDate(data.to)}
+          </p>
+        )}
+      </div>
+
+      {queryError ? (
+        <p role="alert" className="text-sm text-alert-deep">
+          {queryError}
+        </p>
+      ) : query.isLoading ? (
+        <p className="text-sm text-charcoal-soft">Loading attendance…</p>
+      ) : data ? (
+        <>
+          <div className="grid gap-3 md:grid-cols-3">
+            <PercentageCard
+              label="On time"
+              percentage={data.summary.attendance.onTimePercentage}
+              count={data.summary.attendance.onTime}
+              className="bg-evergreen"
+            />
+            <PercentageCard
+              label="Late"
+              percentage={data.summary.attendance.latePercentage}
+              count={data.summary.attendance.late}
+              className="bg-brand-amber"
+            />
+            <PercentageCard
+              label="Absent"
+              percentage={data.summary.attendance.absentPercentage}
+              count={data.summary.attendance.absent}
+              className="bg-alert"
+            />
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold tracking-wide text-charcoal-soft uppercase">
+              Monthly reliability
+            </p>
+            <ul className="divide-y divide-charcoal/5">
+              {data.people.map((row) => (
+                <li
+                  key={row.userId}
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-center gap-3 py-2.5 text-sm"
+                >
+                  <div className="min-w-0">
+                    <Link
+                      href={`/people/${row.userId}`}
+                      className="truncate font-medium text-evergreen hover:underline"
+                    >
+                      {row.fullName}
+                    </Link>
+                    <p className="text-xs text-charcoal-soft">
+                      {row.daysOnTime} on time · {row.daysLate} late · {row.daysAbsent} absent
+                    </p>
+                  </div>
+                  <ScoreBar score={row.score} />
+                </li>
+              ))}
+              {data.people.length === 0 && (
+                <li className="py-3 text-sm text-charcoal-soft">No people to show yet.</li>
+              )}
+            </ul>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+export function useTeamStats(days = 30, enabled = true, month?: string) {
   return useQuery({
-    queryKey: ['attendance', 'stats', 'team', days],
-    queryFn: () => apiFetch<TeamStats>(`/attendance/stats/team?days=${days}`),
+    queryKey: ['attendance', 'stats', 'team', days, month],
+    queryFn: () => apiFetch<TeamStats>(`/attendance/stats/team${buildQuery({ days: month ? undefined : days, month })}`),
     enabled,
+    refetchInterval: 60_000,
   });
 }

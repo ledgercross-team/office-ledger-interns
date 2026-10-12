@@ -96,7 +96,7 @@ function TeamAttendance() {
       {items.length > 0 && (
         <Reveal>
           <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
-            <table className="w-full text-left text-sm">
+            <table className="min-w-[48rem] w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-charcoal/10 bg-offwhite text-charcoal-soft">
                   <th className="px-4 py-2.5 font-medium">Person</th>

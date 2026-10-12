@@ -203,7 +203,7 @@ function PersonDetail() {
             <p>
               Deactivate {person.fullName}? They will be signed out and unable to log in.
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 disabled={update.isPending}
@@ -226,7 +226,7 @@ function PersonDetail() {
             <p>
               Reset the password for {person.fullName}? Their current sessions will be signed out.
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 disabled={reset.isPending}

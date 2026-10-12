@@ -43,7 +43,7 @@ function SubscriptionView() {
       <h1 className="text-xl font-semibold text-charcoal">Subscription</h1>
 
       {current ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-4">
           <StatTile label="Plan" value={current.planName} />
           <StatTile label="Starts" value={formatDate(current.startsOn)} />
           <StatTile label="Ends" value={formatDate(current.endsOn)} />
@@ -66,7 +66,8 @@ function SubscriptionView() {
         {items.length === 0 ? (
           <p className="text-sm text-charcoal-soft">No subscriptions yet.</p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <div className="slim-scroll overflow-x-auto">
+          <table className="min-w-[32rem] w-full text-left text-sm">
             <thead>
               <tr className="border-b border-charcoal/10 text-charcoal-soft">
                 <th className="py-2 pr-4 font-medium">Plan</th>
@@ -88,6 +89,7 @@ function SubscriptionView() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </div>

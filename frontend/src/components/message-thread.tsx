@@ -135,7 +135,7 @@ export function MessageThread({ companyId, title, subtitle, className }: Message
   return (
     <section
       aria-label={`Messages with ${title}`}
-      className={`flex min-h-[420px] flex-col overflow-hidden rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)] ${className ?? 'h-[calc(100dvh-17rem)]'}`}
+      className={`flex min-h-[360px] flex-col overflow-hidden rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:min-h-[420px] ${className ?? 'h-[calc(100dvh-14rem)] sm:h-[calc(100dvh-17rem)]'}`}
     >
       <header className="flex items-center gap-3 border-b border-charcoal/10 bg-forest px-4 py-3 text-white">
         <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mint font-semibold text-forest-deep">

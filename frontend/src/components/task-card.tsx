@@ -17,7 +17,7 @@ export function TaskCard({
   return (
     <article className="space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="font-semibold text-charcoal">
+        <h2 className="min-w-0 flex-1 font-semibold break-words text-charcoal">
           {linkTitle ? (
             <Link href={`/tasks/${task.id}`} className="text-evergreen hover:underline">
               {task.title}
@@ -26,7 +26,7 @@ export function TaskCard({
             task.title
           )}
         </h2>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex max-w-full shrink-0 flex-wrap items-center gap-2">
           <CategoryTag category={task.category} />
           {task.overdue && (
             <span className="rounded-full bg-alert px-2.5 py-0.5 text-xs font-medium text-white">

@@ -1,5 +1,15 @@
 import { Transform } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Matches,
+  Max,
+  Min,
+} from 'class-validator';
 import { IsAppDate } from '../../../common/validators/app-date';
 
 export class MyAttendanceQueryDto {
@@ -30,6 +40,13 @@ export class StatsQueryDto {
   @Min(7)
   @Max(90)
   days?: number;
+
+  // A calendar month in the company's timezone, for example 2026-10.
+  @IsOptional()
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, {
+    message: 'month must use YYYY-MM format.',
+  })
+  month?: string;
 }
 
 export class CorrectAttendanceDto {

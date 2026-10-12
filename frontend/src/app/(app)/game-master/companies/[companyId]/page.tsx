@@ -228,7 +228,7 @@ function CompanyDetail() {
   const confirmBox = (title: string, yes: string, onYes: () => void) => (
     <div role="alertdialog" aria-label={title} className="space-y-2 text-sm">
       <p>{title}</p>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button type="button" onClick={onYes} className="rounded-xl bg-alert px-3 py-1 text-white">
           {yes}
         </button>
@@ -302,7 +302,7 @@ function CompanyDetail() {
                     <span className="text-charcoal-soft">({item.email})</span>
                     {!item.isActive && <span className="text-alert-deep"> · Inactive</span>}
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => {

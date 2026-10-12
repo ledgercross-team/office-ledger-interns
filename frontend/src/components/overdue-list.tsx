@@ -13,9 +13,9 @@ export function OverdueList({ items }: { items: OverdueItem[] }) {
         <ul className="space-y-2">
           {items.map((item) => (
             <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-alert/25 bg-alert-tint/40 p-3 text-sm">
-              <div>
+              <div className="min-w-0">
                 <Link href={`/tasks/${item.id}`} className="font-medium text-charcoal hover:underline">
-                  {item.title}
+                  <span className="break-words">{item.title}</span>
                 </Link>
                 <p className="text-charcoal-soft">
                   {item.assigneeName} · due {formatDateTime(item.deadline)}

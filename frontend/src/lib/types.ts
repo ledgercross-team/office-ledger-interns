@@ -334,6 +334,7 @@ export interface TeamStatsRow extends Omit<AttendanceStats, 'series' | 'user' | 
 export interface TeamStats {
   timezone: string;
   days: number;
+  month: string | null;
   from: string;
   to: string;
   workStartMinutes: number;
@@ -342,6 +343,15 @@ export interface TeamStats {
     avgScore: number | null;
     avgArrivalOffset: number | null;
     onTimeRate: number | null;
+    attendance: {
+      total: number;
+      onTime: number;
+      late: number;
+      absent: number;
+      onTimePercentage: number | null;
+      latePercentage: number | null;
+      absentPercentage: number | null;
+    };
   };
   people: TeamStatsRow[];
 }

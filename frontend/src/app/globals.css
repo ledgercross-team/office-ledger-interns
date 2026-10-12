@@ -30,6 +30,9 @@ html {
 }
 
 body {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   background: var(--color-offwhite);
   color: var(--color-charcoal);
   font-family: var(--font-sans);

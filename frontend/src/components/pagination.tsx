@@ -13,7 +13,7 @@ export function Pagination({ page, pageSize, total, onPage }: PaginationProps) {
   }
 
   return (
-    <nav aria-label="Pagination" className="flex items-center gap-3 text-sm">
+    <nav aria-label="Pagination" className="flex flex-wrap items-center gap-3 text-sm">
       <button
         type="button"
         disabled={page <= 1}

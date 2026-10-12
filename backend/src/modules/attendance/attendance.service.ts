@@ -11,7 +11,7 @@ import { getCompanyDate } from '../../common/utils/company-time';
 import { isUniqueViolation } from '../../common/utils/db-errors';
 import { DRIZZLE, type Database } from '../../db/db.module';
 import { attendanceRecords, companies, users } from '../../db/schema';
-import { addDays } from '../../common/utils/dates';
+import { addDays, daysBetween } from '../../common/utils/dates';
 import { managedPeople } from '../users/visibility';
 import {
   attendanceStatus,
@@ -29,6 +29,12 @@ import type {
 } from './dto/attendance.dto';
 
 const DEFAULT_STATS_DAYS = 30;
+const MIN_STATS_MONTH = '2022-01';
+
+function lastDayOfMonth(month: string): string {
+  const [year, monthNumber] = month.split('-').map(Number);
+  return new Date(Date.UTC(year, monthNumber, 0)).toISOString().slice(0, 10);
+}
 
 @Injectable()
 export class AttendanceService {
@@ -199,7 +205,7 @@ export class AttendanceService {
   }
 
   // Everyone the caller can see, best score first. No per-day series, to keep it light.
-  async statsTeam(caller: AuthUser, days = DEFAULT_STATS_DAYS) {
+  async statsTeam(caller: AuthUser, days = DEFAULT_STATS_DAYS, month?: string) {
     const company = await this.getCompany(caller);
     const people = await this.database
       .select({
@@ -213,7 +219,16 @@ export class AttendanceService {
       .orderBy(users.fullName);
 
     const today = getCompanyDate(company.timezone);
-    const from = addDays(today, -(days - 1));
+    if (month && month < MIN_STATS_MONTH) {
+      throw new BadRequestException(`month cannot be before ${MIN_STATS_MONTH}.`);
+    }
+    if (month && month > today.slice(0, 7)) {
+      throw new BadRequestException('month cannot be in the future.');
+    }
+
+    const from = month ? `${month}-01` : addDays(today, -(days - 1));
+    const requestedTo = month ? lastDayOfMonth(month) : today;
+    const to = requestedTo < today ? requestedTo : today;
     const records = people.length
       ? await this.database
           .select()
@@ -226,7 +241,7 @@ export class AttendanceService {
                 people.map((person) => person.id),
               ),
               gte(attendanceRecords.workDate, from),
-              lte(attendanceRecords.workDate, today),
+              lte(attendanceRecords.workDate, to),
             ),
           )
       : [];
@@ -235,8 +250,10 @@ export class AttendanceService {
       const mine = records.filter((record) => record.userId === person.id);
       const stats = computeStats({
         records: mine,
-        from: this.windowStart(from, person.createdAt, company.timezone, mine),
-        to: today,
+        from: month
+          ? this.monthWindowStart(from, person.createdAt, company.timezone)
+          : this.windowStart(from, person.createdAt, company.timezone, mine),
+        to,
         today,
         timezone: company.timezone,
         workStartTime: company.workStartTime,
@@ -254,11 +271,24 @@ export class AttendanceService {
         ? null
         : Math.round(values.reduce((sum, n) => sum + n, 0) / values.length);
 
+    const attendance = rows.reduce(
+      (totals, row) => ({
+        total: totals.total + row.expectedDays,
+        onTime: totals.onTime + row.daysOnTime,
+        late: totals.late + row.daysLate,
+        absent: totals.absent + row.daysAbsent,
+      }),
+      { total: 0, onTime: 0, late: 0, absent: 0 },
+    );
+    const percentage = (value: number) =>
+      attendance.total === 0 ? null : Math.round((value / attendance.total) * 100);
+
     return {
       timezone: company.timezone,
-      days,
+      days: month ? Math.max(0, daysBetween(from, to) + 1) : days,
+      month: month ?? null,
       from,
-      to: today,
+      to,
       workStartMinutes: workStartMinutesOf(company.workStartTime),
       summary: {
         people: rows.length,
@@ -267,6 +297,12 @@ export class AttendanceService {
         onTimeRate: average(
           rows.filter((row) => row.punctualityRate !== null).map((r) => r.punctualityRate as number),
         ),
+        attendance: {
+          ...attendance,
+          onTimePercentage: percentage(attendance.onTime),
+          latePercentage: percentage(attendance.late),
+          absentPercentage: percentage(attendance.absent),
+        },
       },
       people: rows,
     };
@@ -322,6 +358,13 @@ export class AttendanceService {
       getCompanyDate(timezone, joinedAt),
     );
     return first > from ? first : from;
+  }
+
+  // Monthly dashboard reports cover the selected month even when earlier days have no record.
+  // Do not count days before the person joined the company as absences.
+  private monthWindowStart(from: string, joinedAt: Date, timezone: string): string {
+    const joinedDate = getCompanyDate(timezone, joinedAt);
+    return joinedDate > from ? joinedDate : from;
   }
 
   // Everyone the caller can see on a date, including absent people.

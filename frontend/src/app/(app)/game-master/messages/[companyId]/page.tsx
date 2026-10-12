@@ -117,7 +117,7 @@ function Thread() {
           companyId={companyId}
           title={adminName}
           subtitle={company.data?.company.name}
-          className="h-[calc(100dvh-19rem)]"
+          className="h-[calc(100dvh-14rem)] sm:h-[calc(100dvh-19rem)]"
         />
       </div>
     </div>

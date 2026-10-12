@@ -2,23 +2,28 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Suspense, useEffect, type ReactNode } from 'react';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import { NAV_ICONS } from '@/components/nav-icons';
 import { useAuth } from '@/lib/auth-context';
 import type { Role } from '@/lib/types';
 import { NAV_BY_ROLE, ROLE_LABELS } from '@/lib/navigation';
 
-function greeting(name: string): string {
-  const hour = new Date().getHours();
+function greeting(name: string, timezone?: string): string {
+  const hour = Number(
+    new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: timezone }).format(
+      new Date(),
+    ),
+  );
   const part = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   return `${part}, ${name.split(' ')[0]}`;
 }
 
-function todayLine(): string {
+function todayLine(timezone?: string): string {
   return new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
+    timeZone: timezone,
   });
 }
 
@@ -79,6 +84,12 @@ function Sidebar({ role, fullName }: { role: Role; fullName: string }) {
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
+  const [, refreshClock] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => refreshClock(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;
@@ -102,8 +113,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <header className="border-b border-charcoal/10 bg-white px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-lg font-semibold text-charcoal">{greeting(user.fullName)}</p>
-              <p className="text-sm text-charcoal-soft">{todayLine()}</p>
+              <p className="text-lg font-semibold text-charcoal">{greeting(user.fullName, user.companyTimezone)}</p>
+              <p className="text-sm text-charcoal-soft">{todayLine(user.companyTimezone)}</p>
             </div>
             <div className="flex items-center gap-3 text-sm md:hidden">
               <span className="text-charcoal-soft">{ROLE_LABELS[user.role]}</span>
@@ -133,7 +144,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             or message the game master to renew.
           </p>
         )}
-        <main className="flex-1 px-4 py-6 sm:px-6">{children}</main>
+        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">{children}</main>
       </div>
     </div>
   );

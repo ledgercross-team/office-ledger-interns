@@ -103,7 +103,7 @@ export function CorrectionDialog({ record, personName, timezone, onClose }: Corr
             {error}
           </p>
         )}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <button type="button" onClick={onClose} className="rounded-xl border border-charcoal/15 px-4 py-2 text-sm font-medium hover:bg-mist">
             Close
           </button>

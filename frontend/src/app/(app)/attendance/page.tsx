@@ -42,7 +42,8 @@ function MyAttendance() {
           <p className="text-sm text-charcoal-soft">No attendance to show yet.</p>
         )}
         {history.data && history.data.items.length > 0 && (
-          <table className="w-full text-left text-sm">
+          <div className="slim-scroll overflow-x-auto">
+          <table className="min-w-[36rem] w-full text-left text-sm">
             <thead>
               <tr className="border-b border-charcoal/10 text-charcoal-soft">
                 <th className="py-2 pr-4 font-medium">Date</th>
@@ -70,6 +71,7 @@ function MyAttendance() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
         {timezone && <p className="text-xs text-charcoal-soft">Times are in {timezone}.</p>}
       </section>

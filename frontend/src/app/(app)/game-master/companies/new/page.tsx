@@ -75,7 +75,7 @@ function NewCompanyForm() {
           Admin: {created.admin.fullName} ({created.admin.email})
         </p>
         <TemporaryPasswordPanel password={created.temporaryPassword} />
-        <div className="flex gap-3 text-sm">
+        <div className="flex flex-wrap gap-3 text-sm">
           <Link
             href={`/game-master/companies/${created.company.id}`}
             className="rounded-xl border border-charcoal/15 px-3 py-1"

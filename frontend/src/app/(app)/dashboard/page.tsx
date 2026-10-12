@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { motion } from 'motion/react';
-import { PersonInsights, TeamInsights, useTeamStats } from '@/components/attendance-insights';
+import { MonthlyTeamInsights, PersonInsights } from '@/components/attendance-insights';
 import { CheckInCard } from '@/components/check-in-card';
 import { OpenTaskList } from '@/components/open-task-list';
 import { OverdueList } from '@/components/overdue-list';
@@ -48,36 +48,49 @@ const STATUS_BAR_CLASS: Record<keyof TasksByStatus, string> = {
 };
 
 function TaskBars({ counts }: { counts: TasksByStatus }) {
+  const taskTotal = Object.values(counts).reduce((sum, n) => sum + n, 0);
   const total = Math.max(
     1,
-    Object.values(counts).reduce((sum, n) => sum + n, 0),
+    taskTotal,
   );
+  const completedPercentage = taskTotal === 0 ? 0 : Math.round((counts.done / taskTotal) * 100);
 
   return (
-    <ul className="space-y-3">
-      {STATUS_LABELS.map(([key, label]) => {
-        const pct = Math.round((counts[key] / total) * 100);
-        return (
-          <li key={key}>
-            <div className="mb-1 flex items-baseline justify-between text-sm">
-              <span className="font-medium text-charcoal">{label}</span>
-              <span className="text-charcoal-soft">
-                {counts[key]} · {pct}%
-              </span>
-            </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-charcoal/10">
-              <motion.div
-                className={`h-full rounded-full ${STATUS_BAR_CLASS[key]}`}
-                initial={{ width: 0 }}
-                whileInView={{ width: `${pct}%` }}
-                viewport={{ once: true, margin: '-48px' }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
-              />
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+    <div>
+      <div className="mb-5 flex items-end justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-charcoal">Work progress</p>
+          <p className="text-xs text-charcoal-soft">
+            {counts.done} of {taskTotal} {taskTotal === 1 ? 'task' : 'tasks'} completed
+          </p>
+        </div>
+        <p className="text-xl font-semibold text-charcoal">{completedPercentage}%</p>
+      </div>
+      <ul className="space-y-3">
+        {STATUS_LABELS.map(([key, label]) => {
+          const pct = Math.round((counts[key] / total) * 100);
+          return (
+            <li key={key}>
+              <div className="mb-1 flex items-baseline justify-between text-sm">
+                <span className="font-medium text-charcoal">{label}</span>
+                <span className="text-charcoal-soft">
+                  {counts[key]} · {pct}%
+                </span>
+              </div>
+              <div className="h-2.5 overflow-hidden rounded-full bg-charcoal/10">
+                <motion.div
+                  className={`h-full rounded-full ${STATUS_BAR_CLASS[key]}`}
+                  initial={{ width: 0 }}
+                  whileInView={{ width: `${pct}%` }}
+                  viewport={{ once: true, margin: '-48px' }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -144,7 +157,7 @@ function EmployeeDashboard({ summary }: { summary: DashboardSummary }) {
   return (
     <div className="space-y-5">
       <Reveal>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatTile label="Open" value={summary.openTasks} />
           <StatTile label="Overdue" value={summary.overdueTasks} tone="warning" />
           <StatTile label="Done this week" value={summary.doneThisWeek} />
@@ -170,14 +183,13 @@ function EmployeeDashboard({ summary }: { summary: DashboardSummary }) {
 function ManagerDashboard({ summary, userId }: { summary: DashboardSummary; userId: string }) {
   const team = summary.team;
   const spotlight = useTodaySpotlight(team !== undefined, summary.timezone);
-  const teamStats = useTeamStats(30, team !== undefined);
 
   return (
     <div className="space-y-8">
       {summary.today && <CheckInCard today={summary.today} timezone={summary.timezone} />}
 
       <Reveal>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatTile label="My open" value={summary.openTasks} />
           <StatTile label="Overdue" value={summary.overdueTasks} tone="warning" />
           <StatTile label="Done this week" value={summary.doneThisWeek} />
@@ -203,16 +215,10 @@ function ManagerDashboard({ summary, userId }: { summary: DashboardSummary; user
 
           <StoryChapter
             step="Chapter 3"
-            title="Who keeps good time?"
-            lede="Average arrival and reliability for your team over the last 30 days."
+            title="Who can you count on?"
+            lede="On-time, late and absent attendance for the selected month."
           >
-            {teamStats.data ? (
-              <TeamInsights data={teamStats.data} />
-            ) : (
-              <p className="text-sm text-charcoal-soft">
-                {teamStats.error ? errorMessage(teamStats.error) : 'Loading…'}
-              </p>
-            )}
+            <MonthlyTeamInsights key={todayIn(summary.timezone).slice(0, 7)} timezone={summary.timezone} />
           </StoryChapter>
         </>
       )}
@@ -237,7 +243,6 @@ function ManagerDashboard({ summary, userId }: { summary: DashboardSummary; user
 function AdminDashboard({ summary }: { summary: DashboardSummary }) {
   const people = summary.peopleByRole;
   const spotlight = useTodaySpotlight(summary.attendance !== undefined, summary.timezone);
-  const teamStats = useTeamStats(30, summary.attendance !== undefined);
 
   return (
     <div className="space-y-8">
@@ -274,16 +279,10 @@ function AdminDashboard({ summary }: { summary: DashboardSummary }) {
 
       <StoryChapter
         step="Chapter 3"
-        title="Who keeps good time?"
-        lede="Average arrival and reliability across the company over the last 30 days."
+        title="Who can you count on?"
+        lede="On-time, late and absent attendance for the selected month."
       >
-        {teamStats.data ? (
-          <TeamInsights data={teamStats.data} />
-        ) : (
-          <p className="text-sm text-charcoal-soft">
-            {teamStats.error ? errorMessage(teamStats.error) : 'Loading…'}
-          </p>
-        )}
+        <MonthlyTeamInsights key={todayIn(summary.timezone).slice(0, 7)} timezone={summary.timezone} />
       </StoryChapter>
 
       <StoryChapter step="Chapter 4" title="Is the account healthy?" lede="Subscription and unread messages.">
@@ -314,6 +313,7 @@ function Dashboard() {
   const query = useQuery({
     queryKey: ['dashboard', 'summary'],
     queryFn: () => apiFetch<DashboardSummary>('/dashboard/summary'),
+    refetchInterval: 60_000,
   });
 
   if (query.isLoading) {

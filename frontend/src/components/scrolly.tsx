@@ -42,7 +42,7 @@ export function Scrolly({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-10">
-      <div className="sticky top-2 z-10 self-start rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] lg:top-6">
+      <div className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] lg:sticky lg:top-6 lg:z-10 lg:self-start">
         {panel(active)}
       </div>
 
