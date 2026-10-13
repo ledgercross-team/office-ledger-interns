@@ -133,6 +133,36 @@ export interface Task {
   canDelete?: boolean;
 }
 
+export type TaskAssignmentRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface TaskAssignmentRequest {
+  id: string;
+  companyId: string;
+  managerId: string;
+  managerName: string;
+  employeeId: string;
+  employeeName: string;
+  employeeManagerName: string | null;
+  title: string;
+  description: string | null;
+  category: TaskCategory;
+  priority: TaskPriority;
+  deadline: string;
+  status: TaskAssignmentRequestStatus;
+  reviewedById: string | null;
+  reviewedAt: string | null;
+  taskId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PendingTaskAssignmentResponse {
+  status: 'pending_approval';
+  request: TaskAssignmentRequest;
+}
+
+export type CreateTaskResponse = Task | PendingTaskAssignmentResponse;
+
 export interface TaskActivity {
   id: string;
   taskId: string;
@@ -254,6 +284,7 @@ export interface DashboardSummary {
   subscriptionEndsOn?: string | null;
   daysLeft?: number | null;
   unreadMessages?: number;
+  pendingAssignmentApprovals?: number;
 }
 
 export interface CompanySubscription {

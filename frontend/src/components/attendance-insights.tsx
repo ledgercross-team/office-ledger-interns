@@ -360,7 +360,7 @@ export function MonthlyTeamInsights({ timezone }: { timezone: string }) {
               aria-label="Previous month"
               disabled={!canGoPrevious}
               onClick={() => moveMonth(-1)}
-              className="rounded-lg border border-charcoal/15 px-2 py-2 text-lg leading-none text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-35"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-charcoal/15 px-2 py-2 text-lg leading-none text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-35"
             >
               ‹
             </button>
@@ -375,14 +375,14 @@ export function MonthlyTeamInsights({ timezone }: { timezone: string }) {
                 setPage(1);
               }}
               required
-              className="rounded-lg border border-charcoal/15 bg-white px-3 py-2 text-sm"
+              className="min-h-11 rounded-lg border border-charcoal/15 bg-white px-3 py-2 text-sm"
             />
             <button
               type="button"
               aria-label="Next month"
               disabled={!canGoNext}
               onClick={() => moveMonth(1)}
-              className="rounded-lg border border-charcoal/15 px-2 py-2 text-lg leading-none text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-35"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-charcoal/15 px-2 py-2 text-lg leading-none text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-35"
             >
               ›
             </button>
@@ -470,7 +470,7 @@ export function MonthlyTeamInsights({ timezone }: { timezone: string }) {
                     setPageSize(Number(event.target.value));
                     setPage(1);
                   }}
-                  className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 outline-none focus:border-evergreen"
+                  className="min-h-11 rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 outline-none focus:border-evergreen"
                 >
                   {TEAM_PAGE_SIZE_OPTIONS.map((option) => (
                     <option key={option} value={option}>
@@ -483,11 +483,11 @@ export function MonthlyTeamInsights({ timezone }: { timezone: string }) {
                   aria-label="Previous people page"
                   disabled={page <= 1}
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   ‹ <span className="sr-only">Previous</span>
                 </button>
-                <span className="rounded-lg bg-evergreen px-3 py-1.5 font-medium text-white" aria-current="page">
+                <span className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-evergreen px-3 py-1.5 font-medium text-white" aria-current="page">
                   {currentPage}
                 </span>
                 <button
@@ -495,7 +495,7 @@ export function MonthlyTeamInsights({ timezone }: { timezone: string }) {
                   aria-label="Next people page"
                   disabled={currentPage >= totalPages}
                   onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                  className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <span className="sr-only">Next</span> ›
                 </button>

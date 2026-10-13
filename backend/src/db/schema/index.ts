@@ -4,6 +4,7 @@ export * from './users';
 export * from './refresh-tokens';
 export * from './subscriptions';
 export * from './tasks';
+export * from './task-assignment-requests';
 export * from './task-activity';
 export * from './attendance-records';
 export * from './messages';

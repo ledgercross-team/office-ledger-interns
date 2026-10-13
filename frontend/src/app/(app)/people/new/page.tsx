@@ -20,11 +20,11 @@ function NewPersonForm() {
   // Next keeps a page's state when you navigate away, so drop the password explicitly on leave.
   useEffect(() => () => setCreated(null), []);
 
-  // Admins choose who a new employee reports to; a manager's hires report to themselves.
+  // Both admins and managers may explicitly choose an active manager, or leave the employee unassigned.
   const managers = useQuery({
     queryKey: ['people', 'managers'],
     queryFn: () => apiFetch<{ items: ManagerOption[] }>('/users/managers'),
-    enabled: user?.role === 'admin',
+    enabled: user?.role === 'admin' || user?.role === 'manager',
   });
 
   const create = useMutation({
@@ -68,11 +68,11 @@ function NewPersonForm() {
           <button
             type="button"
             onClick={() => setCreated(null)}
-            className="rounded-xl border border-charcoal/15 px-3 py-1"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2"
           >
             Add another
           </button>
-          <Link href="/people" className="rounded-xl border border-charcoal/15 px-3 py-1">
+          <Link href="/people" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2">
             Back to people
           </Link>
         </div>
@@ -84,7 +84,7 @@ function NewPersonForm() {
   const isAdmin = user?.role === 'admin';
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto w-full max-w-xl space-y-4">
+    <form onSubmit={onSubmit} className="mx-auto w-full max-w-2xl space-y-4 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-6">
       <h1 className="text-xl font-semibold">Add person</h1>
 
       <div className="space-y-1">
@@ -96,7 +96,7 @@ function NewPersonForm() {
           name="fullName"
           required
           maxLength={120}
-          className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
+          className="min-h-11 w-full rounded-xl border border-charcoal/15 px-3 py-2"
         />
       </div>
       <div className="space-y-1">
@@ -109,7 +109,7 @@ function NewPersonForm() {
           type="email"
           required
           maxLength={254}
-          className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
+          className="min-h-11 w-full rounded-xl border border-charcoal/15 px-3 py-2"
         />
       </div>
       <div className="space-y-1">
@@ -121,25 +121,25 @@ function NewPersonForm() {
           name="role"
           value={role}
           onChange={(event) => setRole(event.target.value)}
-          className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+          className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
         >
           <option value="employee">Employee</option>
           {isAdmin && <option value="manager">Manager</option>}
           {isAdmin && <option value="admin">Admin</option>}
         </select>
       </div>
-      {isAdmin && role === 'employee' && (
+      {(isAdmin || user?.role === 'manager') && role === 'employee' && (
         <div className="space-y-1">
           <label htmlFor="managerId" className="block text-sm font-medium">
-            Reports to (optional)
+            Assign to manager (optional)
           </label>
           <select
             id="managerId"
             name="managerId"
             defaultValue=""
-            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+            className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
           >
-            <option value="">Assign later</option>
+            <option value="">Leave unassigned</option>
             {managers.data?.items.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.fullName}
@@ -156,7 +156,7 @@ function NewPersonForm() {
           id="jobTitle"
           name="jobTitle"
           maxLength={120}
-          className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
+          className="min-h-11 w-full rounded-xl border border-charcoal/15 px-3 py-2"
         />
       </div>
 
@@ -168,7 +168,7 @@ function NewPersonForm() {
       <button
         type="submit"
         disabled={create.isPending}
-        className="rounded-xl bg-evergreen px-4 py-2 text-white disabled:opacity-60"
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-4 py-2 text-white disabled:opacity-60 sm:w-auto"
       >
         {create.isPending ? 'Adding…' : 'Add person'}
       </button>

@@ -9,7 +9,13 @@ import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { errorMessage, formatGmtOffset, fromZonedInput, MAX_DATE, toZonedInput } from '@/lib/format';
 import { TASK_CATEGORIES } from '@/lib/task-meta';
-import type { Paginated, Task, TaskCategory, TaskPriority, User } from '@/lib/types';
+import type {
+  CreateTaskResponse,
+  Paginated,
+  TaskCategory,
+  TaskPriority,
+  User,
+} from '@/lib/types';
 
 interface NewTask {
   title: string;
@@ -25,28 +31,46 @@ function NewTaskForm() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [deadline, setDeadline] = useState('');
+  const [assigneeId, setAssigneeId] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
   const timezone = user?.companyTimezone ?? 'UTC';
   const timezoneLabel = formatGmtOffset(timezone);
   // The earliest deadline the form allows: right now, on the company's clock.
   const earliest = toZonedInput(new Date().toISOString(), timezone);
 
-  // Managers see only their own team here; admins see every manager and employee.
+  // Managers see every active employee so they can request approval for
+  // employees outside their own team. Admins also see active managers.
   const people = useQuery({
-    queryKey: ['people', 'assignable'],
-    queryFn: () => apiFetch<Paginated<User>>('/users?isActive=true&pageSize=100'),
+    queryKey: ['people', 'assignable', user?.role],
+    queryFn: () => apiFetch<Paginated<User>>('/users/assignable'),
+    enabled: Boolean(user),
   });
 
+  const selectedPerson = people.data?.items.find((person) => person.id === assigneeId);
+  const needsApproval = user?.role === 'manager' && Boolean(selectedPerson && selectedPerson.managerId !== user.id);
+
   const create = useMutation({
-    mutationFn: (body: NewTask) => apiFetch<Task>('/tasks', { method: 'POST', body }),
-    onSuccess: async (task) => {
+    mutationFn: (body: NewTask) => apiFetch<CreateTaskResponse>('/tasks', { method: 'POST', body }),
+    onSuccess: async (result) => {
       formRef.current?.reset();
       setDeadline('');
+      setAssigneeId('');
+      setError(null);
       await queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      router.push(`/tasks/${task.id}`);
+      if ('status' in result && result.status === 'pending_approval') {
+        setNotice(
+          `Admin approval requested for ${result.request.employeeName}. The task will be created after approval.`,
+        );
+        return;
+      }
+      router.push(`/tasks/${result.id}`);
     },
-    onError: (err) => setError(errorMessage(err)),
+    onError: (err) => {
+      setNotice(null);
+      setError(errorMessage(err));
+    },
   });
 
   useEffect(() => {
@@ -54,7 +78,9 @@ function NewTaskForm() {
       if (event.persisted) {
         formRef.current?.reset();
         setDeadline('');
+        setAssigneeId('');
         setError(null);
+        setNotice(null);
       }
     }
 
@@ -68,6 +94,7 @@ function NewTaskForm() {
     const description = String(form.get('description')).trim();
 
     setError(null);
+    setNotice(null);
     if (!deadline) {
       setError('Please choose a deadline.');
       return;
@@ -88,7 +115,7 @@ function NewTaskForm() {
       ref={formRef}
       autoComplete="off"
       onSubmit={onSubmit}
-      className="mx-auto w-full max-w-xl space-y-4"
+      className="mx-auto w-full max-w-2xl space-y-4 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-6"
     >
       <h1 className="text-xl font-semibold">New task</h1>
 
@@ -101,7 +128,7 @@ function NewTaskForm() {
           name="title"
           required
           maxLength={200}
-          className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
+          className="min-h-11 w-full rounded-xl border border-charcoal/15 px-3 py-2"
         />
       </div>
 
@@ -126,7 +153,7 @@ function NewTaskForm() {
           id="category"
           name="category"
           defaultValue="general"
-          className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+          className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
         >
           {TASK_CATEGORIES.map((item) => (
             <option key={item.value} value={item.value}>
@@ -145,7 +172,7 @@ function NewTaskForm() {
             id="priority"
             name="priority"
             defaultValue="medium"
-            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+            className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
           >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
@@ -177,23 +204,41 @@ function NewTaskForm() {
           id="assigneeId"
           name="assigneeId"
           required
-          defaultValue=""
-          className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+          value={assigneeId}
+          onChange={(event) => setAssigneeId(event.target.value)}
+          className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
         >
           <option value="" disabled>
-            {people.isLoading ? 'Loading…' : 'Select a person'}
+            {people.isLoading
+              ? 'Loading employees…'
+              : people.data?.items.length
+                ? user?.role === 'manager'
+                  ? 'Select an employee'
+                  : 'Select a person'
+                : user?.role === 'manager'
+                  ? 'No active employees available'
+                  : 'No assignable people found'}
           </option>
           {people.data?.items
-            .filter((person) => person.role !== 'admin')
             .map((person) => (
               <option key={person.id} value={person.id}>
                 {person.fullName} ({person.role}
-                {person.managerName ? `, reports to ${person.managerName}` : ''})
+                {person.managerName ? `, reports to ${person.managerName}` : ', currently unassigned'})
               </option>
             ))}
         </select>
+        {user?.role === 'manager' && (
+          <p className="text-xs text-charcoal-soft">
+            Employees on your team are assigned immediately. Other employees require admin approval.
+          </p>
+        )}
       </div>
 
+      {notice && (
+        <p role="status" className="rounded-xl bg-mist px-3 py-2 text-sm text-forest">
+          {notice}
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-sm text-alert-deep">
           {error}
@@ -202,9 +247,9 @@ function NewTaskForm() {
       <button
         type="submit"
         disabled={create.isPending}
-        className="rounded-xl bg-evergreen px-4 py-2 text-white disabled:opacity-60"
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-4 py-2 text-white disabled:opacity-60 sm:w-auto"
       >
-        {create.isPending ? 'Creating…' : 'Create task'}
+        {create.isPending ? 'Submitting…' : needsApproval ? 'Request admin approval' : 'Create task'}
       </button>
     </form>
   );

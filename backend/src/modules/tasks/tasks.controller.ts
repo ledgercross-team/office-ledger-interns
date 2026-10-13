@@ -17,6 +17,7 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import {
   CommentDto,
   CreateTaskDto,
+  ListAssignmentRequestsQueryDto,
   ListTasksQueryDto,
   StatusChangeDto,
   UpdateTaskDto,
@@ -37,6 +38,33 @@ export class TasksController {
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateTaskDto) {
     return this.service.create(user, dto);
+  }
+
+  @Roles('admin')
+  @Get('assignment-requests')
+  listAssignmentRequests(
+    @CurrentUser() user: AuthUser,
+    @Query() query: ListAssignmentRequestsQueryDto,
+  ) {
+    return this.service.listAssignmentRequests(user, query);
+  }
+
+  @Roles('admin')
+  @Post('assignment-requests/:requestId/approve')
+  approveAssignment(
+    @CurrentUser() user: AuthUser,
+    @Param('requestId', ParseUUIDPipe) requestId: string,
+  ) {
+    return this.service.approveAssignment(user, requestId);
+  }
+
+  @Roles('admin')
+  @Post('assignment-requests/:requestId/reject')
+  rejectAssignment(
+    @CurrentUser() user: AuthUser,
+    @Param('requestId', ParseUUIDPipe) requestId: string,
+  ) {
+    return this.service.rejectAssignment(user, requestId);
   }
 
   @Roles('admin', 'manager')

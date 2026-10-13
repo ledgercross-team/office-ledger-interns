@@ -15,6 +15,12 @@ export const taskPriorityEnum = pgEnum('task_priority', ['low', 'medium', 'high'
 
 export const taskActivityTypeEnum = pgEnum('task_activity_type', ['comment', 'status_change']);
 
+export const taskAssignmentRequestStatusEnum = pgEnum('task_assignment_request_status', [
+  'pending',
+  'approved',
+  'rejected',
+]);
+
 export const attendanceStatusEnum = pgEnum('attendance_status', ['present', 'late']);
 
 // HR-flavoured tags so a task list reads like an HRMS rather than a generic to-do list.

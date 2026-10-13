@@ -53,7 +53,7 @@ function TeamAttendance() {
   const canEdit = (row: TeamAttendanceRow) => user?.role === 'admin' || row.role === 'employee';
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-xl font-semibold text-charcoal">Team attendance</h1>
         <div className="space-y-1">
@@ -137,7 +137,7 @@ function TeamAttendance() {
                         <button
                           type="button"
                           onClick={() => setEditing(row)}
-                          className="rounded-lg border border-charcoal/15 px-2.5 py-1 text-xs font-medium text-charcoal hover:bg-mist"
+                          className="inline-flex min-h-11 items-center justify-center rounded-lg border border-charcoal/15 px-3 py-2 text-xs font-medium text-charcoal hover:bg-mist"
                         >
                           Edit
                         </button>
@@ -215,7 +215,7 @@ function TeamAttendancePagination({
           id="team-attendance-page-size"
           value={pageSize}
           onChange={(event) => onPageSize(Number(event.target.value))}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 outline-none focus:border-evergreen"
+          className="min-h-11 rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 outline-none focus:border-evergreen"
         >
           {PAGE_SIZE_OPTIONS.map((option) => (
             <option key={option} value={option}>
@@ -228,11 +228,11 @@ function TeamAttendancePagination({
           aria-label="Previous team attendance page"
           disabled={page <= 1}
           onClick={() => onPage(Math.max(1, page - 1))}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
         >
           ‹ <span className="sr-only">Previous</span>
         </button>
-        <span className="rounded-lg bg-evergreen px-3 py-1.5 font-medium text-white" aria-current="page">
+        <span className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-evergreen px-3 py-1.5 font-medium text-white" aria-current="page">
           {page}
         </span>
         <button
@@ -240,7 +240,7 @@ function TeamAttendancePagination({
           aria-label="Next team attendance page"
           disabled={page >= totalPages}
           onClick={() => onPage(Math.min(totalPages, page + 1))}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
         >
           <span className="sr-only">Next</span> ›
         </button>

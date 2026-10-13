@@ -1,47 +1,66 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { AttendanceStatus } from '@/components/attendance-status';
-import { PersonInsights } from '@/components/attendance-insights';
 import { CheckInCard } from '@/components/check-in-card';
+import { Pagination } from '@/components/pagination';
 import { Reveal } from '@/components/reveal';
 import { RoleGate } from '@/components/role-gate';
 import { apiFetch } from '@/lib/api-client';
-import { errorMessage, formatDate, formatTime } from '@/lib/format';
+import { useAuth } from '@/lib/auth-context';
+import { buildQuery, errorMessage, formatDate, formatTime, todayIn } from '@/lib/format';
 import type { AttendanceDay, DashboardSummary } from '@/lib/types';
 
+function addDays(date: string, days: number): string {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
 function MyAttendance() {
+  const { user } = useAuth();
+  const today = todayIn(user?.companyTimezone);
+  const from = addDays(today, -9);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   // Same query as the dashboard, so the check-in card stays in sync with it.
   const summary = useQuery({
     queryKey: ['dashboard', 'summary'],
     queryFn: () => apiFetch<DashboardSummary>('/dashboard/summary'),
   });
   const history = useQuery({
-    queryKey: ['attendance', 'me'],
-    queryFn: () => apiFetch<{ timezone: string; items: AttendanceDay[] }>('/attendance/me'),
+    queryKey: ['attendance', 'me', { from, to: today }],
+    queryFn: () =>
+      apiFetch<{ timezone: string; items: AttendanceDay[] }>(`/attendance/me${buildQuery({ from, to: today })}`),
+    enabled: Boolean(user),
   });
 
   const timezone = history.data?.timezone ?? summary.data?.timezone;
+  const items = history.data?.items ?? [];
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const visibleItems = items.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
-    <div className="w-full max-w-5xl space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-6">
       <h1 className="text-xl font-semibold text-charcoal">Attendance</h1>
 
       {summary.data?.today && <CheckInCard today={summary.data.today} timezone={timezone} />}
 
       <Reveal>
-      <section aria-label="Last 30 days" className="space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-5">
-        <h2 className="font-semibold text-charcoal">Last 30 days</h2>
+      <section aria-label="Last 10 days" className="space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-5">
+        <h2 className="font-semibold text-charcoal">Last 10 days</h2>
         {history.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
         {history.error && (
           <p role="alert" className="text-sm text-alert-deep">
             {errorMessage(history.error)}
           </p>
         )}
-        {history.data && history.data.items.length === 0 && (
+        {history.data && items.length === 0 && (
           <p className="text-sm text-charcoal-soft">No attendance to show yet.</p>
         )}
-        {history.data && history.data.items.length > 0 && (
+        {history.data && items.length > 0 && (
           <div className="slim-scroll max-w-full overflow-x-auto">
           <table className="min-w-[36rem] w-full text-left text-sm">
             <thead>
@@ -54,7 +73,7 @@ function MyAttendance() {
               </tr>
             </thead>
             <tbody className="divide-y divide-charcoal/5">
-              {history.data.items.map((day) => (
+              {visibleItems.map((day) => (
                 <tr key={day.workDate} className="transition-colors hover:bg-mist/50">
                   <td className="py-2 pr-4">{formatDate(day.workDate)}</td>
                   <td className="py-2 pr-4">
@@ -73,14 +92,22 @@ function MyAttendance() {
           </table>
           </div>
         )}
-        {timezone && <p className="text-xs text-charcoal-soft">Times are in {timezone}.</p>}
+        {items.length > 0 && (
+          <Pagination
+            page={currentPage}
+            pageSize={pageSize}
+            total={items.length}
+            onPage={setPage}
+            onPageSize={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+            pageSizeId="attendance-page-size"
+          />
+        )}
       </section>
       </Reveal>
 
-      <section aria-label="Your tendencies" className="max-w-5xl space-y-3">
-        <h2 className="text-lg font-semibold text-charcoal">Your check-in and check-out tendencies</h2>
-        <PersonInsights path="/attendance/stats/me" />
-      </section>
     </div>
   );
 }

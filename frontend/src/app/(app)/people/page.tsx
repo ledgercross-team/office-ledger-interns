@@ -18,6 +18,7 @@ function PeopleList() {
   const [role, setRole] = useState('');
   const [active, setActive] = useState('');
   const [unassigned, setUnassigned] = useState(false);
+  const [teamOnly, setTeamOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -30,7 +31,7 @@ function PeopleList() {
   }, [search]);
 
   const query = useQuery({
-    queryKey: ['people', 'list', { debounced, role, active, unassigned, page, pageSize }],
+    queryKey: ['people', 'list', { debounced, role, active, unassigned, teamOnly, page, pageSize }],
     queryFn: () =>
       apiFetch<Paginated<User>>(
         `/users${buildQuery({
@@ -38,6 +39,7 @@ function PeopleList() {
           role,
           isActive: active,
           unassigned: unassigned || undefined,
+          managerId: user?.role === 'manager' && teamOnly ? user.id : undefined,
           page,
           pageSize,
         })}`,
@@ -45,10 +47,10 @@ function PeopleList() {
   });
 
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-charcoal">People</h1>
-        <Link href="/people/new" className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-evergreen-dark">
+        <Link href="/people/new" className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-evergreen-dark sm:w-auto">
           Add person
         </Link>
       </div>
@@ -64,7 +66,7 @@ function PeopleList() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Name or email"
-            className="w-full rounded-xl border border-charcoal/15 px-3 py-2 outline-none placeholder:text-charcoal-soft focus:border-evergreen sm:w-64"
+            className="min-h-11 w-full rounded-xl border border-charcoal/15 px-3 py-2 outline-none placeholder:text-charcoal-soft focus:border-evergreen sm:w-64"
           />
         </div>
         {user?.role === 'admin' && (
@@ -79,7 +81,7 @@ function PeopleList() {
                 setRole(event.target.value);
                 setPage(1);
               }}
-              className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen sm:w-auto"
+              className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen sm:w-auto"
             >
               <option value="">All</option>
               <option value="admin">Admins</option>
@@ -89,7 +91,7 @@ function PeopleList() {
           </div>
         )}
         {user?.role === 'admin' && (
-          <label className="flex items-center gap-2 pb-2 text-sm">
+          <label className="flex min-h-11 items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={unassigned}
@@ -112,13 +114,32 @@ function PeopleList() {
               setActive(event.target.value);
               setPage(1);
             }}
-            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen sm:w-auto"
+            className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen sm:w-auto"
           >
             <option value="">All</option>
             <option value="true">Active</option>
             <option value="false">Inactive</option>
           </select>
         </div>
+        {user?.role === 'manager' && (
+          <div className="w-full space-y-1 sm:w-auto">
+            <label htmlFor="people-scope" className="block text-sm font-medium text-charcoal">
+              People shown
+            </label>
+            <select
+              id="people-scope"
+              value={teamOnly ? 'team' : 'all'}
+              onChange={(event) => {
+                setTeamOnly(event.target.value === 'team');
+                setPage(1);
+              }}
+              className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen sm:w-auto"
+            >
+              <option value="all">All employees</option>
+              <option value="team">My team only</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {query.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
@@ -213,7 +234,7 @@ function PeoplePagination({
           id="people-page-size"
           value={pageSize}
           onChange={(event) => onPageSize(Number(event.target.value))}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 outline-none focus:border-evergreen"
+          className="min-h-11 rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 outline-none focus:border-evergreen"
         >
           {PAGE_SIZE_OPTIONS.map((option) => (
             <option key={option} value={option}>
@@ -226,11 +247,11 @@ function PeoplePagination({
           aria-label="Previous people page"
           disabled={page <= 1}
           onClick={() => onPage(Math.max(1, page - 1))}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
         >
           ‹ <span className="sr-only">Previous</span>
         </button>
-        <span className="rounded-lg bg-evergreen px-3 py-1.5 font-medium text-white" aria-current="page">
+        <span className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-evergreen px-3 py-1.5 font-medium text-white" aria-current="page">
           {page}
         </span>
         <button
@@ -238,7 +259,7 @@ function PeoplePagination({
           aria-label="Next people page"
           disabled={page >= totalPages}
           onClick={() => onPage(Math.min(totalPages, page + 1))}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
         >
           <span className="sr-only">Next</span> ›
         </button>

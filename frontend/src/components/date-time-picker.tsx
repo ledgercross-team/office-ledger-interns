@@ -102,7 +102,7 @@ export function DateTimePicker({
         aria-label={value ? `Deadline ${displayValue(value)}` : 'Choose deadline'}
         onClick={openPicker}
         onKeyDown={onKeyDown}
-        className={`flex w-full items-center justify-between gap-3 rounded-xl border bg-white px-3 py-2 text-left outline-none transition-colors focus:border-evergreen ${value ? 'border-charcoal/15 text-charcoal' : 'border-charcoal/15 text-charcoal-soft'}`}
+        className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border bg-white px-3 py-2 text-left outline-none transition-colors focus:border-evergreen ${value ? 'border-charcoal/15 text-charcoal' : 'border-charcoal/15 text-charcoal-soft'}`}
       >
         <span className="truncate">{displayValue(value)}</span>
         <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -122,32 +122,32 @@ export function DateTimePicker({
               type="button"
               aria-label="Close deadline picker"
               onClick={() => setOpen(false)}
-              className="rounded-lg px-2 py-1 text-lg leading-none text-charcoal-soft hover:bg-mist hover:text-charcoal"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg px-2 py-1 text-lg leading-none text-charcoal-soft hover:bg-mist hover:text-charcoal"
             >
               ×
             </button>
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-sm font-medium text-charcoal">
-              Date
+            <div className="space-y-1 text-sm font-medium text-charcoal">
+              <span className="block">Date</span>
               <DateInput
                 id={`${id}-date`}
                 value={draftDate}
                 min={minDate}
                 max={maxDate}
                 onChange={(event) => setDraftDate(event.target.value)}
-                className="w-full rounded-lg border border-charcoal/15 bg-white font-normal outline-none"
+                className="min-h-11 w-full rounded-lg border border-charcoal/15 bg-white font-normal outline-none"
               />
-            </label>
+            </div>
             <label className="space-y-1 text-sm font-medium text-charcoal">
-              Time
+              <span className="block">Time</span>
               <input
                 type="time"
                 value={draftTime}
                 min={draftDate === minDate ? minTime : undefined}
                 onChange={(event) => setDraftTime(event.target.value)}
-                className="w-full rounded-lg border border-charcoal/15 bg-white px-2.5 py-2 font-normal outline-none focus:border-evergreen"
+                className="min-h-11 w-full rounded-lg border border-charcoal/15 bg-white px-3 py-2 font-normal text-charcoal outline-none focus:border-evergreen"
               />
             </label>
           </div>
@@ -166,14 +166,14 @@ export function DateTimePicker({
                   onChange('');
                   setOpen(false);
                 }}
-                className="rounded-lg px-2.5 py-2 text-sm font-medium text-charcoal-soft hover:bg-charcoal/5 hover:text-charcoal"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg px-2.5 py-2 text-sm font-medium text-charcoal-soft hover:bg-charcoal/5 hover:text-charcoal"
               >
                 Clear
               </button>
               <button
                 type="button"
                 onClick={setToday}
-                className="rounded-lg px-2.5 py-2 text-sm font-medium text-evergreen hover:bg-mist"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg px-2.5 py-2 text-sm font-medium text-evergreen hover:bg-mist"
               >
                 Today
               </button>
@@ -182,7 +182,7 @@ export function DateTimePicker({
               type="button"
               onClick={confirm}
               disabled={!draftDate || !draftTime || draftIsHoliday}
-              className="rounded-lg bg-evergreen px-4 py-2 text-sm font-semibold text-white hover:bg-evergreen-dark disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-evergreen px-4 py-2 text-sm font-semibold text-white hover:bg-evergreen-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               OK
             </button>
