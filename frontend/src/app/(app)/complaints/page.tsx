@@ -42,6 +42,8 @@ function ComplaintContent() {
       await queryClient.invalidateQueries({ queryKey: ['employee-services', 'complaints'] });
     },
   });
+  const complaintItems = complaints.data?.items ?? [];
+  const openCount = complaintItems.filter((item) => item.status !== 'resolved').length;
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,89 +52,119 @@ function ComplaintContent() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-charcoal sm:text-3xl">Complaints</h1>
-        <p className="mt-1 text-sm text-charcoal-soft">Raise a workplace concern and keep a record of your submissions.</p>
-      </div>
+    <div className="mx-auto w-full max-w-6xl space-y-5 sm:space-y-6">
+      <section className="overflow-hidden rounded-3xl bg-forest text-white shadow-[0_12px_30px_rgba(28,43,37,0.16)]">
+        <div className="p-5 sm:p-8">
+          <p className="text-sm font-semibold text-mint">Issues</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Report an issue</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-mist/80 sm:text-base">
+            Share a workplace concern and keep track of its review from one place.
+          </p>
+        </div>
+      </section>
 
-      <form onSubmit={onSubmit} className="space-y-5 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-6">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1">
-            <label htmlFor="complaint-category" className="block text-sm font-medium text-charcoal">Category</label>
-            <select
-              id="complaint-category"
-              value={category}
-              onChange={(event) => setCategory(event.target.value as ComplaintCategory)}
-              className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-sm outline-none focus:border-evergreen"
-            >
-              {CATEGORIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-            </select>
+      <div className="grid items-start gap-5 lg:grid-cols-2">
+        <form onSubmit={onSubmit} className="space-y-5 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-6">
+          <div>
+            <h2 className="text-lg font-semibold text-charcoal sm:text-xl">New report</h2>
+            <p className="mt-1 text-sm text-charcoal-soft">Give enough detail for the issue to be reviewed properly.</p>
           </div>
-          <div className="space-y-1">
-            <label htmlFor="complaint-subject" className="block text-sm font-medium text-charcoal">Subject</label>
+
+          <div className="space-y-1.5">
+            <label htmlFor="complaint-subject" className="block text-sm font-semibold text-charcoal">Subject</label>
             <input
               id="complaint-subject"
               value={subject}
               onChange={(event) => setSubject(event.target.value)}
               required
               maxLength={200}
-              className="min-h-11 w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen"
+              className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-evergreen focus:ring-2 focus:ring-evergreen/15"
               placeholder="Briefly describe the concern"
             />
           </div>
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="complaint-details" className="block text-sm font-medium text-charcoal">Details</label>
-          <textarea
-            id="complaint-details"
-            value={details}
-            onChange={(event) => setDetails(event.target.value)}
-            required
-            maxLength={5000}
-            rows={6}
-            className="w-full resize-y rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen"
-            placeholder="Share what happened and any useful context."
-          />
-        </div>
-        {notice && <p role="status" className="text-sm text-evergreen">{notice}</p>}
-        {create.error && <p role="alert" className="text-sm text-alert-deep">{errorMessage(create.error)}</p>}
-        <button
-          type="submit"
-          disabled={create.isPending}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-evergreen px-4 py-2.5 text-sm font-semibold text-white hover:bg-evergreen-dark disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {create.isPending ? 'Submitting…' : 'Submit complaint'}
-        </button>
-      </form>
 
-      <section className="space-y-4 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-6">
-        <div>
-          <h2 className="font-semibold text-charcoal">Your complaints</h2>
-          <p className="mt-1 text-sm text-charcoal-soft">Updates will appear here when your complaint is reviewed.</p>
-        </div>
-        {complaints.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
-        {complaints.error && <p role="alert" className="text-sm text-alert-deep">{errorMessage(complaints.error)}</p>}
-        {complaints.data?.items.length === 0 && <p className="text-sm text-charcoal-soft">No complaints yet.</p>}
-        {complaints.data && complaints.data.items.length > 0 && (
-          <div className="space-y-3">
-            {complaints.data.items.map((item) => (
-              <article key={item.id} className="rounded-xl border border-charcoal/10 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-medium text-charcoal">{item.subject}</h3>
-                    <p className="mt-1 text-xs capitalize text-charcoal-soft">{item.category.replace('_', ' ')}</p>
-                  </div>
-                  <span className="rounded-full bg-mist px-2.5 py-1 text-xs font-semibold text-forest">{complaintStatus(item.status)}</span>
-                </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm text-charcoal-soft">{item.details}</p>
-                {item.response && <p className="mt-3 rounded-lg bg-mist p-3 text-sm text-forest">Response: {item.response}</p>}
-                <p className="mt-3 text-xs text-charcoal-soft">Submitted {formatDateTime(item.createdAt, user?.companyTimezone)}</p>
-              </article>
-            ))}
+          <div className="space-y-1.5">
+            <label htmlFor="complaint-details" className="block text-sm font-semibold text-charcoal">Details</label>
+            <textarea
+              id="complaint-details"
+              value={details}
+              onChange={(event) => setDetails(event.target.value)}
+              required
+              maxLength={5000}
+              rows={7}
+              className="w-full resize-y rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-evergreen focus:ring-2 focus:ring-evergreen/15"
+              placeholder="Share what happened and any useful context."
+            />
           </div>
-        )}
-      </section>
+
+          <div className="space-y-1.5">
+            <label htmlFor="complaint-category" className="block text-sm font-semibold text-charcoal">Category</label>
+            <select
+              id="complaint-category"
+              value={category}
+              onChange={(event) => setCategory(event.target.value as ComplaintCategory)}
+              className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-evergreen focus:ring-2 focus:ring-evergreen/15"
+            >
+              {CATEGORIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </div>
+
+          {(notice || create.error) && (
+            <div className={`rounded-xl px-3 py-2.5 text-sm ${create.error ? 'bg-alert/10 text-alert-deep' : 'bg-mist text-evergreen'}`}>
+              {create.error ? errorMessage(create.error) : notice}
+            </div>
+          )}
+
+          <div className="flex justify-end border-t border-charcoal/10 pt-4">
+            <button
+              type="submit"
+              disabled={create.isPending}
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-evergreen-dark disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            >
+              {create.isPending ? 'Submitting…' : 'Submit report'}
+            </button>
+          </div>
+        </form>
+
+        <section className="space-y-4 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-charcoal sm:text-xl">Open issues</h2>
+              <p className="mt-1 text-sm text-charcoal-soft">{openCount} unresolved {openCount === 1 ? 'report' : 'reports'}</p>
+            </div>
+            <span className="rounded-full bg-mist px-3 py-1 text-xs font-semibold text-forest">
+              {complaintItems.length} total
+            </span>
+          </div>
+
+          {complaints.isLoading && <p className="text-sm text-charcoal-soft">Loading reports…</p>}
+          {complaints.error && <p role="alert" className="rounded-xl bg-alert/10 px-3 py-2.5 text-sm text-alert-deep">{errorMessage(complaints.error)}</p>}
+          {!complaints.isLoading && !complaints.error && complaintItems.length === 0 && (
+            <div className="flex min-h-40 flex-col items-center justify-center rounded-xl border border-dashed border-evergreen/25 bg-mist/30 px-5 text-center">
+              <p className="font-semibold text-charcoal">No open issues</p>
+              <p className="mt-1 text-sm text-charcoal-soft">New reports will appear here immediately.</p>
+            </div>
+          )}
+          {complaintItems.length > 0 && (
+            <div className="space-y-3">
+              {complaintItems.map((item) => (
+                <article key={item.id} className="rounded-xl border border-charcoal/10 bg-white p-4 transition-colors hover:border-evergreen/30">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="break-words font-semibold text-charcoal">{item.subject}</h3>
+                      <p className="mt-1 text-xs capitalize text-charcoal-soft">{item.category.replace('_', ' ')}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-mist px-2.5 py-1 text-xs font-semibold text-forest">{complaintStatus(item.status)}</span>
+                  </div>
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-charcoal-soft">{item.details}</p>
+                  {item.response && <p className="mt-3 rounded-lg bg-mist p-3 text-sm text-forest"><span className="font-semibold">Response:</span> {item.response}</p>}
+                  <p className="mt-3 text-xs text-charcoal-soft">Submitted {formatDateTime(item.createdAt, user?.companyTimezone)}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
