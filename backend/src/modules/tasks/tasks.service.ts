@@ -11,6 +11,7 @@ import {
   and,
   asc,
   count,
+  desc,
   eq,
   lt,
   notInArray,
@@ -18,8 +19,10 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { AuthUser, Role } from '../../auth/auth.types';
+import { getCompanyDate } from '../../common/utils/company-time';
+import { isHoliday } from '../../common/utils/dates';
 import { DRIZZLE, type Database } from '../../db/db.module';
-import { taskActivity, tasks, users } from '../../db/schema';
+import { companies, taskActivity, tasks, users } from '../../db/schema';
 import { managedPeople } from '../users/visibility';
 import type {
   CommentDto,
@@ -112,7 +115,7 @@ export class TasksService {
 
     const rows = await this.baseSelect()
       .where(where)
-      .orderBy(asc(tasks.deadline), asc(tasks.id))
+      .orderBy(desc(tasks.priority), asc(tasks.deadline), asc(tasks.id))
       .limit(query.pageSize)
       .offset((query.page - 1) * query.pageSize);
 
@@ -130,6 +133,7 @@ export class TasksService {
 
   async create(user: AuthUser, dto: CreateTaskDto) {
     this.assertNotInThePast(dto.deadline);
+    await this.assertNotHoliday(user, dto.deadline);
     await this.assertAssignable(user, dto.assigneeId);
 
     const [created] = await this.database
@@ -149,6 +153,16 @@ export class TasksService {
     return this.get(user, created.id);
   }
 
+  async remove(user: AuthUser, taskId: string): Promise<void> {
+    const task = await this.findVisible(user, taskId);
+
+    if (!isTaskManager(user, assigneeOf(task))) {
+      throw new ForbiddenException('You cannot delete this task.');
+    }
+
+    await this.database.delete(tasks).where(eq(tasks.id, taskId));
+  }
+
   async update(user: AuthUser, taskId: string, dto: UpdateTaskDto) {
     const task = await this.findVisible(user, taskId);
 
@@ -163,6 +177,7 @@ export class TasksService {
     }
     if (dto.deadline && new Date(dto.deadline).getTime() !== task.deadline.getTime()) {
       this.assertNotInThePast(dto.deadline);
+      await this.assertNotHoliday(user, dto.deadline);
     }
 
     await this.database
@@ -308,6 +323,19 @@ export class TasksService {
     }
   }
 
+  private async assertNotHoliday(user: AuthUser, deadline: string): Promise<void> {
+    const [company] = await this.database
+      .select({ timezone: companies.timezone })
+      .from(companies)
+      .where(eq(companies.id, user.companyId as string))
+      .limit(1);
+    const companyDate = getCompanyDate(company?.timezone ?? 'UTC', new Date(deadline));
+
+    if (isHoliday(companyDate)) {
+      throw new BadRequestException('The deadline cannot be on Friday or Saturday because they are holidays.');
+    }
+  }
+
   // Active, in the caller's company, and someone the caller manages: an admin assigns to any
   // manager or employee, a manager only to the employees who report to them.
   private async assertAssignable(user: AuthUser, assigneeId: string): Promise<void> {
@@ -339,6 +367,7 @@ export class TasksService {
       allowedActions: allowedActions(user, row, owner),
       // Task managers may edit a task until it is done or cancelled.
       canEdit: isTaskManager(user, owner) && !CLOSED.includes(row.status),
+      canDelete: isTaskManager(user, owner),
     };
   }
 }

@@ -33,8 +33,8 @@ export function StoryChapter({
     <Reveal>
       <section className="rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-8">
         <p className="text-xs font-semibold tracking-widest text-evergreen uppercase">{step}</p>
-        <h2 className="mt-1 text-xl font-semibold text-charcoal">{title}</h2>
-        {lede && <p className="mt-1 text-sm text-charcoal-soft">{lede}</p>}
+        <h2 className="mt-1 break-words text-xl font-semibold text-charcoal">{title}</h2>
+        {lede && <p className="mt-1 break-words text-sm text-charcoal-soft">{lede}</p>}
         <div className="mt-5">{children}</div>
       </section>
     </Reveal>

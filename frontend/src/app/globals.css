@@ -47,6 +47,7 @@ input,
 textarea,
 select {
   font: inherit;
+  max-width: 100%;
 }
 
 body {

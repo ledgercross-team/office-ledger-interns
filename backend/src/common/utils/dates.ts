@@ -23,10 +23,14 @@ export function addDays(date: string, days: number): string {
   return new Date(toUtcMs(date) + days * DAY_MS).toISOString().slice(0, 10);
 }
 
-/** Monday to Friday. */
+/** Sunday to Thursday; Friday and Saturday are company holidays. */
 export function isWeekday(date: string): boolean {
   const day = new Date(toUtcMs(date)).getUTCDay();
-  return day !== 0 && day !== 6;
+  return day !== 5 && day !== 6;
+}
+
+export function isHoliday(date: string): boolean {
+  return !isWeekday(date);
 }
 
 /** Every date from `from` to `to`, inclusive. */

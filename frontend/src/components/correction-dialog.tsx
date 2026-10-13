@@ -76,7 +76,7 @@ function formatPickerValue(value: string): string {
   if (!parts) return 'Select date and time';
   const hour = parts.hour % 12 || 12;
   const suffix = parts.hour >= 12 ? 'PM' : 'AM';
-  return `${MONTHS[parts.month - 1]} ${parts.day}, ${parts.year}, ${pad(hour)}:${pad(parts.minute)} ${suffix}`;
+  return `${pad(parts.day)}/${pad(parts.month)}/${parts.year}, ${pad(hour)}:${pad(parts.minute)} ${suffix}`;
 }
 
 function DateTimePicker({
@@ -158,7 +158,7 @@ function DateTimePicker({
           id={`${id}-picker`}
           role="dialog"
           aria-label={`${label} date and time picker`}
-          className="absolute left-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-charcoal/10 bg-white p-3 shadow-[0_8px_24px_rgba(19,78,58,0.18)]"
+          className="absolute top-full left-1/2 z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-charcoal/10 bg-white p-3 shadow-[0_8px_24px_rgba(19,78,58,0.18)] sm:left-0 sm:translate-x-0"
         >
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-semibold text-charcoal">

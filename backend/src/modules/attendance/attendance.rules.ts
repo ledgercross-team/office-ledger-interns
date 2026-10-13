@@ -42,7 +42,7 @@ export interface AttendanceDayRow<R extends DayRecord> {
   record: R | null;
 }
 
-// One row per day that has a record, plus every weekday up to today without one (absent).
+// One row per day that has a record, plus every workday up to today without one (absent).
 export function buildDays<R extends DayRecord>(
   records: R[],
   from: string,
@@ -91,7 +91,7 @@ export function defaultRange(today: string): { from: string; to: string } {
 
 // ---------------------------------------------------------------------------------------
 // Check-in / check-out tendencies. Deliberately simple, so a manager can explain every number:
-//   attendance rate  = days attended / weekdays in the window
+//   attendance rate  = days attended / workdays in the window
 //   punctuality rate = on-time days / days attended
 //   checkout rate    = days with a check-out / past days attended
 //   score            = 50% attendance + 35% punctuality + 15% checkout

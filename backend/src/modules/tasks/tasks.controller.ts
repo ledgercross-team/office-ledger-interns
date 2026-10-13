@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -36,6 +37,13 @@ export class TasksController {
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateTaskDto) {
     return this.service.create(user, dto);
+  }
+
+  @Roles('admin', 'manager')
+  @Delete(':taskId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@CurrentUser() user: AuthUser, @Param('taskId', ParseUUIDPipe) taskId: string) {
+    await this.service.remove(user, taskId);
   }
 
   @Roles('admin', 'manager', 'employee')

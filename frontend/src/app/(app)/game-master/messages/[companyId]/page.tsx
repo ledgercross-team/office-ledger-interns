@@ -44,7 +44,7 @@ function Thread() {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <p className="text-sm text-charcoal-soft">
         <Link href="/game-master" className="text-evergreen hover:underline">
           Companies
@@ -59,7 +59,7 @@ function Thread() {
         )}
       </p>
 
-      <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
         <aside
           aria-label="Conversations"
           className="overflow-hidden rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)]"
@@ -117,7 +117,7 @@ function Thread() {
           companyId={companyId}
           title={adminName}
           subtitle={company.data?.company.name}
-          className="h-[calc(100dvh-14rem)] sm:h-[calc(100dvh-19rem)]"
+          className="min-h-[360px] h-[calc(100dvh-15rem)] sm:h-[calc(100dvh-19rem)]"
         />
       </div>
     </div>

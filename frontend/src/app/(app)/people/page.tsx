@@ -45,7 +45,7 @@ function PeopleList() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-charcoal">People</h1>
         <Link href="/people/new" className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-evergreen-dark">
@@ -53,8 +53,8 @@ function PeopleList() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
-        <div className="space-y-1">
+      <div className="flex flex-col items-stretch gap-4 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="w-full space-y-1 sm:w-auto">
           <label htmlFor="search" className="block text-sm font-medium text-charcoal">
             Search
           </label>
@@ -64,11 +64,11 @@ function PeopleList() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Name or email"
-            className="rounded-xl border border-charcoal/15 px-3 py-2 outline-none placeholder:text-charcoal-soft focus:border-evergreen"
+            className="w-full rounded-xl border border-charcoal/15 px-3 py-2 outline-none placeholder:text-charcoal-soft focus:border-evergreen sm:w-64"
           />
         </div>
         {user?.role === 'admin' && (
-          <div className="space-y-1">
+          <div className="w-full space-y-1 sm:w-auto">
             <label htmlFor="role" className="block text-sm font-medium text-charcoal">
               Role
             </label>
@@ -79,7 +79,7 @@ function PeopleList() {
                 setRole(event.target.value);
                 setPage(1);
               }}
-              className="rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen"
+              className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen sm:w-auto"
             >
               <option value="">All</option>
               <option value="admin">Admins</option>
@@ -101,7 +101,7 @@ function PeopleList() {
             Without a manager
           </label>
         )}
-        <div className="space-y-1">
+        <div className="w-full space-y-1 sm:w-auto">
           <label htmlFor="active" className="block text-sm font-medium text-charcoal">
             Status
           </label>
@@ -112,7 +112,7 @@ function PeopleList() {
               setActive(event.target.value);
               setPage(1);
             }}
-            className="rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen"
+            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen sm:w-auto"
           >
             <option value="">All</option>
             <option value="true">Active</option>
@@ -131,7 +131,7 @@ function PeopleList() {
         <p className="text-sm text-charcoal-soft">No people found.</p>
       )}
       {query.data && query.data.items.length > 0 && (
-        <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
+        <div className="max-w-full overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
           <table className="min-w-[48rem] w-full text-left text-sm">
             <thead>
               <tr className="border-b border-charcoal/10 bg-offwhite text-charcoal-soft">

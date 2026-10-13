@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AttendanceStatus } from '@/components/attendance-status';
 import { CorrectionDialog } from '@/components/correction-dialog';
+import { DateInput } from '@/components/date-input';
 import { Reveal } from '@/components/reveal';
 import { RoleGate } from '@/components/role-gate';
 import { AttendanceBars, AttendanceSpotlight, RateDonut, StoryChapter } from '@/components/story';
@@ -59,9 +60,8 @@ function TeamAttendance() {
           <label htmlFor="date" className="block text-sm font-medium text-charcoal">
             Date
           </label>
-          <input
+          <DateInput
             id="date"
-            type="date"
             min={MIN_DATE}
             max={MAX_DATE}
             value={date}
@@ -69,7 +69,7 @@ function TeamAttendance() {
               setDate(event.target.value);
               setPage(1);
             }}
-            className="rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-charcoal outline-none focus:border-evergreen"
+            className="w-full rounded-xl border border-charcoal/15 bg-white text-charcoal outline-none sm:w-44"
           />
         </div>
       </div>
@@ -104,7 +104,7 @@ function TeamAttendance() {
 
       {items.length > 0 && (
         <Reveal>
-          <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
+          <div className="max-w-full overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
             <table className="min-w-[48rem] w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-charcoal/10 bg-offwhite text-charcoal-soft">

@@ -24,13 +24,13 @@ function MyAttendance() {
   const timezone = history.data?.timezone ?? summary.data?.timezone;
 
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="w-full max-w-5xl space-y-6">
       <h1 className="text-xl font-semibold text-charcoal">Attendance</h1>
 
       {summary.data?.today && <CheckInCard today={summary.data.today} timezone={timezone} />}
 
       <Reveal>
-      <section aria-label="Last 30 days" className="space-y-3 rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
+      <section aria-label="Last 30 days" className="space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-5">
         <h2 className="font-semibold text-charcoal">Last 30 days</h2>
         {history.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
         {history.error && (
@@ -42,7 +42,7 @@ function MyAttendance() {
           <p className="text-sm text-charcoal-soft">No attendance to show yet.</p>
         )}
         {history.data && history.data.items.length > 0 && (
-          <div className="slim-scroll overflow-x-auto">
+          <div className="slim-scroll max-w-full overflow-x-auto">
           <table className="min-w-[36rem] w-full text-left text-sm">
             <thead>
               <tr className="border-b border-charcoal/10 text-charcoal-soft">

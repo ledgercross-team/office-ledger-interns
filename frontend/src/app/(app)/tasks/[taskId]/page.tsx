@@ -3,11 +3,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { notFound, useParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { DateTimePicker } from '@/components/date-time-picker';
 import { RoleGate } from '@/components/role-gate';
 import { TaskCard } from '@/components/task-card';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
-import { errorMessage, formatDateTime, fromZonedInput, MAX_DATE, toZonedInput } from '@/lib/format';
+import {
+  errorMessage,
+  formatDateTime,
+  formatGmtOffset,
+  fromZonedInput,
+  MAX_DATE,
+  toZonedInput,
+} from '@/lib/format';
 import { TASK_CATEGORIES } from '@/lib/task-meta';
 import type { Paginated, Task, TaskActivity, TaskCategory, TaskPriority, User } from '@/lib/types';
 
@@ -24,6 +32,8 @@ function EditForm({ task, timezone }: { task: Task; timezone: string }) {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [deadline, setDeadline] = useState(() => toZonedInput(task.deadline, timezone));
+  const timezoneLabel = formatGmtOffset(timezone);
 
   // Whoever may edit the task may hand it to someone else they manage.
   const people = useQuery({
@@ -48,12 +58,16 @@ function EditForm({ task, timezone }: { task: Task; timezone: string }) {
 
     setError(null);
     setSaved(false);
+    if (!deadline) {
+      setError('Please choose a deadline.');
+      return;
+    }
     save.mutate({
       title: String(form.get('title')).trim(),
       description: String(form.get('description')).trim(),
       category: String(form.get('category')) as TaskCategory,
       priority: String(form.get('priority')) as TaskPriority,
-      deadline: fromZonedInput(String(form.get('deadline')), timezone),
+      deadline: fromZonedInput(deadline, timezone),
       assigneeId: String(form.get('assigneeId')),
     });
   }
@@ -144,17 +158,18 @@ function EditForm({ task, timezone }: { task: Task; timezone: string }) {
           </select>
         </div>
         <div className="space-y-1">
-          <label htmlFor="edit-deadline" className="block text-sm font-medium">
-            Deadline ({timezone})
+          <label htmlFor="edit-deadline-button" className="block text-sm font-medium">
+            Deadline ({timezoneLabel})
           </label>
-          <input
+          <DateTimePicker
             id="edit-deadline"
             name="deadline"
-            type="datetime-local"
-            defaultValue={toZonedInput(task.deadline, timezone)}
+            value={deadline}
+            onChange={setDeadline}
+            min={toZonedInput(new Date().toISOString(), timezone)}
             max={`${MAX_DATE}T23:59`}
-            required
-            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+            timezone={timezone}
+            timezoneLabel={timezoneLabel}
           />
         </div>
       </div>

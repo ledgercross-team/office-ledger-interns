@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/format';
@@ -29,10 +30,13 @@ const BUTTONS: ButtonSpec[] = [
 ];
 
 export function TaskActionBar({ task }: { task: Task }) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [dialog, setDialog] = useState<ButtonSpec | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState(false);
   const [comment, setComment] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: ({ spec, text }: { spec: ButtonSpec; text: string }) =>
@@ -54,6 +58,19 @@ export function TaskActionBar({ task }: { task: Task }) {
     onError: (err) => setError(errorMessage(err)),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => apiFetch<void>(`/tasks/${task.id}`, { method: 'DELETE' }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+        queryClient.removeQueries({ queryKey: ['tasks', 'detail', task.id] }),
+      ]);
+      router.push('/tasks');
+    },
+    onError: (err) => setDeleteError(errorMessage(err)),
+  });
+
   const enabled = (spec: ButtonSpec) =>
     spec.key === 'comment' || task.allowedActions?.includes(spec.key as TaskAction) === true;
 
@@ -69,7 +86,11 @@ export function TaskActionBar({ task }: { task: Task }) {
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Task actions">
+      <div
+        className={`grid w-full grid-cols-2 gap-2 sm:grid-cols-4 ${task.canDelete ? 'lg:grid-cols-8' : 'lg:grid-cols-7'}`}
+        role="group"
+        aria-label="Task actions"
+      >
         {BUTTONS.map((spec) => {
           const isEnabled = enabled(spec);
           return (
@@ -79,12 +100,25 @@ export function TaskActionBar({ task }: { task: Task }) {
               disabled={!isEnabled || mutation.isPending}
               title={isEnabled ? undefined : spec.hint}
               onClick={() => press(spec)}
-              className="rounded-xl border border-charcoal/15 bg-white px-3 py-1.5 text-sm font-medium text-charcoal transition-colors hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-xl border border-charcoal/15 bg-white px-2 py-1.5 text-center text-sm font-medium text-charcoal transition-colors hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
             >
               {spec.label}
             </button>
           );
         })}
+        {task.canDelete && (
+          <button
+            type="button"
+            disabled={mutation.isPending || deleteMutation.isPending}
+            onClick={() => {
+              setDeleteError(null);
+              setDeleteDialog(true);
+            }}
+            className="w-full rounded-xl border border-alert/30 bg-alert-tint px-2 py-1.5 text-center text-sm font-medium text-alert-deep transition-colors hover:bg-alert-tint/70 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Delete
+          </button>
+        )}
       </div>
 
       {!dialog && error && (
@@ -147,6 +181,52 @@ export function TaskActionBar({ task }: { task: Task }) {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {deleteDialog && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby={`delete-dialog-title-${task.id}`}
+          className="fixed inset-0 z-20 flex items-center justify-center overflow-y-auto bg-black/40 p-4"
+        >
+          <div className="my-auto w-full max-w-md space-y-4 rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_8px_24px_rgba(19,78,58,0.12)]">
+            <div>
+              <h2 id={`delete-dialog-title-${task.id}`} className="font-semibold text-charcoal">
+                Delete this task?
+              </h2>
+              <p className="mt-1 break-words text-sm leading-6 text-charcoal-soft">
+                “{task.title}” and its activity history will be permanently removed. This cannot be undone.
+              </p>
+            </div>
+            {deleteError && (
+              <p role="alert" className="text-sm text-alert-deep">
+                {deleteError}
+              </p>
+            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteDialog(false);
+                  setDeleteError(null);
+                }}
+                disabled={deleteMutation.isPending}
+                className="rounded-xl border border-charcoal/15 px-4 py-2 text-sm font-medium hover:bg-mist disabled:opacity-60"
+              >
+                Keep task
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className="rounded-xl bg-alert px-4 py-2 text-sm font-semibold text-white hover:bg-alert-deep disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deleteMutation.isPending ? 'Deleting…' : 'Delete permanently'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -62,7 +62,7 @@ function SubscriptionView() {
 
       {current ? (
         <section className="overflow-hidden rounded-3xl border border-charcoal/10 bg-white shadow-[0_8px_30px_rgba(28,43,37,0.07)]">
-          <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-7">
+          <div className="flex min-w-0 flex-col gap-5 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-7">
             <div className="flex min-w-0 items-start gap-4">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-mist text-evergreen">
                 <svg aria-hidden width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -86,7 +86,7 @@ function SubscriptionView() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 border-t border-charcoal/10 bg-offwhite/60 p-5 min-[420px]:grid-cols-2 sm:grid-cols-3 sm:p-7">
+          <div className="grid grid-cols-1 gap-3 border-t border-charcoal/10 bg-offwhite/60 p-4 min-[420px]:grid-cols-2 sm:grid-cols-3 sm:p-7">
             <StatTile label="Starts" value={formatDate(current.startsOn)} />
             <StatTile label="Ends" value={formatDate(current.endsOn)} />
             <StatTile label={currentState === 'Current' ? 'Days left' : 'Access'} value={accessValue} />
@@ -112,7 +112,7 @@ function SubscriptionView() {
         {items.length === 0 ? (
           <p className="text-sm text-charcoal-soft">No subscriptions yet.</p>
         ) : (
-          <div className="slim-scroll overflow-x-auto">
+          <div className="slim-scroll max-w-full overflow-x-auto">
             <table className="min-w-[32rem] w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-charcoal/10 text-charcoal-soft">

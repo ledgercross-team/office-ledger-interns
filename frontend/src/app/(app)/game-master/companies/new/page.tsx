@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/role-gate';
+import { DateInput } from '@/components/date-input';
 import { TemporaryPasswordPanel } from '@/components/temporary-password-panel';
 import { TimezoneSelect } from '@/components/timezone-select';
 import { apiFetch } from '@/lib/api-client';
@@ -26,14 +27,24 @@ function Field({
       <label htmlFor={id} className="block text-sm font-medium">
         {label}
       </label>
-      <input
-        id={id}
-        name={id}
-        type={type}
-        defaultValue={defaultValue}
-        required
-        className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
-      />
+      {type === 'date' ? (
+        <DateInput
+          id={id}
+          name={id}
+          defaultValue={defaultValue}
+          required
+          className="w-full rounded-xl border border-charcoal/15 bg-white"
+        />
+      ) : (
+        <input
+          id={id}
+          name={id}
+          type={type}
+          defaultValue={defaultValue}
+          required
+          className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+        />
+      )}
     </div>
   );
 }
@@ -69,7 +80,7 @@ function NewCompanyForm() {
 
   if (created) {
     return (
-      <div className="w-full max-w-xl space-y-4">
+      <div className="mx-auto w-full max-w-xl space-y-4">
         <h1 className="text-xl font-semibold">{created.company.name} was created</h1>
         <p className="text-sm">
           Admin: {created.admin.fullName} ({created.admin.email})
@@ -91,7 +102,7 @@ function NewCompanyForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="w-full max-w-xl space-y-4">
+    <form onSubmit={onSubmit} className="mx-auto w-full max-w-xl space-y-4">
       <h1 className="text-xl font-semibold">New company</h1>
 
       <Field id="companyName" label="Company name" />

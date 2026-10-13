@@ -1,14 +1,43 @@
 export function formatDateTime(iso: string, timezone?: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
     timeZone: timezone,
-  });
+  })
+    .format(new Date(iso))
+    .replace(', ', ' · ');
 }
 
-/** YYYY-MM-DD as a calendar date, with no timezone shift. */
+/** YYYY-MM-DD as a calendar date, with no timezone shift, shown as DD/MM/YYYY. */
 export function formatDate(date: string): string {
-  return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { dateStyle: 'medium' });
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : date;
+}
+
+/** Converts an IANA timezone into the compact company-facing label used in the UI. */
+export function formatGmtOffset(timezone?: string, at: Date = new Date()): string {
+  if (!timezone) return 'GMT +0';
+
+  const zoneName = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    timeZoneName: 'longOffset',
+  })
+    .formatToParts(at)
+    .find((part) => part.type === 'timeZoneName')?.value;
+
+  if (!zoneName || zoneName === 'GMT') return 'GMT +0';
+
+  const match = /^GMT([+-])(\d{2})(?::?(\d{2}))?$/.exec(zoneName);
+  if (!match) return zoneName;
+
+  const sign = match[1];
+  const hours = Number(match[2]);
+  const minutes = Number(match[3] ?? 0);
+  return minutes ? `GMT ${sign}${hours}:${String(minutes).padStart(2, '0')}` : `GMT ${sign}${hours}`;
 }
 
 export function formatTime(iso: string, timezone?: string): string {
@@ -70,7 +99,14 @@ export function errorMessage(error: unknown): string {
 
 /** Today's calendar date (YYYY-MM-DD) on the company's clock, not the browser's. */
 export function todayIn(timezone?: string): string {
-  return new Date().toLocaleDateString('en-CA', timezone ? { timeZone: timezone } : undefined);
+  const parts = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: timezone,
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
 /** Minutes since midnight as "9:05 AM". */

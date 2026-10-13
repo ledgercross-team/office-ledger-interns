@@ -41,8 +41,8 @@ describe('buildDays', () => {
     checkOutAt: null,
   });
 
-  it('adds absent rows for weekdays without a record, newest first', () => {
-    // 2026-10-05 Mon .. 2026-10-09 Fri
+  it('adds absent rows for workdays without a record, newest first', () => {
+    // 2026-10-05 Mon .. 2026-10-09 Fri; Friday is a holiday.
     const rows = buildDays(
       [record('2026-10-05'), record('2026-10-07', 'late')],
       '2026-10-05',
@@ -50,7 +50,6 @@ describe('buildDays', () => {
       '2026-10-09',
     );
     expect(rows.map((row) => [row.workDate, row.status])).toEqual([
-      ['2026-10-09', 'absent'],
       ['2026-10-08', 'absent'],
       ['2026-10-07', 'late'],
       ['2026-10-06', 'absent'],
@@ -58,14 +57,14 @@ describe('buildDays', () => {
     ]);
   });
 
-  it('skips weekends and future days', () => {
+  it('skips holidays and future days', () => {
     const rows = buildDays([], '2026-10-09', '2026-10-13', '2026-10-12');
-    expect(rows.map((row) => row.workDate)).toEqual(['2026-10-12', '2026-10-09']);
+    expect(rows.map((row) => row.workDate)).toEqual(['2026-10-12', '2026-10-11']);
   });
 
-  it('keeps a weekend record', () => {
+  it('keeps a holiday record', () => {
     const rows = buildDays([record('2026-10-10')], '2026-10-10', '2026-10-11', '2026-10-11');
-    expect(rows.map((row) => row.workDate)).toEqual(['2026-10-10']);
+    expect(rows.map((row) => row.workDate)).toEqual(['2026-10-11', '2026-10-10']);
   });
 });
 
@@ -90,8 +89,8 @@ describe('computeStats', () => {
     checkOutAt: outTime ? at(date, outTime) : null,
   });
 
-  it('counts on-time, late and absent weekdays and averages the check-in', () => {
-    // Mon 5 Oct to Fri 9 Oct 2026: on time, late, absent, on time, on time.
+  it('counts on-time, late and absent workdays and averages the check-in', () => {
+    // Mon 5 Oct to Fri 9 Oct 2026: Friday is a holiday.
     const stats = computeStats({
       ...base,
       from: '2026-10-05',
@@ -104,11 +103,11 @@ describe('computeStats', () => {
       ],
     });
 
-    expect(stats.expectedDays).toBe(5);
+    expect(stats.expectedDays).toBe(4);
     expect(stats.daysOnTime).toBe(3);
     expect(stats.daysLate).toBe(1);
     expect(stats.daysAbsent).toBe(1);
-    expect(stats.attendanceRate).toBe(80);
+    expect(stats.attendanceRate).toBe(100);
     expect(stats.punctualityRate).toBe(75);
     expect(stats.avgCheckInMinutes).toBe(9 * 60 + 4); // 09:04 average
     expect(stats.avgArrivalOffset).toBe(4);
@@ -116,7 +115,7 @@ describe('computeStats', () => {
     expect(stats.series).toHaveLength(5);
   });
 
-  it('does not mark today absent before they check in, and ignores weekends', () => {
+  it('does not mark today absent before they check in, and ignores holidays', () => {
     const stats = computeStats({
       ...base,
       from: '2026-10-09', // Friday
@@ -125,7 +124,7 @@ describe('computeStats', () => {
     });
 
     expect(stats.expectedDays).toBe(1);
-    expect(stats.daysAbsent).toBe(0);
+    expect(stats.daysAbsent).toBe(1);
   });
 
   it('calls someone who usually arrives early an early bird', () => {

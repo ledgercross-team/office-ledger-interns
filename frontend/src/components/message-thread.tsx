@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { errorMessage, formatDate, formatDateTime, formatTime } from '@/lib/format';
@@ -116,6 +116,16 @@ export function MessageThread({ companyId, title, subtitle, className }: Message
     }
   }
 
+  function onComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+      event.preventDefault();
+      const text = body.trim();
+      if (text && !send.isPending) {
+        send.mutate(text);
+      }
+    }
+  }
+
   const lastOwnIndex = items.map((message) => message.senderId === user?.id).lastIndexOf(true);
 
   // Day dividers, precomputed so render stays pure.
@@ -135,34 +145,56 @@ export function MessageThread({ companyId, title, subtitle, className }: Message
   return (
     <section
       aria-label={`Messages with ${title}`}
-      className={`flex min-h-[360px] flex-col overflow-hidden rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:min-h-[420px] ${className ?? 'h-[calc(100dvh-14rem)] sm:h-[calc(100dvh-17rem)]'}`}
+      className={`flex min-h-[360px] flex-col overflow-hidden rounded-2xl border border-charcoal/10 bg-white shadow-[0_8px_30px_rgba(28,43,37,0.07)] sm:min-h-[560px] ${className ?? 'h-[calc(100dvh-19rem)] sm:h-[calc(100dvh-21rem)]'}`}
     >
-      <header className="flex items-center gap-3 border-b border-charcoal/10 bg-forest px-4 py-3 text-white">
-        <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mint font-semibold text-forest-deep">
-          {initials(title)}
-        </span>
-        <div className="min-w-0">
-          <p className="truncate font-semibold">{title}</p>
-          {subtitle && <p className="truncate text-sm text-mist/80">{subtitle}</p>}
+      <header className="flex items-center justify-between gap-4 border-b border-charcoal/10 bg-white px-4 py-4 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <span aria-hidden className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-mist font-semibold text-forest">
+            {initials(title)}
+            <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-evergreen" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-charcoal">{title}</p>
+            {subtitle && <p className="truncate text-sm text-charcoal-soft">{subtitle}</p>}
+          </div>
+        </div>
+        <div className="hidden shrink-0 items-center gap-2 text-xs text-charcoal-soft sm:flex">
+          <span className="h-2 w-2 rounded-full bg-evergreen" aria-hidden />
+          Active conversation
         </div>
       </header>
 
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="slim-scroll flex-1 space-y-3 overflow-y-auto bg-offwhite px-4 py-4"
+        className="slim-scroll flex-1 space-y-4 overflow-y-auto bg-[#f5f8f6] px-4 py-5 sm:px-6"
         aria-live="polite"
       >
-        {thread.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
+        {thread.isLoading && (
+          <div className="space-y-3" aria-label="Loading messages">
+            <div className="h-3 w-24 animate-pulse rounded bg-charcoal/10" />
+            <div className="h-12 w-2/3 animate-pulse rounded-2xl bg-white" />
+            <div className="ml-auto h-12 w-1/2 animate-pulse rounded-2xl bg-mist" />
+          </div>
+        )}
         {thread.error && (
           <p role="alert" className="text-sm text-alert-deep">
             {errorMessage(thread.error)}
           </p>
         )}
         {!thread.isLoading && !thread.error && items.length === 0 && (
-          <p className="py-8 text-center text-sm text-charcoal-soft">
-            No messages yet. Say hello to start the conversation.
-          </p>
+          <div className="flex h-full min-h-56 flex-col items-center justify-center px-6 text-center">
+            <span aria-hidden className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-mist text-evergreen">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 9.2 9.2 0 0 1-4-.9L3 21l1.9-4.2A8.1 8.1 0 0 1 3 11.5 8.38 8.38 0 0 1 12 3a8.38 8.38 0 0 1 9 8.5Z" />
+                <path d="M8 12h.01M12 12h.01M16 12h.01" />
+              </svg>
+            </span>
+            <p className="font-medium text-charcoal">Your conversation starts here</p>
+            <p className="mt-1 max-w-sm text-sm leading-6 text-charcoal-soft">
+              Send a message below and the game master will get back to you.
+            </p>
+          </div>
         )}
         {items.map((message, index) => {
           const mine = message.senderId === user?.id;
@@ -182,7 +214,7 @@ export function MessageThread({ companyId, title, subtitle, className }: Message
                   )}
                   <div
                     title={formatDateTime(message.createdAt)}
-                    className={`rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap ${
+                    className={`break-words rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap ${
                       mine ? 'rounded-br-md bg-evergreen text-white' : 'rounded-bl-md border border-charcoal/10 bg-white text-charcoal'
                     }`}
                   >
@@ -201,31 +233,51 @@ export function MessageThread({ companyId, title, subtitle, className }: Message
         })}
       </div>
 
-      <form onSubmit={onSubmit} className="border-t border-charcoal/10 bg-white p-3">
-        <div className="flex items-center gap-2">
+      <form onSubmit={onSubmit} className="border-t border-charcoal/10 bg-white p-3 sm:p-4">
+        <div className="rounded-xl border border-charcoal/15 bg-offwhite p-2 transition-colors focus-within:border-evergreen/60 focus-within:ring-2 focus-within:ring-evergreen/10">
           <label htmlFor={`message-body-${companyId}`} className="sr-only">
             Message {title}
           </label>
-          <input
+          <textarea
             id={`message-body-${companyId}`}
             value={body}
             onChange={(event) => setBody(event.target.value)}
+            onKeyDown={onComposerKeyDown}
             maxLength={2000}
             placeholder={`Message ${title}…`}
             autoComplete="off"
-            className="min-w-0 flex-1 rounded-full border border-charcoal/15 bg-offwhite px-4 py-2.5 text-sm outline-none placeholder:text-charcoal-soft focus:border-evergreen"
+            rows={2}
+            className="block min-h-14 w-full resize-none bg-transparent px-2 py-1 text-sm leading-6 outline-none placeholder:text-charcoal-soft"
           />
-          <button
-            type="submit"
-            disabled={send.isPending || body.trim() === ''}
-            aria-label="Send message"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-evergreen text-white transition-colors hover:bg-evergreen-dark disabled:opacity-50"
-          >
-            <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="m22 2-7 20-4-9-9-4Z" />
-              <path d="M22 2 11 13" />
-            </svg>
-          </button>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-charcoal/10 px-2 pt-2">
+            <p className="text-[11px] text-charcoal-soft">{body.length}/2000 · Ctrl/Cmd + Enter to send</p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setBody('');
+                  setError(null);
+                }}
+                disabled={body.trim() === '' || send.isPending}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-charcoal-soft transition-colors hover:bg-charcoal/5 hover:text-charcoal disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Discard
+              </button>
+              <button
+                type="submit"
+                disabled={send.isPending || body.trim() === ''}
+                className="inline-flex items-center gap-2 rounded-lg bg-evergreen px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-evergreen-dark disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {send.isPending ? 'Sending…' : 'Send message'}
+                {!send.isPending && (
+                  <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m22 2-7 20-4-9-9-4Z" />
+                    <path d="M22 2 11 13" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
         {error && (
           <p role="alert" className="mt-2 text-sm text-alert-deep">

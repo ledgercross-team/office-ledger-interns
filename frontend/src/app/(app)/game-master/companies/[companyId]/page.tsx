@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/role-gate';
+import { DateInput } from '@/components/date-input';
 import { TemporaryPasswordPanel } from '@/components/temporary-password-panel';
 import { TimezoneSelect, timezoneLabel } from '@/components/timezone-select';
 import { ApiError, apiFetch } from '@/lib/api-client';
@@ -37,15 +38,26 @@ function Input({
       <label htmlFor={id} className="block text-sm font-medium">
         {label}
       </label>
-      <input
-        id={id}
-        name={name ?? id}
-        type={type}
-        defaultValue={defaultValue}
-        required={required}
-        {...range}
-        className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
-      />
+      {type === 'date' ? (
+        <DateInput
+          id={id}
+          name={name ?? id}
+          defaultValue={defaultValue}
+          required={required}
+          {...range}
+          className="w-full rounded-xl border border-charcoal/15 bg-white"
+        />
+      ) : (
+        <input
+          id={id}
+          name={name ?? id}
+          type={type}
+          defaultValue={defaultValue}
+          required={required}
+          {...range}
+          className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+        />
+      )}
     </div>
   );
 }
@@ -240,7 +252,7 @@ function CompanyDetail() {
   );
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="w-full max-w-3xl space-y-6">
       <div>
         <p className="text-sm">
           <Link href="/game-master" className="underline">

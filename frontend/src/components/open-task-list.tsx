@@ -8,7 +8,7 @@ import type { Paginated, Task } from '@/lib/types';
 
 const OPEN = ['todo', 'in_progress', 'delayed'];
 
-// The API returns tasks sorted by deadline; keep that order and show only open ones.
+// The API returns tasks sorted by priority, then deadline; keep that order and show only open ones.
 export function OpenTaskList({ assigneeId, title }: { assigneeId?: string; title: string }) {
   const query = useQuery({
     queryKey: ['tasks', 'open', assigneeId ?? 'me'],

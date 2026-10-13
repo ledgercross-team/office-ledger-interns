@@ -130,6 +130,7 @@ export interface Task {
   overdue?: boolean;
   allowedActions?: TaskAction[];
   canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export interface TaskActivity {

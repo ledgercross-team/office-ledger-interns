@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import { NAV_ICONS } from '@/components/nav-icons';
 import { useAuth } from '@/lib/auth-context';
+import { formatDate, todayIn } from '@/lib/format';
 import type { Role } from '@/lib/types';
 import { NAV_BY_ROLE, ROLE_LABELS } from '@/lib/navigation';
 
@@ -19,12 +20,10 @@ function greeting(name: string, timezone?: string): string {
 }
 
 function todayLine(timezone?: string): string {
-  return new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    timeZone: timezone,
-  });
+  const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: timezone }).format(
+    new Date(),
+  );
+  return `${weekday}, ${formatDate(todayIn(timezone))}`;
 }
 
 function NavLinks({ role, onNavigate }: { role: Role; onNavigate?: () => void }) {
@@ -107,10 +106,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const subscriptionEnded = user.role === 'admin' && user.subscriptionActive === false;
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex min-h-dvh w-full">
       <Sidebar role={user.role} fullName={user.fullName} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-charcoal/10 bg-white px-3 py-3 sm:px-6 sm:py-4">
+        <header className="min-w-0 border-b border-charcoal/10 bg-white px-3 py-3 sm:px-6 sm:py-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="break-words text-lg font-semibold text-charcoal">
@@ -146,7 +145,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             or message the game master to renew.
           </p>
         )}
-        <main className="min-w-0 flex-1 px-3 py-4 sm:px-6 sm:py-6 lg:px-8">{children}</main>
+        <main className="w-full min-w-0 flex-1 px-3 py-4 sm:px-6 sm:py-6 lg:px-8">{children}</main>
       </div>
     </div>
   );

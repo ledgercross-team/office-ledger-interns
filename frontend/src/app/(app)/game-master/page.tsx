@@ -24,7 +24,7 @@ function Companies() {
     );
 
   return (
-    <div className="max-w-5xl space-y-4">
+    <div className="w-full max-w-5xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-charcoal">Companies</h1>
         <Link
@@ -45,7 +45,7 @@ function Companies() {
         <p className="text-sm text-charcoal-soft">No companies yet.</p>
       )}
       {rows.length > 0 && (
-        <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
+        <div className="max-w-full overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
           <table className="min-w-[44rem] w-full text-left text-sm">
             <thead>
               <tr className="border-b border-charcoal/10 bg-offwhite text-charcoal-soft">

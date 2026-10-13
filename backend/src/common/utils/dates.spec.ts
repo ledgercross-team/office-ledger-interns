@@ -1,4 +1,4 @@
-import { addDays, daysBetween, eachDate, isSupportedDate, isWeekday } from './dates';
+import { addDays, daysBetween, eachDate, isHoliday, isSupportedDate, isWeekday } from './dates';
 
 describe('dates', () => {
   it('counts days between dates', () => {
@@ -11,9 +11,11 @@ describe('dates', () => {
   });
 
   it('detects weekdays', () => {
-    expect(isWeekday('2026-10-09')).toBe(true); // Friday
-    expect(isWeekday('2026-10-10')).toBe(false); // Saturday
-    expect(isWeekday('2026-10-11')).toBe(false); // Sunday
+    expect(isWeekday('2026-10-09')).toBe(false); // Friday holiday
+    expect(isWeekday('2026-10-10')).toBe(false); // Saturday holiday
+    expect(isWeekday('2026-10-11')).toBe(true); // Sunday
+    expect(isHoliday('2026-10-09')).toBe(true);
+    expect(isHoliday('2026-10-11')).toBe(false);
   });
 
   it('lists an inclusive range', () => {
