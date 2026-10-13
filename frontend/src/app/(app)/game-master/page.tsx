@@ -24,12 +24,12 @@ function Companies() {
     );
 
   return (
-    <div className="w-full max-w-5xl space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-4">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-semibold text-charcoal">Companies</h1>
         <Link
           href="/game-master/companies/new"
-          className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-evergreen-dark"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-evergreen-dark sm:w-auto"
         >
           New company
         </Link>
@@ -46,15 +46,13 @@ function Companies() {
       )}
       {rows.length > 0 && (
         <div className="max-w-full overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
-          <table className="min-w-[44rem] w-full text-left text-sm">
+          <table className="min-w-[36rem] w-full text-left text-sm">
             <thead>
               <tr className="border-b border-charcoal/10 bg-offwhite text-charcoal-soft">
                 <th className="px-4 py-2.5 font-medium">Company</th>
                 <th className="px-4 py-2.5 font-medium">Admin</th>
                 <th className="px-4 py-2.5 font-medium">State</th>
                 <th className="px-4 py-2.5 font-medium">Ends</th>
-                <th className="px-4 py-2.5 font-medium">Unread</th>
-                <th className="px-4 py-2.5" />
               </tr>
             </thead>
             <tbody className="divide-y divide-charcoal/5">
@@ -84,23 +82,6 @@ function Companies() {
                   </td>
                   <td className="px-4 py-2.5">
                     {company.subscription ? formatDate(company.subscription.endsOn) : '—'}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {company.unreadCount > 0 ? (
-                      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-alert px-1.5 text-[11px] font-semibold text-white">
-                        {company.unreadCount}
-                      </span>
-                    ) : (
-                      <span className="text-charcoal-soft">0</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <Link
-                      href={`/game-master/messages/${company.id}`}
-                      className="rounded-lg border border-charcoal/15 px-2.5 py-1 text-xs font-medium text-charcoal hover:bg-mist"
-                    >
-                      Messages
-                    </Link>
                   </td>
                 </tr>
               ))}

@@ -1,4 +1,16 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { AuthUser } from '../../auth/auth.types';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
@@ -36,6 +48,12 @@ export class GameMasterController {
   @Patch('companies/:companyId')
   update(@Param('companyId', ParseUUIDPipe) companyId: string, @Body() dto: UpdateCompanyDto) {
     return this.service.updateCompany(companyId, dto);
+  }
+
+  @Delete('companies/:companyId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('companyId', ParseUUIDPipe) companyId: string) {
+    await this.service.removeCompany(companyId);
   }
 
   @Throttle({ default: RESET_RATE })
@@ -78,8 +96,9 @@ export class GameMasterController {
   @Patch('subscriptions/:subscriptionId')
   updateSubscription(
     @Param('subscriptionId', ParseUUIDPipe) subscriptionId: string,
+    @CurrentUser() user: AuthUser,
     @Body() dto: UpdateSubscriptionDto,
   ) {
-    return this.service.updateSubscription(subscriptionId, dto);
+    return this.service.updateSubscription(subscriptionId, dto, user.id);
   }
 }

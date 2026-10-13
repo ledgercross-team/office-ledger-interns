@@ -14,7 +14,7 @@ import { isUniqueViolation } from '../../common/utils/db-errors';
 import { hashPassword, generateTempPassword } from '../../common/utils/passwords';
 import { type Paginated } from '../../common/utils/pagination';
 import { DRIZZLE, type Database } from '../../db/db.module';
-import { companies, messages, subscriptions, users } from '../../db/schema';
+import { attendanceRecords, companies, messages, subscriptions, tasks, users } from '../../db/schema';
 import type { CreateAdminDto, UpdateAdminDto } from './dto/admins.dto';
 import type { CreateCompanyDto } from './dto/create-company.dto';
 import type { CreateSubscriptionDto } from './dto/create-subscription.dto';
@@ -204,6 +204,32 @@ export class GameMasterService {
     return company;
   }
 
+  async removeCompany(companyId: string): Promise<void> {
+    await this.findCompany(companyId);
+    const members = await this.database
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.companyId, companyId));
+
+    await this.database.transaction(async (tx) => {
+      await tx.delete(messages).where(eq(messages.companyId, companyId));
+      await tx.delete(attendanceRecords).where(eq(attendanceRecords.companyId, companyId));
+      await tx.delete(tasks).where(eq(tasks.companyId, companyId));
+      await tx.delete(subscriptions).where(eq(subscriptions.companyId, companyId));
+
+      // Clear self-references before removing the company's users.
+      await tx
+        .update(users)
+        .set({ createdById: null, managerId: null })
+        .where(eq(users.companyId, companyId));
+      await tx.delete(users).where(eq(users.companyId, companyId));
+      await tx.delete(companies).where(eq(companies.id, companyId));
+    });
+
+    await this.authService.invalidateCompanySubscription(companyId);
+    await Promise.all(members.map(({ id }) => this.authState.invalidate(id)));
+  }
+
   async createAdmin(companyId: string, creatorId: string, dto: CreateAdminDto) {
     await this.findCompany(companyId);
 
@@ -286,7 +312,7 @@ export class GameMasterService {
     return subscription;
   }
 
-  async updateSubscription(subscriptionId: string, dto: UpdateSubscriptionDto) {
+  async updateSubscription(subscriptionId: string, dto: UpdateSubscriptionDto, actorId: string) {
     const [existing] = await this.database
       .select()
       .from(subscriptions)
@@ -301,20 +327,56 @@ export class GameMasterService {
     const endsOn = dto.endsOn ?? existing.endsOn;
     this.assertDates(startsOn, endsOn);
 
-    const [subscription] = await this.database
-      .update(subscriptions)
-      .set({
-        planName: dto.planName,
-        startsOn: dto.startsOn,
-        endsOn: dto.endsOn,
-        notes: dto.notes,
-        cancelledAt: dto.cancel ? (existing.cancelledAt ?? new Date()) : undefined,
-      })
-      .where(eq(subscriptions.id, subscriptionId))
-      .returning();
+    const subscription = await this.database.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(subscriptions)
+        .set({
+          planName: dto.planName,
+          startsOn: dto.startsOn,
+          endsOn: dto.endsOn,
+          notes: dto.notes,
+          cancelledAt: dto.cancel ? (existing.cancelledAt ?? new Date()) : undefined,
+        })
+        .where(eq(subscriptions.id, subscriptionId))
+        .returning();
+
+      const notification = this.subscriptionChangeNotification(existing, updated);
+      if (notification) {
+        await tx.insert(messages).values({
+          companyId: existing.companyId,
+          senderId: actorId,
+          body: notification,
+        });
+      }
+
+      return updated;
+    });
 
     await this.authService.invalidateCompanySubscription(existing.companyId);
     return subscription;
+  }
+
+  private subscriptionChangeNotification(
+    previous: typeof subscriptions.$inferSelect,
+    updated: typeof subscriptions.$inferSelect,
+  ): string | null {
+    const changes: string[] = [];
+    if (previous.planName !== updated.planName) {
+      changes.push(`Plan: ${updated.planName}`);
+    }
+    if (previous.startsOn !== updated.startsOn || previous.endsOn !== updated.endsOn) {
+      changes.push(`Dates: ${displayDate(updated.startsOn)} to ${displayDate(updated.endsOn)}`);
+    }
+    if (previous.notes !== updated.notes) {
+      changes.push('Notes updated.');
+    }
+    if (previous.cancelledAt === null && updated.cancelledAt !== null) {
+      changes.push('Status: Cancelled.');
+    }
+
+    return changes.length > 0
+      ? `Your subscription was updated by the game master.\n${changes.join('\n')}`
+      : null;
   }
 
   private async findAdmin(companyId: string, adminId: string) {
@@ -367,4 +429,9 @@ export class GameMasterService {
     }
   }
 
+}
+
+function displayDate(date: string): string {
+  const [year, month, day] = date.split('-');
+  return `${day}/${month}/${year}`;
 }

@@ -23,7 +23,11 @@ export function TemporaryPasswordPanel({ password }: { password: string }) {
       <p className="font-medium">Temporary password</p>
       <p className="flex flex-wrap items-center gap-3">
         <code className="rounded-xl bg-white px-2 py-1 font-mono text-base">{password}</code>
-        <button type="button" onClick={() => void copy()} className="rounded-xl border border-charcoal/15 bg-white px-3 py-1 text-sm">
+        <button
+          type="button"
+          onClick={() => void copy()}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-sm"
+        >
           {copied ? 'Copied' : 'Copy'}
         </button>
       </p>

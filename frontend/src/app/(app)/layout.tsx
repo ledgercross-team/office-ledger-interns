@@ -32,14 +32,14 @@ function NavLinks({ role, onNavigate }: { role: Role; onNavigate?: () => void })
   return (
     <ul className="space-y-1">
       {NAV_BY_ROLE[role].map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active = isNavItemActive(pathname, item.href, role);
         return (
           <li key={item.href}>
             <Link
               href={item.href}
               onClick={onNavigate}
               aria-current={active ? 'page' : undefined}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active ? 'bg-evergreen text-white' : 'text-mist/80 hover:bg-white/10 hover:text-white'
               }`}
             >
@@ -71,7 +71,7 @@ function Sidebar({ role, fullName }: { role: Role; fullName: string }) {
         <button
           type="button"
           onClick={() => void logout()}
-          className="mt-2 w-full rounded-lg border border-white/25 px-3 py-1.5 text-sm hover:bg-white/10"
+          className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-white/25 px-3 py-1.5 text-sm hover:bg-white/10"
         >
           Log out
         </button>
@@ -122,7 +122,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={() => void logout()}
-                className="rounded-lg border border-charcoal/15 px-3 py-1.5"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-charcoal/15 px-3 py-1.5"
               >
                 Log out
               </button>
@@ -157,13 +157,13 @@ function MobileLinks({ role }: { role: Role }) {
   return (
     <>
       {NAV_BY_ROLE[role].map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active = isNavItemActive(pathname, item.href, role);
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={active ? 'page' : undefined}
-            className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ${
+            className={`flex min-h-11 shrink-0 items-center gap-2 rounded-full px-3 py-2 text-sm font-medium ${
               active ? 'bg-forest text-white' : 'bg-mist text-forest'
             }`}
           >
@@ -174,4 +174,20 @@ function MobileLinks({ role }: { role: Role }) {
       })}
     </>
   );
+}
+
+function isNavItemActive(pathname: string, href: string, role: Role): boolean {
+  if (role === 'game_master') {
+    if (href === '/game-master/dashboard') {
+      return pathname === href;
+    }
+    if (href === '/game-master') {
+      return pathname === href || pathname.startsWith('/game-master/companies/');
+    }
+    if (href === '/game-master/messages') {
+      return pathname === href || pathname.startsWith('/game-master/messages/');
+    }
+  }
+
+  return pathname === href || pathname.startsWith(`${href}/`);
 }

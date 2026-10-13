@@ -346,7 +346,7 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (user?.role === 'game_master') router.replace('/game-master');
+    if (user?.role === 'game_master') router.replace('/game-master/dashboard');
   }, [user, router]);
 
   return (

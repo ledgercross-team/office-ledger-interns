@@ -7,7 +7,11 @@ export interface NavItem {
 
 // Role -> pages map, matching section 15.1.
 export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
-  game_master: [{ href: '/game-master', label: 'Companies' }],
+  game_master: [
+    { href: '/game-master/dashboard', label: 'Dashboard' },
+    { href: '/game-master', label: 'Companies' },
+    { href: '/game-master/messages', label: 'Messages' },
+  ],
   admin: [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/tasks', label: 'Tasks' },
@@ -38,7 +42,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 export function homePath(role: Role): string {
-  return role === 'game_master' ? '/game-master' : '/dashboard';
+  return role === 'game_master' ? '/game-master/dashboard' : '/dashboard';
 }
 
 // Only same-site absolute paths are accepted: starts with "/" but not "//" or "/\".

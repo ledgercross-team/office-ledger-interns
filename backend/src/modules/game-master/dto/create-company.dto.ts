@@ -1,5 +1,5 @@
 import { IsEmail, IsString, Length, Matches, MaxLength } from 'class-validator';
-import { IsAppDate } from '../../../common/validators/app-date';
+import { IsCalendarDate } from '../../../common/validators/app-date';
 
 export const WORK_START_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -27,9 +27,9 @@ export class CreateCompanyDto {
   @Length(1, 60)
   planName!: string;
 
-  @IsAppDate()
+  @IsCalendarDate()
   startsOn!: string;
 
-  @IsAppDate()
+  @IsCalendarDate()
   endsOn!: string;
 }

@@ -1,5 +1,5 @@
 import { Equals, IsOptional, IsString, Length, MaxLength } from 'class-validator';
-import { IsAppDate } from '../../../common/validators/app-date';
+import { IsCalendarDate } from '../../../common/validators/app-date';
 
 // Every field is optional: send only what changes.
 export class UpdateSubscriptionDto {
@@ -9,11 +9,11 @@ export class UpdateSubscriptionDto {
   planName?: string;
 
   @IsOptional()
-  @IsAppDate()
+  @IsCalendarDate()
   startsOn?: string;
 
   @IsOptional()
-  @IsAppDate()
+  @IsCalendarDate()
   endsOn?: string;
 
   @IsOptional()

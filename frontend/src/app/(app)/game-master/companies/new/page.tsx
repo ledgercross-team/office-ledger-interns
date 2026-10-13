@@ -42,7 +42,7 @@ function Field({
           type={type}
           defaultValue={defaultValue}
           required
-          className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+          className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
         />
       )}
     </div>
@@ -80,7 +80,7 @@ function NewCompanyForm() {
 
   if (created) {
     return (
-      <div className="mx-auto w-full max-w-xl space-y-4">
+      <div className="mx-auto w-full max-w-3xl space-y-4">
         <h1 className="text-xl font-semibold">{created.company.name} was created</h1>
         <p className="text-sm">
           Admin: {created.admin.fullName} ({created.admin.email})
@@ -89,11 +89,14 @@ function NewCompanyForm() {
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
             href={`/game-master/companies/${created.company.id}`}
-            className="rounded-xl border border-charcoal/15 px-3 py-1"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2"
           >
             Open company
           </Link>
-          <Link href="/game-master" className="rounded-xl border border-charcoal/15 px-3 py-1">
+          <Link
+            href="/game-master"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2"
+          >
             Back to companies
           </Link>
         </div>
@@ -102,39 +105,44 @@ function NewCompanyForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto w-full max-w-xl space-y-4">
-      <h1 className="text-xl font-semibold">New company</h1>
-
-      <Field id="companyName" label="Company name" />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <TimezoneSelect id="timezone" label="Timezone" />
-        <Field id="workStartTime" label="Work start time" type="time" defaultValue="09:00" />
-      </div>
-
-      <h2 className="pt-2 font-semibold">Admin</h2>
-      <Field id="adminFullName" label="Admin full name" />
-      <Field id="adminEmail" label="Admin email" type="email" />
-
-      <h2 className="pt-2 font-semibold">First subscription</h2>
-      <Field id="planName" label="Plan name" defaultValue="Standard" />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="startsOn" label="Starts on" type="date" />
-        <Field id="endsOn" label="Ends on" type="date" />
-      </div>
-
-      {error && (
-        <p role="alert" className="text-sm text-alert-deep">
-          {error}
-        </p>
-      )}
-      <button
-        type="submit"
-        disabled={create.isPending}
-        className="rounded-xl bg-evergreen px-4 py-2 text-white disabled:opacity-60"
+    <div className="mx-auto w-full max-w-4xl">
+      <form
+        onSubmit={onSubmit}
+        className="mx-auto w-full max-w-2xl space-y-4 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-6"
       >
-        {create.isPending ? 'Creating…' : 'Create company'}
-      </button>
-    </form>
+        <h1 className="text-xl font-semibold">New company</h1>
+
+        <Field id="companyName" label="Company name" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TimezoneSelect id="timezone" label="Timezone" />
+          <Field id="workStartTime" label="Work start time" type="time" defaultValue="09:00" />
+        </div>
+
+        <h2 className="pt-2 font-semibold">Admin</h2>
+        <Field id="adminFullName" label="Admin full name" />
+        <Field id="adminEmail" label="Admin email" type="email" />
+
+        <h2 className="pt-2 font-semibold">First subscription</h2>
+        <Field id="planName" label="Plan name" defaultValue="Standard" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field id="startsOn" label="Starts on" type="date" />
+          <Field id="endsOn" label="Ends on" type="date" />
+        </div>
+
+        {error && (
+          <p role="alert" className="text-sm text-alert-deep">
+            {error}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={create.isPending}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-4 py-2 text-white disabled:opacity-60 sm:w-auto"
+        >
+          {create.isPending ? 'Creating…' : 'Create company'}
+        </button>
+      </form>
+    </div>
   );
 }
 

@@ -259,14 +259,14 @@ export function MessageThread({ companyId, title, subtitle, className }: Message
                   setError(null);
                 }}
                 disabled={body.trim() === '' || send.isPending}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-charcoal-soft transition-colors hover:bg-charcoal/5 hover:text-charcoal disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 text-sm font-medium text-charcoal-soft transition-colors hover:bg-charcoal/5 hover:text-charcoal disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Discard
               </button>
               <button
                 type="submit"
                 disabled={send.isPending || body.trim() === ''}
-                className="inline-flex items-center gap-2 rounded-lg bg-evergreen px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-evergreen-dark disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-evergreen px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-evergreen-dark disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {send.isPending ? 'Sending…' : 'Send message'}
                 {!send.isPending && (

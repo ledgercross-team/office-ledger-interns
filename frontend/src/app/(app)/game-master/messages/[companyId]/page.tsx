@@ -45,20 +45,6 @@ function Thread() {
 
   return (
     <div className="min-w-0 space-y-4">
-      <p className="text-sm text-charcoal-soft">
-        <Link href="/game-master" className="text-evergreen hover:underline">
-          Companies
-        </Link>
-        {company.data && (
-          <>
-            {' / '}
-            <Link href={`/game-master/companies/${companyId}`} className="text-evergreen hover:underline">
-              {company.data.company.name}
-            </Link>
-          </>
-        )}
-      </p>
-
       <div className="grid min-w-0 gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
         <aside
           aria-label="Conversations"
@@ -83,7 +69,7 @@ function Thread() {
                   <Link
                     href={`/game-master/messages/${row.id}`}
                     aria-current={active ? 'page' : undefined}
-                    className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
+                    className={`flex min-h-14 items-center gap-3 px-4 py-3 text-sm transition-colors ${
                       active ? 'bg-mist' : 'hover:bg-offwhite'
                     }`}
                   >

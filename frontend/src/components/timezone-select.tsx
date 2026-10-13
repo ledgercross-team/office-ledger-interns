@@ -94,7 +94,7 @@ export function TimezoneSelect({
         name={id}
         defaultValue={defaultValue}
         required={required}
-        className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+        className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

@@ -16,3 +16,11 @@ export function IsAppDate() {
     }),
   );
 }
+
+/** A valid YYYY-MM-DD calendar date without the app-wide reporting window. */
+export function IsCalendarDate() {
+  return applyDecorators(
+    Matches(DATE_PATTERN, { message: 'date must be formatted YYYY-MM-DD' }),
+    IsISO8601({ strict: true }),
+  );
+}

@@ -2,17 +2,17 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { notFound, useParams } from 'next/navigation';
+import { notFound, useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/role-gate';
 import { DateInput } from '@/components/date-input';
 import { TemporaryPasswordPanel } from '@/components/temporary-password-panel';
 import { TimezoneSelect, timezoneLabel } from '@/components/timezone-select';
 import { ApiError, apiFetch } from '@/lib/api-client';
-import { errorMessage, formatDate, MAX_DATE, MIN_DATE, todayIn } from '@/lib/format';
+import { errorMessage, formatDate, todayIn } from '@/lib/format';
 import type { Company, CompanyAdmin, GameMasterCompanyDetail, Subscription } from '@/lib/types';
 
-type Confirming = 'deactivate' | { reset: string } | { cancel: string } | null;
+type Confirming = 'deactivate' | 'discard' | { reset: string } | { cancel: string } | null;
 
 function Input({
   id,
@@ -30,9 +30,6 @@ function Input({
   defaultValue?: string;
   required?: boolean;
 }) {
-  // Subscription dates are limited to 2024 through 2050.
-  const range = type === 'date' ? { min: MIN_DATE, max: MAX_DATE } : {};
-
   return (
     <div className="space-y-1">
       <label htmlFor={id} className="block text-sm font-medium">
@@ -44,7 +41,6 @@ function Input({
           name={name ?? id}
           defaultValue={defaultValue}
           required={required}
-          {...range}
           className="w-full rounded-xl border border-charcoal/15 bg-white"
         />
       ) : (
@@ -54,8 +50,7 @@ function Input({
           type={type}
           defaultValue={defaultValue}
           required={required}
-          {...range}
-          className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+          className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
         />
       )}
     </div>
@@ -71,6 +66,7 @@ function subscriptionState(item: Subscription, today: string): string {
 
 function CompanyDetail() {
   const { companyId } = useParams<{ companyId: string }>();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -94,6 +90,18 @@ function CompanyDetail() {
     onSuccess: async () => {
       setConfirming(null);
       await refresh();
+    },
+    onError: fail,
+  });
+
+  const discardCompany = useMutation({
+    mutationFn: () =>
+      apiFetch<void>(`/game-master/companies/${companyId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['companies'] });
+      router.replace('/game-master');
     },
     onError: fail,
   });
@@ -240,11 +248,19 @@ function CompanyDetail() {
   const confirmBox = (title: string, yes: string, onYes: () => void) => (
     <div role="alertdialog" aria-label={title} className="space-y-2 text-sm">
       <p>{title}</p>
-      <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={onYes} className="rounded-xl bg-alert px-3 py-1 text-white">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          onClick={onYes}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-alert px-3 py-2 text-white sm:w-auto"
+        >
           {yes}
         </button>
-        <button type="button" onClick={() => setConfirming(null)} className="rounded-xl border border-charcoal/15 px-3 py-1">
+        <button
+          type="button"
+          onClick={() => setConfirming(null)}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
+        >
           Cancel
         </button>
       </div>
@@ -252,21 +268,17 @@ function CompanyDetail() {
   );
 
   return (
-    <div className="w-full max-w-3xl space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6">
       <div>
         <p className="text-sm">
-          <Link href="/game-master" className="underline">
+          <Link href="/game-master" className="inline-flex min-h-11 items-center underline">
             Companies
           </Link>
         </p>
-        <h1 className="text-xl font-semibold">{company.name}</h1>
-        <p className="text-sm text-charcoal-soft">
+        <h1 className="break-words text-xl font-semibold">{company.name}</h1>
+        <p className="break-words text-sm text-charcoal-soft">
           {company.isActive ? 'Active' : 'Inactive'} · {timezoneLabel(company.timezone)} · starts{' '}
           {company.workStartTime.slice(0, 5)}
-          {' · '}
-          <Link href={`/game-master/messages/${company.id}`} className="underline">
-            Messages
-          </Link>
         </p>
       </div>
 
@@ -293,7 +305,7 @@ function CompanyDetail() {
         <button
           type="submit"
           disabled={updateCompany.isPending}
-          className="rounded-xl bg-evergreen px-3 py-1 text-sm text-white disabled:opacity-60"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-3 py-2 text-sm text-white disabled:opacity-60 sm:w-auto"
         >
           Save changes
         </button>
@@ -309,12 +321,12 @@ function CompanyDetail() {
             return (
               <li key={item.id} className="space-y-2 py-2 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p>
+                  <p className="min-w-0 break-words">
                     <span className="font-medium">{item.fullName}</span>{' '}
                     <span className="text-charcoal-soft">({item.email})</span>
                     {!item.isActive && <span className="text-alert-deep"> · Inactive</span>}
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                     <button
                       type="button"
                       onClick={() => {
@@ -322,7 +334,7 @@ function CompanyDetail() {
                         setTemporaryPassword(null);
                         setConfirming({ reset: item.id });
                       }}
-                      className="rounded-xl border border-charcoal/15 px-3 py-1"
+                      className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
                     >
                       Reset password
                     </button>
@@ -334,7 +346,7 @@ function CompanyDetail() {
                         setSaved(null);
                         setAdminActive.mutate({ adminId: item.id, isActive: !item.isActive });
                       }}
-                      className="rounded-xl border border-charcoal/15 px-3 py-1"
+                      className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
                     >
                       {item.isActive ? 'Deactivate' : 'Reactivate'}
                     </button>
@@ -360,11 +372,36 @@ function CompanyDetail() {
           <button
             type="submit"
             disabled={addAdmin.isPending}
-            className="rounded-xl bg-evergreen px-3 py-1 text-sm text-white disabled:opacity-60"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-3 py-2 text-sm text-white disabled:opacity-60 sm:w-auto"
           >
             {addAdmin.isPending ? 'Adding…' : 'Add admin'}
           </button>
         </form>
+      </section>
+
+      <section className="space-y-3 rounded-lg border border-alert/30 p-4">
+        <h2 className="font-semibold text-alert-deep">Danger zone</h2>
+        {confirming === 'discard'
+          ? confirmBox(
+              `Discard ${company.name}? This permanently deletes the company, its users, subscriptions, tasks, attendance, and messages.`,
+              'Yes, discard company',
+              () => discardCompany.mutate(),
+            )
+          : (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setSaved(null);
+                    setConfirming('discard');
+                  }}
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-alert px-3 py-2 text-sm text-white sm:w-auto"
+                >
+                  Discard company
+                </button>
+              </div>
+            )}
       </section>
 
       <section className="space-y-3 rounded-lg border p-4">
@@ -377,7 +414,7 @@ function CompanyDetail() {
             () => updateCompany.mutate({ isActive: false }),
           )}
         {(confirming === null || typeof confirming === 'object') && (
-          <div className="flex flex-wrap gap-2 text-sm">
+          <div className="flex flex-col gap-2 text-sm sm:flex-row">
             {company.isActive ? (
               <button
                 type="button"
@@ -385,7 +422,7 @@ function CompanyDetail() {
                   setError(null);
                   setConfirming('deactivate');
                 }}
-                className="rounded-xl border border-charcoal/15 px-3 py-1"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
               >
                 Deactivate company
               </button>
@@ -393,7 +430,7 @@ function CompanyDetail() {
               <button
                 type="button"
                 onClick={() => updateCompany.mutate({ isActive: true })}
-                className="rounded-xl border border-charcoal/15 px-3 py-1"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
               >
                 Reactivate company
               </button>
@@ -451,20 +488,31 @@ function CompanyDetail() {
                       required={false}
                       defaultValue={item.notes ?? ''}
                     />
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <button
                         type="submit"
                         disabled={updateSubscription.isPending}
-                        className="rounded-xl bg-evergreen px-3 py-1 text-white disabled:opacity-60"
+                        className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-3 py-2 text-white disabled:opacity-60 sm:w-auto"
                       >
                         Save subscription
                       </button>
                       <button
                         type="button"
                         onClick={() => setConfirming({ cancel: item.id })}
-                        className="rounded-xl border border-charcoal/15 px-3 py-1"
+                        className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
                       >
                         Cancel subscription
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.currentTarget.form?.reset();
+                          setError(null);
+                          setSaved(null);
+                        }}
+                        className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
+                      >
+                        Discard changes
                       </button>
                     </div>
                   </form>
@@ -491,7 +539,7 @@ function CompanyDetail() {
           <button
             type="submit"
             disabled={addSubscription.isPending}
-            className="rounded-xl bg-evergreen px-3 py-1 text-sm text-white disabled:opacity-60"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-3 py-2 text-sm text-white disabled:opacity-60 sm:w-auto"
           >
             Add subscription
           </button>

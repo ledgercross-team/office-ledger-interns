@@ -1,15 +1,15 @@
 import { IsOptional, IsString, Length, MaxLength } from 'class-validator';
-import { IsAppDate } from '../../../common/validators/app-date';
+import { IsCalendarDate } from '../../../common/validators/app-date';
 
 export class CreateSubscriptionDto {
   @IsString()
   @Length(1, 60)
   planName!: string;
 
-  @IsAppDate()
+  @IsCalendarDate()
   startsOn!: string;
 
-  @IsAppDate()
+  @IsCalendarDate()
   endsOn!: string;
 
   @IsOptional()
