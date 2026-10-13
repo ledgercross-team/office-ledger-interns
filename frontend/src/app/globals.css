@@ -27,6 +27,7 @@
 
 html {
   scroll-behavior: smooth;
+  width: 100%;
 }
 
 *,
@@ -51,6 +52,7 @@ select {
 }
 
 body {
+  width: 100%;
   min-width: 0;
   max-width: 100%;
   overflow-x: hidden;

@@ -21,6 +21,7 @@ import { UsersModule } from './modules/users/users.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { RedisService } from './modules/redis/redis.service';
 import { RedisThrottlerStorage } from './modules/redis/redis-throttler.storage';
+import { EmployeeServicesModule } from './modules/employee-services/employee-services.module';
 
 // Only credential endpoints count against the strict auth limit. /auth/me runs on every
 // page load, so counting it would lock people out after a few refreshes.
@@ -59,6 +60,7 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
     AttendanceModule,
     HealthModule,
     RedisModule,
+    EmployeeServicesModule,
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule, RedisModule],
       inject: [ConfigService, RedisService],

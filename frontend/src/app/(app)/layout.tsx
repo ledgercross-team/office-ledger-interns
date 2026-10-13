@@ -1,9 +1,11 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import { NAV_ICONS } from '@/components/nav-icons';
+import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { formatDate, todayIn } from '@/lib/format';
 import type { Role } from '@/lib/types';
@@ -26,6 +28,26 @@ function todayLine(timezone?: string): string {
   return `${weekday}, ${formatDate(todayIn(timezone))}`;
 }
 
+function NewMessageDot() {
+  const query = useQuery({
+    queryKey: ['messages', 'unread'],
+    queryFn: () => apiFetch<{ unread: number }>('/message-threads/unread'),
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: true,
+  });
+
+  if ((query.data?.unread ?? 0) === 0) return null;
+
+  return (
+    <span
+      role="status"
+      aria-label="New message"
+      title="New message"
+      className="h-2.5 w-2.5 shrink-0 rounded-full bg-alert"
+    />
+  );
+}
+
 function NavLinks({ role, onNavigate }: { role: Role; onNavigate?: () => void }) {
   const pathname = usePathname();
 
@@ -45,6 +67,7 @@ function NavLinks({ role, onNavigate }: { role: Role; onNavigate?: () => void })
             >
               {NAV_ICONS[item.href]}
               {item.label}
+              {(item.href === '/messages' || item.href === '/game-master/messages') && <NewMessageDot />}
             </Link>
           </li>
         );
@@ -58,7 +81,7 @@ function Sidebar({ role, fullName }: { role: Role; fullName: string }) {
   const { logout } = useAuth();
 
   return (
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col overflow-y-auto bg-forest p-4 text-white md:flex">
+    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col overflow-y-auto bg-forest p-4 text-white lg:flex">
       <p className="px-2 py-3 text-lg font-semibold tracking-tight">office-ledger</p>
       <nav aria-label="Main" className="mt-2 flex-1">
         <Suspense fallback={null}>
@@ -117,7 +140,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               </p>
               <p className="text-sm text-charcoal-soft">{todayLine(user.companyTimezone)}</p>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2 text-sm md:hidden">
+            <div className="flex flex-wrap items-center justify-end gap-2 text-sm lg:hidden">
               <span className="text-charcoal-soft">{ROLE_LABELS[user.role]}</span>
               <button
                 type="button"
@@ -128,7 +151,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               </button>
             </div>
           </div>
-          <nav aria-label="Main" className="mt-3 md:hidden">
+          <nav aria-label="Main" className="mt-3 lg:hidden">
             <Suspense fallback={null}>
               <div className="slim-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                 <MobileLinks role={user.role} />
@@ -169,6 +192,7 @@ function MobileLinks({ role }: { role: Role }) {
           >
             {NAV_ICONS[item.href]}
             {item.label}
+            {(item.href === '/messages' || item.href === '/game-master/messages') && <NewMessageDot />}
           </Link>
         );
       })}

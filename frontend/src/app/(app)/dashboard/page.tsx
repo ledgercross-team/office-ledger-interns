@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { motion } from 'motion/react';
-import { MonthlyTeamInsights, PersonInsights } from '@/components/attendance-insights';
+import { MonthlyTeamInsights } from '@/components/attendance-insights';
 import { CheckInCard } from '@/components/check-in-card';
 import { OpenTaskList } from '@/components/open-task-list';
 import { OverdueList } from '@/components/overdue-list';
@@ -94,6 +94,33 @@ function TaskBars({ counts }: { counts: TasksByStatus }) {
   );
 }
 
+function EmployeeTools() {
+  const tools = [
+    { href: '/leave-request', label: 'Leave request', text: 'Ask for time away and track the decision.', icon: '＋' },
+    { href: '/calendar', label: 'Calendar', text: 'See working days and company holidays.', icon: '□' },
+    { href: '/complaints', label: 'Complaints', text: 'Raise a workplace concern privately.', icon: '!' },
+  ];
+
+  return (
+    <Reveal>
+      <section className="space-y-4 rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
+        <div>
+          <h2 className="mt-1 text-lg font-semibold text-charcoal">What do you need?</h2>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {tools.map((tool) => (
+            <Link key={tool.href} href={tool.href} className="group rounded-xl border border-charcoal/10 p-4 transition-colors hover:border-evergreen/40 hover:bg-mist/50">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-mist text-lg font-semibold text-evergreen" aria-hidden>{tool.icon}</span>
+              <span className="mt-3 block font-medium text-charcoal group-hover:text-evergreen">{tool.label}</span>
+              <span className="mt-1 block text-sm leading-5 text-charcoal-soft">{tool.text}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
 function AttendanceStory({
   attendance,
   rate,
@@ -156,26 +183,13 @@ function useTodaySpotlight(enabled: boolean, timezone: string) {
 function EmployeeDashboard({ summary }: { summary: DashboardSummary }) {
   return (
     <div className="space-y-5">
-      <Reveal>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatTile label="Open" value={summary.openTasks} />
-          <StatTile label="Overdue" value={summary.overdueTasks} tone="warning" />
-          <StatTile label="Done this week" value={summary.doneThisWeek} />
-        </div>
-      </Reveal>
+      <EmployeeTools />
       {summary.today && <CheckInCard today={summary.today} timezone={summary.timezone} />}
       <Reveal>
         <div className="rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
           <OpenTaskList title="Open tasks" />
         </div>
       </Reveal>
-      <StoryChapter
-        step="Your attendance"
-        title="How do your days look?"
-        lede="Scroll through your last 30 days of check-ins and check-outs."
-      >
-        <PersonInsights path="/attendance/stats/me" />
-      </StoryChapter>
     </div>
   );
 }
@@ -254,9 +268,8 @@ function AdminDashboard({ summary }: { summary: DashboardSummary }) {
   return (
     <div className="space-y-8">
       <Reveal>
-        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-4">
           <StatTile label="Active people" value={summary.activePeople ?? 0} />
-          <StatTile label="Attendance rate" value={`${summary.todayAttendanceRate ?? 0}%`} />
           <StatTile label="Open tasks" value={summary.openTasks} />
           <StatTile label="Overdue" value={summary.overdueTasks} tone="warning" />
           <StatTile label="Task approvals" value={summary.pendingAssignmentApprovals ?? 0} tone="warning" />

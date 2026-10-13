@@ -3,14 +3,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AttendanceStatus } from '@/components/attendance-status';
-import { CheckInCard } from '@/components/check-in-card';
 import { Pagination } from '@/components/pagination';
 import { Reveal } from '@/components/reveal';
 import { RoleGate } from '@/components/role-gate';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { buildQuery, errorMessage, formatDate, formatTime, todayIn } from '@/lib/format';
-import type { AttendanceDay, DashboardSummary } from '@/lib/types';
+import type { AttendanceDay } from '@/lib/types';
 
 function addDays(date: string, days: number): string {
   const [year, month, day] = date.split('-').map(Number);
@@ -24,11 +23,6 @@ function MyAttendance() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Same query as the dashboard, so the check-in card stays in sync with it.
-  const summary = useQuery({
-    queryKey: ['dashboard', 'summary'],
-    queryFn: () => apiFetch<DashboardSummary>('/dashboard/summary'),
-  });
   const history = useQuery({
     queryKey: ['attendance', 'me', { from, to: today }],
     queryFn: () =>
@@ -36,7 +30,7 @@ function MyAttendance() {
     enabled: Boolean(user),
   });
 
-  const timezone = history.data?.timezone ?? summary.data?.timezone;
+  const timezone = history.data?.timezone;
   const items = history.data?.items ?? [];
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -45,8 +39,6 @@ function MyAttendance() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-5xl space-y-6">
       <h1 className="text-xl font-semibold text-charcoal">Attendance</h1>
-
-      {summary.data?.today && <CheckInCard today={summary.data.today} timezone={timezone} />}
 
       <Reveal>
       <section aria-label="Last 10 days" className="space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-5">

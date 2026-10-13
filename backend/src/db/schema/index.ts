@@ -8,3 +8,5 @@ export * from './task-assignment-requests';
 export * from './task-activity';
 export * from './attendance-records';
 export * from './messages';
+export * from './leave-requests';
+export * from './complaints';

@@ -35,6 +35,11 @@ export type AttendanceStatus = 'present' | 'late';
 
 export type AttendanceDayStatus = AttendanceStatus | 'absent';
 
+export type LeaveRequestStatus = 'pending' | 'approved' | 'rejected';
+export type LeaveType = 'annual' | 'sick' | 'personal' | 'emergency';
+export type ComplaintCategory = 'workplace' | 'facilities' | 'payroll' | 'harassment' | 'other';
+export type ComplaintStatus = 'open' | 'in_review' | 'resolved';
+
 export interface Paginated<T> {
   items: T[];
   page: number;
@@ -56,6 +61,34 @@ export interface AuthUser {
 
 export interface AuthSession {
   user: AuthUser;
+}
+
+export interface LeaveRequest {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  leaveType: LeaveType;
+  startOn: string;
+  endOn: string;
+  reason: string;
+  status: LeaveRequestStatus;
+  reviewedById: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Complaint {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  category: ComplaintCategory;
+  subject: string;
+  details: string;
+  status: ComplaintStatus;
+  response: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LoginRequest {

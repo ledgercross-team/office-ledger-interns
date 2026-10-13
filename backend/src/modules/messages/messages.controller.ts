@@ -20,6 +20,11 @@ import { MessagesService } from './messages.service';
 export class MessagesController {
   constructor(private readonly service: MessagesService) {}
 
+  @Get('unread')
+  async unread(@CurrentUser() user: AuthUser) {
+    return { unread: await this.service.unreadCount(user) };
+  }
+
   @Get(':companyId/messages')
   list(
     @CurrentUser() user: AuthUser,
