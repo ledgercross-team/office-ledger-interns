@@ -27,4 +27,14 @@ describe('AppThrottlerGuard', () => {
     });
     expect(result).toBe('1.2.3.4');
   });
+
+  it('tracks v2 login by IP and normalised email too', async () => {
+    const result = await tracker()({
+      method: 'POST',
+      path: '/api/auth/login',
+      ip: '1.2.3.4',
+      body: { email: 'User@Example.com' },
+    });
+    expect(result).toBe('1.2.3.4:user@example.com');
+  });
 });

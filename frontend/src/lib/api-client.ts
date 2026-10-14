@@ -69,11 +69,48 @@ function redirectTo(path: string): void {
   if (typeof window === 'undefined') {
     return;
   }
+  // The v1 session wraps every page (see app/layout.tsx), including the HRMS
+  // screens which authenticate with hrms_* cookies only. A hard reload to the
+  // login page from there fights proxy.ts (/login with hrms tokens redirects
+  // back to /) and reloads forever, so on HRMS routes just throw instead.
+  if (isHrmsPath(window.location.pathname)) {
+    return;
+  }
   const current = `${window.location.pathname}${window.location.search}`;
   if (current === path) {
     return;
   }
   window.location.assign(path);
+}
+
+// Same route set as proxy.ts and the rewrites in next.config.ts.
+const HRMS_ROUTE_ROOTS = [
+  '/',
+  '/login',
+  '/accept-invite',
+  '/change-password',
+  '/attendance',
+  '/calendar',
+  '/history',
+  '/invites',
+  '/leave',
+  '/notifications',
+  '/people',
+  '/performance',
+  '/platform',
+  '/projects',
+  '/ratings',
+  '/requests',
+  '/settings',
+  '/tasks',
+  '/workload',
+];
+
+function isHrmsPath(pathname: string): boolean {
+  if (pathname === '/hrms' || pathname.startsWith('/hrms/')) return true;
+  return HRMS_ROUTE_ROOTS.some((root) =>
+    root === '/' ? pathname === '/' : pathname === root || pathname.startsWith(root + '/'),
+  );
 }
 
 let refreshPromise: Promise<void> | null = null;

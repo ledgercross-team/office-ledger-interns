@@ -95,4 +95,19 @@ describe('AccountStateGuard', () => {
       await expect(build(true).run('/api/v1/tasks', user({}))).resolves.toBe(true);
     });
   });
+
+  it('leaves /api paths alone, even for a user with a pending password change', async () => {
+    const { run, getSubscriptionActive } = build(false);
+    await expect(
+      run('/api/health', user({ mustChangePassword: true })),
+    ).resolves.toBe(true);
+    expect(getSubscriptionActive).not.toHaveBeenCalled();
+  });
+
+  it('still enforces the pending password change on v1 paths', async () => {
+    const { run } = build(true);
+    expect(await codeOf(run('/api/v1/tasks', user({ mustChangePassword: true })))).toBe(
+      'PASSWORD_CHANGE_REQUIRED',
+    );
+  });
 });

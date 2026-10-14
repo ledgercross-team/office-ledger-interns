@@ -8,6 +8,7 @@
     "db:generate": "pnpm --filter backend db:generate",
     "db:migrate": "pnpm --filter backend db:migrate",
     "db:seed": "pnpm --filter backend db:seed",
+    "db:seed:hrms": "pnpm --filter backend db:seed:hrms",
     "db:create-game-master": "pnpm --filter backend db:create-game-master",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",

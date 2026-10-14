@@ -14,6 +14,11 @@ One document to deploy office-ledger safely. Work through it top to bottom, then
 
 Put both apps behind an HTTPS reverse proxy. The project itself ships no container setup.
 
+> **HRMS v2.** The new system (`/hrms`, `/api`, database `office_ledger_hrms`) is deployed
+> alongside v1 and switched on by flags. Its variables, staging walkthrough, backups and
+> rollback are in [`docs/hrms/CUTOVER.md`](hrms/CUTOVER.md). v1 steps below still apply while
+> v1 runs.
+
 ## 1. Prerequisites
 
 - Node from `.nvmrc` (24) and pnpm (`corepack enable`; the version is pinned in `package.json`).

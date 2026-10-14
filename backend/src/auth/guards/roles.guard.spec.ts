@@ -10,14 +10,14 @@ interface RouteMeta {
   roles?: Role[];
 }
 
-function canActivate(meta: RouteMeta, role?: Role): boolean {
+function canActivate(meta: RouteMeta, role?: Role, path = '/api/v1/tasks'): boolean {
   const reflector = {
     getAllAndOverride: (key: string) => (key === IS_PUBLIC_KEY ? meta.isPublic : meta.roles),
   } as unknown as Reflector;
   const context = {
     getHandler: () => undefined,
     getClass: () => undefined,
-    switchToHttp: () => ({ getRequest: () => ({ user: role ? { role } : undefined }) }),
+    switchToHttp: () => ({ getRequest: () => ({ path, user: role ? { role } : undefined }) }),
   } as unknown as ExecutionContext;
 
   return new RolesGuard(reflector).canActivate(context);
@@ -48,5 +48,13 @@ describe('RolesGuard', () => {
     expect(() => canActivate({ roles: ['admin', 'manager'] }, 'employee')).toThrow(
       ForbiddenException,
     );
+  });
+
+  it('leaves /api paths to the v2 guards', () => {
+    expect(canActivate({}, undefined, '/api/health')).toBe(true);
+  });
+
+  it('still denies a v1 path without @Roles', () => {
+    expect(() => canActivate({}, 'admin', '/api/v1/tasks')).toThrow(ForbiddenException);
   });
 });

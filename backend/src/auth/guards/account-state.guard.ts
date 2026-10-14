@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { AuthService } from '../auth.service';
 import type { AuthUser } from '../auth.types';
+import { isHrmsPath } from '../../hrms/hrms-paths';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 const API_PREFIX = '/api/v1';
@@ -33,6 +34,8 @@ export class AccountStateGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    if (isHrmsPath(context.switchToHttp().getRequest<{ path?: string }>().path)) return true;
+
     const targets = [context.getHandler(), context.getClass()];
 
     if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, targets)) {
