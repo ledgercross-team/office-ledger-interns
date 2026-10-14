@@ -38,6 +38,7 @@ class EnvironmentVariables {
   @Max(65_535)
   PORT: number;
 
+  // The hrms_api login of the office_ledger_hrms database, never the owner.
   @IsString()
   @IsNotEmpty()
   DATABASE_URL: string;
@@ -86,12 +87,6 @@ class EnvironmentVariables {
   @IsString()
   SEED_DEMO_PASSWORD?: string;
 
-  // HRMS v2 (docs/hrms/RUNBOOK.md). Off unless explicitly enabled.
-  @IsOptional()
-  @Transform(toBoolean)
-  @IsBoolean()
-  HRMS_V2_ENABLED?: boolean;
-
   // The scheduler inside the API (docs/hrms/RUNBOOK.md Phase 12). On unless set to false.
   @IsOptional()
   @Transform(toBoolean)
@@ -103,15 +98,16 @@ class EnvironmentVariables {
   @IsIn(['log', 'none'])
   MAIL_TRANSPORT?: string = 'log';
 
-  // 32 bytes (64 hex characters or base64) that encrypt MFA secrets. Required with HRMS_V2_ENABLED.
+  // Two-step sign-in for gameMaster, CEO and COO. "false" lets everyone in with email and password.
   @IsOptional()
-  @IsString()
-  MFA_ENCRYPTION_KEY?: string;
+  @Transform(toBoolean)
+  @IsBoolean()
+  MFA_REQUIRED?: boolean = true;
 
-  // The hrms_api login of the new database. Required when HRMS_V2_ENABLED is true.
-  @IsOptional()
+  // 32 bytes (64 hex characters or base64) that encrypt MFA secrets.
   @IsString()
-  HRMS_DATABASE_URL?: string;
+  @IsNotEmpty()
+  MFA_ENCRYPTION_KEY: string;
 }
 
 export function validateEnvironment(config: Record<string, unknown>): EnvironmentVariables {
@@ -129,17 +125,10 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     messages.push('COOKIE_SECURE must be true when NODE_ENV is production');
   }
 
-  if (validatedConfig.HRMS_V2_ENABLED === true && !validatedConfig.HRMS_DATABASE_URL) {
-    messages.push('HRMS_DATABASE_URL is required when HRMS_V2_ENABLED is true');
-  }
-
-  if (validatedConfig.HRMS_V2_ENABLED === true) {
-    try {
-      if (!validatedConfig.MFA_ENCRYPTION_KEY) throw new Error('MFA_ENCRYPTION_KEY is required when HRMS_V2_ENABLED is true');
-      parseKey(validatedConfig.MFA_ENCRYPTION_KEY);
-    } catch (error) {
-      messages.push(error instanceof Error ? error.message : 'MFA_ENCRYPTION_KEY is invalid');
-    }
+  try {
+    parseKey(validatedConfig.MFA_ENCRYPTION_KEY);
+  } catch (error) {
+    messages.push(error instanceof Error ? error.message : 'MFA_ENCRYPTION_KEY is invalid');
   }
 
   if (messages.length > 0) {

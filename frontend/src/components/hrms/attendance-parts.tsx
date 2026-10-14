@@ -3,6 +3,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
+import { formatTime } from '@/lib/hrms/time';
 import type { AttendanceCorrectionEntry, AttendanceDayEntry, AttendanceDayStatus } from '@/lib/hrms/types';
 
 const STATUS_LABEL: Record<AttendanceDayStatus, string> = {
@@ -40,7 +41,7 @@ export function StatusPill({ status }: { status: AttendanceDayStatus | null }) {
 }
 
 export function time(value: string | null): string {
-  return value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+  return formatTime(value);
 }
 
 export function hours(minutes: number | null): string {

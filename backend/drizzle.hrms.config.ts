@@ -10,5 +10,5 @@ export default defineConfig({
   out: './src/hrms/db/.pull-output',
   dialect: 'postgresql',
   schemaFilter: ['hrms'],
-  dbCredentials: { url: process.env.HRMS_DATABASE_URL as string },
+  dbCredentials: { url: process.env.DATABASE_URL as string },
 });

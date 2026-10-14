@@ -98,7 +98,7 @@ suite('HRMS auth (integration)', () => {
           ignoreEnvFile: true,
           load: [
             () => ({
-              HRMS_DATABASE_URL: appUrl,
+              DATABASE_URL: appUrl,
               JWT_ACCESS_SECRET: SECRET,
               JWT_ACCESS_TTL_SECONDS: 900,
               REFRESH_TOKEN_TTL_DAYS: 7,

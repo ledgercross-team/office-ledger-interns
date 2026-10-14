@@ -17,7 +17,7 @@ export interface AccessCheck {
 
 export type AccessDenial = { code: string; message: string } | null;
 
-// Path and org-status rules that hold for every v2 route. Role lists per route come from
+// Path and org-status rules that hold for every route. Role lists per route come from
 // the route's own decorator. Pure, so it can be tested without a database.
 export function accessDenial({ role, orgStatus, method, path }: AccessCheck): AccessDenial {
   const platform = under(path, HRMS_PLATFORM_PATH);

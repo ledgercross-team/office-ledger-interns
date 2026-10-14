@@ -26,7 +26,7 @@ suite('HRMS platform (integration)', () => {
   const config = () => ({
     NODE_ENV: 'test',
     FRONTEND_URL: 'http://localhost:3000',
-    HRMS_DATABASE_URL: appUrl,
+    DATABASE_URL: appUrl,
     JWT_ACCESS_SECRET: 'integration-test-secret-at-least-32-characters-long',
     JWT_ACCESS_TTL_SECONDS: 900,
     REFRESH_TOKEN_TTL_DAYS: 7,
@@ -159,7 +159,7 @@ suite('HRMS platform (integration)', () => {
     expect((await ceo.get('/api/platform/orgs')).status).toBe(403);
   });
 
-  it('does not let a new gameMaster confirm themselves or be confirmed by the person who added them', async () => {
+  it('does not let a new gameMaster confirm themselves; the person who added them can', async () => {
     const created = await agents.gm1
       .post('/api/platform/game-masters')
       .send({ email: email('gm2'), fullName: 'Second GM' });
@@ -176,16 +176,10 @@ suite('HRMS platform (integration)', () => {
     expect(login.status).toBe(403);
     expect((await pending.post(`/api/platform/game-masters/${ids.gm2}/confirm`).send({})).status).toBe(401);
 
-    // the person who added them cannot confirm either (database rule)
+    // the person who added them can confirm
     const byCreator = await agents.gm1.post(`/api/platform/game-masters/${ids.gm2}/confirm`).send({});
-    expect(byCreator.status).toBeGreaterThanOrEqual(400);
-    expect((await owner.query(`select status::text as s from hrms.game_masters where user_id = $1`, [ids.gm2])).rows[0].s).toBe(
-      'pending_confirmation',
-    );
-
-    const byOther = await agents.gm3.post(`/api/platform/game-masters/${ids.gm2}/confirm`).send({});
-    expect(byOther.status).toBe(200);
-    const all = await agents.gm3.get('/api/platform/game-masters');
+    expect(byCreator.status).toBe(200);
+    const all = await agents.gm1.get('/api/platform/game-masters');
     expect(all.body.items.find((g: { userId: string }) => g.userId === ids.gm2).status).toBe('active');
   });
 

@@ -14,7 +14,7 @@ export interface HrmsRequestContext {
 
 export type HrmsTransaction = Parameters<Parameters<HrmsDatabase['transaction']>[0]>[0];
 
-// Queries inside one v2 request must all use the same transaction, or the app.* settings
+// Queries inside one request must all use the same transaction, or the app.* settings
 // would not apply to them. The interceptor opens it; services read it from here.
 const current = new AsyncLocalStorage<HrmsTransaction>();
 
@@ -49,10 +49,10 @@ export class HrmsContextService {
     return this.run({ orgId: options.orgId, userId: options.userId }, fn);
   }
 
-  /** The transaction of the request being handled. Throws outside a v2 request. */
+  /** The transaction of the request being handled. Throws outside a request. */
   get tx(): HrmsTransaction {
     const tx = current.getStore();
-    if (!tx) throw new Error('No HRMS transaction: this code ran outside a v2 request context.');
+    if (!tx) throw new Error('No HRMS transaction: this code ran outside a request context.');
     return tx;
   }
 }

@@ -1,6 +1,4 @@
-import { RequestMethod } from '@nestjs/common';
 import { Module } from '@nestjs/common';
-import { ApplicationConfig } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { HrmsAuthController } from './auth/hrms-auth.controller';
 import { HrmsAuthGuard } from './auth/hrms-auth.guard';
@@ -38,30 +36,9 @@ import { TasksService } from './tasks/tasks.service';
 import { OrgController } from './org/org.controller';
 import { OrgService } from './org/org.service';
 
-// main.ts sets the global prefix "api/v1" for the legacy API. HRMS controllers declare
-// their own "api/..." path, so they are excluded from that prefix.
-function excludeHrmsFromGlobalPrefix(config: ApplicationConfig): void {
-  const previous = config.getGlobalPrefixOptions();
-  config.setGlobalPrefixOptions({
-    ...previous,
-    exclude: [
-      ...(previous.exclude ?? []),
-      {
-        path: 'api{/*path}',
-        requestMethod: RequestMethod.ALL,
-        pathRegex: /^\/api(?!\/v1(?:\/|$))(\/.*)?$/,
-      },
-    ],
-  });
-}
-
 @Module({
   imports: [HrmsDbModule, JwtModule.register({})],
   controllers: [HrmsHealthController, HrmsAuthController, OrgController, MembersController, ProjectsController, InvitesController, TasksController, RequestsController, AttendanceController, LeaveController, CalendarController, RatingsController, NotificationsController, AuditController, ExportController, PlatformController, OrgRecoveryController],
   providers: [HrmsTokenService, HrmsAuthService, HrmsAuthGuard, OrgService, MembersService, ProjectsService, InvitesService, TasksService, RequestsService, AttendanceService, LeaveService, CalendarService, RatingsService, NotificationsService, MailService, HrmsJobsService, AuditService, ExportService, PlatformService],
 })
-export class HrmsModule {
-  constructor(config: ApplicationConfig) {
-    excludeHrmsFromGlobalPrefix(config);
-  }
-}
+export class HrmsModule {}

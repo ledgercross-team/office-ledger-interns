@@ -18,7 +18,7 @@ class HrmsPoolCloser implements OnApplicationShutdown {
 }
 
 // A second connection to the HRMS database. It must be the hrms_api login: the owner skips
-// row-level security. Nothing here is shared with the v1 DbModule.
+// row-level security.
 @Global()
 @Module({
   providers: [
@@ -26,7 +26,7 @@ class HrmsPoolCloser implements OnApplicationShutdown {
       provide: HRMS_POOL,
       inject: [ConfigService],
       useFactory: (config: ConfigService) =>
-        new Pool({ connectionString: config.getOrThrow<string>('HRMS_DATABASE_URL'), max: 10 }),
+        new Pool({ connectionString: config.getOrThrow<string>('DATABASE_URL'), max: 10 }),
     },
     {
       provide: HRMS_DB,

@@ -1,6 +1,6 @@
 export const HRMS_ACCESS_COOKIE = 'hrms_access';
 export const HRMS_REFRESH_COOKIE = 'hrms_refresh';
-// Different from v1's issuer and audience, so a v1 token never verifies here.
+// The issuer and audience a session token must carry.
 export const HRMS_JWT_ISSUER = 'office-ledger-hrms-api';
 export const HRMS_JWT_AUDIENCE = 'office-ledger-hrms-web';
 // A password-checked sign-in that still needs its one-time code. Never accepted as a session.

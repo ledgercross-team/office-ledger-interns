@@ -57,9 +57,10 @@ export class AttendanceService {
   ) {}
 
   async checkIn(p: HrmsPrincipal, rawIp: string | null | undefined) {
+    // Recorded when readable. The database refuses a missing or foreign address only
+    // when the CEO or COO has set office networks; with none set, nothing is checked.
     const ip = cleanIp(rawIp);
-    if (!ip) throw new BadRequestException('Could not read your network address, so check-in is not possible.');
-    // The database refuses addresses outside the office networks and decides present or late.
+    // The database decides present or late.
     const r = await this.context.tx.execute<{ id: string }>(sql`
       insert into attendance_days (org_id, member_id, work_date, status, check_in_at, check_in_ip)
       select current_org_id(), ${p.memberId}, (now() at time zone s.timezone)::date, 'present', now(), ${ip}::inet
@@ -223,18 +224,15 @@ export class AttendanceService {
     if (updated.rows.length > 0) return;
 
     if (!row.requested_check_in) throw new BadRequestException('A day with no entry needs a check-in time.');
-    // No entry for the day: there is no real address, so the first office network stands in.
-    const inserted = await tx.execute(sql`
+    // No entry for the day: there is no real address, so the first office network (if any) stands in.
+    await tx.execute(sql`
       insert into attendance_days (org_id, member_id, work_date, status, check_in_at, check_in_ip,
                                    check_out_at, corrected_by_request)
-      select current_org_id(), ${row.member_id}, ${row.work_date}::date, 'present',
-             ${row.requested_check_in}::timestamptz, host(n.network)::inet,
-             ${row.requested_check_out}::timestamptz, ${requestId}
-        from org_office_networks n where n.org_id = current_org_id() limit 1
-      returning id`);
-    if (inserted.rows.length === 0) {
-      throw new ConflictException('Add an office network in the settings before applying a correction.');
-    }
+      values (current_org_id(), ${row.member_id}, ${row.work_date}::date, 'present',
+              ${row.requested_check_in}::timestamptz,
+              (select host(n.network)::inet from org_office_networks n
+                where n.org_id = current_org_id() limit 1),
+              ${row.requested_check_out}::timestamptz, ${requestId})`);
   }
 
   async reportCsv(p: HrmsPrincipal, month?: string): Promise<string> {

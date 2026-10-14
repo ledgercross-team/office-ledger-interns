@@ -9,11 +9,11 @@ import { from, lastValueFrom, type Observable } from 'rxjs';
 import { HrmsContextService, type HrmsRequestContext } from './hrms-context';
 
 export interface HrmsRequest extends Request {
-  // Set by the v2 auth guard (Phase 3). Absent on public routes.
+  // Set by the auth guard. Absent on public routes.
   hrmsContext?: Pick<HrmsRequestContext, 'orgId' | 'memberId' | 'userId'>;
 }
 
-// Wraps a v2 handler in the request transaction. The handler's result is awaited inside it,
+// Wraps a handler in the request transaction. The handler's result is awaited inside it,
 // so the commit happens after the handler and a commit error reaches the error filter.
 @Injectable()
 export class HrmsContextInterceptor implements NestInterceptor {

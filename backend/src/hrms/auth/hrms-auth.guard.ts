@@ -8,7 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { sql } from 'drizzle-orm';
 import type { Request } from 'express';
-import { IS_PUBLIC_KEY } from '../../auth/decorators/public.decorator';
+import { IS_PUBLIC_KEY } from './public.decorator';
 import { ConfigService } from '@nestjs/config';
 import { HrmsContextService } from '../db/hrms-context';
 import type { HrmsRequest } from '../db/hrms-context.interceptor';
@@ -37,7 +37,7 @@ function forbid(code: string, message: string): never {
   throw new ForbiddenException({ statusCode: 403, code, message });
 }
 
-// Deny by default: a v2 route without @Public(), @HrmsSession() or @HrmsRoles() is closed.
+// Deny by default: a route without @Public(), @HrmsSession() or @HrmsRoles() is closed.
 // The membership is looked up again on every request, so a role change or deactivation
 // takes effect at once.
 @Injectable()

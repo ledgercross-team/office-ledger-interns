@@ -50,13 +50,13 @@ export class OrgController {
     return this.org.listNetworks();
   }
 
-  @HrmsRoles('ceo')
+  @HrmsRoles('ceo', 'coo')
   @Post('office-networks')
   addNetwork(@Body() dto: CreateOfficeNetworkDto) {
     return this.org.addNetwork(dto);
   }
 
-  @HrmsRoles('ceo')
+  @HrmsRoles('ceo', 'coo')
   @Delete('office-networks/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   removeNetwork(@Param('id', ParseUUIDPipe) id: string) {

@@ -14,7 +14,7 @@ export class AppThrottlerGuard extends ThrottlerGuard {
   protected override getTracker(req: Record<string, any>): Promise<string> {
     const isLogin =
       req.method === 'POST' &&
-      (req.path === '/api/v1/auth/login' || req.path === '/api/auth/login');
+      req.path === '/api/auth/login';
     const body = req.body as { email?: unknown } | undefined;
     const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
     const ip = String(req.ip ?? '');

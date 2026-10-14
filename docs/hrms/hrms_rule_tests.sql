@@ -163,6 +163,12 @@ INSERT INTO org_office_networks(org_id,network) VALUES (:'org','10.0.0.0/24');
 SELECT as_(:'e1');
 SELECT must_fail('check-in from outside the office', format($$INSERT INTO attendance_days(org_id,member_id,work_date,status,check_in_at,check_in_ip) VALUES (%L,%L,current_date,'present',now(),'8.8.8.8')$$, :'org', :'e1'));
 SELECT must_pass('check-in from office', format($$INSERT INTO attendance_days(org_id,member_id,work_date,status,check_in_at,check_in_ip) VALUES (%L,%L,current_date,'present',now(),'10.0.0.5')$$, :'org', :'e1'));
+-- with no office network set the org does not check addresses at all
+SELECT as_('');
+DELETE FROM org_office_networks WHERE org_id = :'org';
+SELECT must_pass('check-in from anywhere when no office network is set', format($$INSERT INTO attendance_days(org_id,member_id,work_date,status,check_in_at,check_in_ip) VALUES (%L,%L,current_date + 1,'present',now() + interval '1 day',NULL)$$, :'org', :'e1'));
+INSERT INTO org_office_networks(org_id,network) VALUES (:'org','10.0.0.0/24');
+SELECT as_(:'e1');
 SELECT must_fail('attendance cannot be deleted', $$DELETE FROM attendance_days$$);
 
 -- history

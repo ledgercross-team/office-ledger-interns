@@ -136,7 +136,7 @@ To do ──► In progress ──► In review ──► Done          │
 - **While the org is suspended,** only CEOs and COOs can log in, and only to renew.
 
 ## 10. Security and history
-- MFA is required for gameMasters, CEOs and COOs.
+- MFA is required for gameMasters, CEOs and COOs. (This org turned it off with `MFA_REQUIRED=false`: everyone signs in with email and password.)
 - Every database query is restricted to the user's own org.
 - **History:** every create, approval, rejection, role change, assignment, task status change and deactivation is recorded with who did it, when, and from where. A CEO can **add notes or corrections** to an entry, but nobody can change or delete the original.
 

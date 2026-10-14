@@ -26,7 +26,7 @@ suite('HRMS cutover: a real company, end to end', () => {
   const config = () => ({
     NODE_ENV: 'test',
     FRONTEND_URL: 'http://localhost:3000',
-    HRMS_DATABASE_URL: appUrl,
+    DATABASE_URL: appUrl,
     JWT_ACCESS_SECRET: 'integration-test-secret-at-least-32-characters-long',
     JWT_ACCESS_TTL_SECONDS: 900,
     REFRESH_TOKEN_TTL_DAYS: 7,

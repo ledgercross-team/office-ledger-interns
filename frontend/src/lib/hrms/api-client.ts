@@ -1,10 +1,7 @@
-// Fetch wrapper for /api. Same single-flight refresh as lib/api-client.ts, but with the
-// hrms_* cookies (set by the API, sent with credentials: 'include').
+// Fetch wrapper for the API. Single-flight refresh on 401, with the hrms_* cookies (set by
+// the API, sent with credentials: 'include').
 
-const V1_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
-const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_HRMS_API_URL ?? V1_BASE.replace(/\/api\/v1\/?$/, '/api')
-).replace(/\/$/, '');
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 
 const LOGIN_PATH = '/auth/login';
 const REFRESH_PATH = '/auth/refresh';
@@ -13,12 +10,22 @@ export const HRMS_LOGIN_ROUTE = '/login';
 export class HrmsApiError extends Error {
   readonly status: number;
   readonly code?: string;
+  readonly fieldErrors?: Record<string, string[]>;
+  readonly retryAfterSeconds?: number;
 
-  constructor(status: number, message: string, code?: string) {
+  constructor(
+    status: number,
+    message: string,
+    code?: string,
+    fieldErrors?: Record<string, string[]>,
+    retryAfterSeconds?: number,
+  ) {
     super(message);
     this.name = 'HrmsApiError';
     this.status = status;
     this.code = code;
+    this.fieldErrors = fieldErrors;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -31,6 +38,16 @@ interface ErrorBody {
   message?: string | string[];
   error?: string;
   code?: string;
+  errors?: Record<string, string | string[]>;
+}
+
+function retryAfter(response: Response): number | undefined {
+  const value = response.headers.get('Retry-After');
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
+  const date = Date.parse(value);
+  return Number.isNaN(date) ? undefined : Math.max(0, Math.ceil((date - Date.now()) / 1000));
 }
 
 async function parseError(response: Response): Promise<HrmsApiError> {
@@ -41,11 +58,24 @@ async function parseError(response: Response): Promise<HrmsApiError> {
     body = null;
   }
   const raw = body?.message ?? body?.error;
-  const message = Array.isArray(raw) ? raw.join(', ') : raw;
+  const serverMessage = Array.isArray(raw) ? raw.join(', ') : raw;
+  const wait = retryAfter(response);
+  const message = response.status === 403
+    ? "You don't have permission to do that."
+    : response.status === 429
+      ? `Too many attempts. Try again${wait === undefined ? ' shortly' : ` in ${wait} seconds`}.`
+      : response.status >= 500
+        ? 'Something went wrong. Please try again.'
+        : serverMessage || response.statusText || `Request failed with status ${response.status}`;
+  const fieldErrors = body?.errors
+    ? Object.fromEntries(Object.entries(body.errors).map(([field, errors]) => [field, Array.isArray(errors) ? errors : [errors]]))
+    : undefined;
   return new HrmsApiError(
     response.status,
-    message || response.statusText || `Request failed with status ${response.status}`,
+    message,
     body?.code,
+    fieldErrors,
+    wait,
   );
 }
 

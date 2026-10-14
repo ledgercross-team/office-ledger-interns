@@ -228,13 +228,13 @@ export class PlatformService {
       await this.mail.send({
         to: email,
         subject: 'You have been added as a gameMaster',
-        text: `Set your password:\n${this.frontend()}/accept-invite?token=${link.token}\nAnother gameMaster must confirm you before you can sign in.\n`,
+        text: `Set your password:\n${this.frontend()}/accept-invite?token=${link.token}\nAn active gameMaster must confirm you before you can sign in.\n`,
       });
     }
     return { userId: user.id, status: 'pending_confirmation' };
   }
 
-  /** The database refuses the creator and the person themselves as confirmer. */
+  /** The database refuses the person themselves as confirmer. */
   async confirmGameMaster(p: HrmsPrincipal, userId: string) {
     const r = await this.context.tx.execute(sql`
       update game_masters set status = 'active', confirmed_by = ${p.userId}, confirmed_at = now()

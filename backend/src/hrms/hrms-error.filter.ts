@@ -89,7 +89,7 @@ export function mapDatabaseError(error: unknown): MappedError | null {
   }
 }
 
-// Applied to v2 controllers only (see HrmsController), so v1 error output never changes.
+// Applied to every controller through HrmsController.
 @Catch()
 export class HrmsErrorFilter implements ExceptionFilter {
   private readonly logger = new Logger(HrmsErrorFilter.name);

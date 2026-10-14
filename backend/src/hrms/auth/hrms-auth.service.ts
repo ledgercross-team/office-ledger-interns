@@ -74,9 +74,9 @@ export class HrmsAuthService {
     private readonly config: ConfigService,
   ) {}
 
-  /** MFA is on when MFA_ENCRYPTION_KEY is set (env validation requires it with HRMS_V2_ENABLED). */
+  /** MFA is on when MFA_REQUIRED is not "false" and MFA_ENCRYPTION_KEY is set (env validation requires it). */
   get mfaEnabledForApp(): boolean {
-    return Boolean(this.config.get<string>('MFA_ENCRYPTION_KEY'));
+    return this.config.get<boolean>('MFA_REQUIRED') !== false && Boolean(this.config.get<string>('MFA_ENCRYPTION_KEY'));
   }
 
   private mfaKey(): Buffer {

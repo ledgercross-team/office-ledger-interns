@@ -14,6 +14,7 @@ const validEnvironment = {
   TRUST_PROXY: 'false',
   RATE_LIMIT_GLOBAL_PER_MIN: '100',
   SEED_DEMO_PASSWORD: 'test-password',
+  MFA_ENCRYPTION_KEY: '00'.repeat(32),
 };
 
 describe('validateEnvironment', () => {
@@ -23,21 +24,11 @@ describe('validateEnvironment', () => {
     expect(() => validateEnvironment(withoutSeed)).not.toThrow();
   });
 
-  it('leaves HRMS_V2_ENABLED unset by default and parses it as a boolean', () => {
-    expect(validateEnvironment(validEnvironment).HRMS_V2_ENABLED).toBeUndefined();
-    const enabled = {
-      ...validEnvironment,
-      HRMS_V2_ENABLED: 'true',
-      HRMS_DATABASE_URL: 'postgres://hrms_api:pw@localhost:5432/hrms',
-      MFA_ENCRYPTION_KEY: '00'.repeat(32),
-    };
-    expect(validateEnvironment(enabled).HRMS_V2_ENABLED).toBe(true);
-    expect(() => validateEnvironment({ ...enabled, MFA_ENCRYPTION_KEY: undefined })).toThrow('MFA_ENCRYPTION_KEY');
-    expect(() => validateEnvironment({ ...enabled, MFA_ENCRYPTION_KEY: 'short' })).toThrow('32 bytes');
-    expect(() => validateEnvironment({ ...validEnvironment, HRMS_V2_ENABLED: 'true' })).toThrow(
-      'HRMS_DATABASE_URL is required',
-    );
-    expect(() => validateEnvironment({ ...validEnvironment, HRMS_V2_ENABLED: 'yes' })).toThrow();
+  it('requires a 32-byte MFA key', () => {
+    const { MFA_ENCRYPTION_KEY: _unused, ...withoutKey } = validEnvironment;
+
+    expect(() => validateEnvironment(withoutKey)).toThrow('MFA_ENCRYPTION_KEY');
+    expect(() => validateEnvironment({ ...validEnvironment, MFA_ENCRYPTION_KEY: 'short' })).toThrow('32 bytes');
   });
 
   it('parses valid environment values', () => {

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 import { hrmsFetch } from './api-client';
+import { setDisplayTimeZone } from '@/lib/hrms/time';
 import type { HrmsMembership, HrmsSession } from './types';
 
 export const HRMS_SESSION_KEY = ['hrms', 'session'] as const;
@@ -43,9 +44,13 @@ export function HrmsAuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         body: { memberId },
       });
-      // Everything cached belongs to the previous org.
-      queryClient.clear();
+      // Publish the new session first so observers never see a gap, then
+      // drop everything cached for the previous org.
       queryClient.setQueryData(HRMS_SESSION_KEY, session);
+      await queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === 'hrms' && query.queryKey[1] !== 'session',
+      });
     },
     [queryClient],
   );
@@ -61,6 +66,7 @@ export function HrmsAuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<HrmsAuthValue>(() => {
     const session = query.data ?? null;
+    setDisplayTimeZone(session?.user.timezone);
     return {
       session,
       isLoading: query.isLoading,

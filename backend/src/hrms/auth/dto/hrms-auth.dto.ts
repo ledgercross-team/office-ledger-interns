@@ -20,7 +20,7 @@ export class HrmsChangePasswordDto {
   @Length(1, 128)
   currentPassword!: string;
 
-  // 10 to 128 characters, no other composition rules (as in v1).
+  // 10 to 128 characters, no other composition rules.
   @IsString()
   @MinLength(10)
   @MaxLength(128)

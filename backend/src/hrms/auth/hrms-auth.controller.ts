@@ -1,7 +1,7 @@
 import { Body, Get, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
-import { Public } from '../../auth/decorators/public.decorator';
+import { Public } from './public.decorator';
 import { HrmsController } from '../hrms-controller.decorator';
 import {
   HrmsAcceptInviteDto,

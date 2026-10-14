@@ -7,27 +7,6 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
 ];
 
-const hrmsRouteBases = [
-  "login",
-  "accept-invite",
-  "change-password",
-  "attendance",
-  "calendar",
-  "history",
-  "invites",
-  "leave",
-  "notifications",
-  "people",
-  "performance",
-  "platform",
-  "projects",
-  "ratings",
-  "requests",
-  "settings",
-  "tasks",
-  "workload",
-];
-
 const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
@@ -42,15 +21,6 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
-  },
-  async rewrites() {
-    return [
-      { source: "/", destination: "/hrms" },
-      ...hrmsRouteBases.flatMap((base) => [
-        { source: "/" + base, destination: "/hrms/" + base },
-        { source: "/" + base + "/:path*", destination: "/hrms/" + base + "/:path*" },
-      ]),
-    ];
   },
 };
 

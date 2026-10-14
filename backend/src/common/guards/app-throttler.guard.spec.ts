@@ -11,7 +11,7 @@ describe('AppThrottlerGuard', () => {
   it('tracks login by IP and normalised email', async () => {
     const result = await tracker()({
       method: 'POST',
-      path: '/api/v1/auth/login',
+      path: '/api/auth/login',
       ip: '1.2.3.4',
       body: { email: '  User@Example.com ' },
     });
@@ -21,7 +21,7 @@ describe('AppThrottlerGuard', () => {
   it('tracks every other route by IP only', async () => {
     const result = await tracker()({
       method: 'GET',
-      path: '/api/v1/health',
+      path: '/api/health',
       ip: '1.2.3.4',
       body: {},
     });

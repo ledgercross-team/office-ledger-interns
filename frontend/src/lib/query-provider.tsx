@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
-import { ApiError } from './api-client';
+import { HrmsApiError } from './hrms/api-client';
 
 export function QueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -13,7 +13,7 @@ export function QueryProvider({ children }: { children: ReactNode }) {
             staleTime: 30_000,
             refetchOnWindowFocus: false,
             retry: (failureCount, error) => {
-              if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+              if (error instanceof HrmsApiError && error.status >= 400 && error.status < 500) {
                 return false;
               }
               return failureCount < 2;

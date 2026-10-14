@@ -1,7 +1,8 @@
 # Production guide
 
 One document to deploy office-ledger safely. Work through it top to bottom, then the
-[pre-launch checklist](#pre-launch-checklist).
+[pre-launch checklist](#pre-launch-checklist). The go-live walkthrough and rollback are in
+[`docs/hrms/CUTOVER.md`](hrms/CUTOVER.md).
 
 ## What runs where
 
@@ -9,20 +10,17 @@ One document to deploy office-ledger safely. Work through it top to bottom, then
 | --- | --- | --- |
 | Backend API (NestJS) | `pnpm --filter backend start:prod` | 4000 |
 | Frontend (Next.js) | `pnpm --filter frontend start` | 3000 |
-| PostgreSQL 16 | managed or self-hosted | 5432 |
+| PostgreSQL 15 or newer | managed or self-hosted | 5432 |
 | Redis 7 | private network only | 6379 |
 
 Put both apps behind an HTTPS reverse proxy. The project itself ships no container setup.
 
-> **HRMS v2.** The new system (`/hrms`, `/api`, database `office_ledger_hrms`) is deployed
-> alongside v1 and switched on by flags. Its variables, staging walkthrough, backups and
-> rollback are in [`docs/hrms/CUTOVER.md`](hrms/CUTOVER.md). v1 steps below still apply while
-> v1 runs.
-
 ## 1. Prerequisites
 
 - Node from `.nvmrc` (24) and pnpm (`corepack enable`; the version is pinned in `package.json`).
-- A PostgreSQL database and role for the app, and a Redis instance reachable only from the API.
+- A PostgreSQL database `office_ledger_hrms`, its owner login, and the app login `hrms_api`
+  (created as in `docs/hrms/README.md`). The API must connect as `hrms_api`, never the owner.
+- A Redis instance reachable only from the API.
 - Two hostnames under one parent domain, for example `app.example.com` (frontend) and
   `api.example.com` (backend). Cookies are shared through `COOKIE_DOMAIN`.
 
@@ -34,7 +32,7 @@ Put both apps behind an HTTPS reverse proxy. The project itself ships no contain
 | --- | --- |
 | `NODE_ENV` | `production` |
 | `PORT` | port the API listens on |
-| `DATABASE_URL` | `postgres://user:password@host:5432/office_ledger` |
+| `DATABASE_URL` | `postgres://hrms_api:<secret>@host:5432/office_ledger_hrms` (the app role) |
 | `REDIS_URL` | `redis://:password@host:6379/0` |
 | `FRONTEND_URL` | the exact frontend origin, e.g. `https://app.example.com` (no trailing slash, never `*`) |
 | `JWT_ACCESS_SECRET` | unique, random, 32+ characters (see below) |
@@ -43,10 +41,14 @@ Put both apps behind an HTTPS reverse proxy. The project itself ships no contain
 | `COOKIE_SECURE` | `true` (the API refuses to start in production otherwise) |
 | `COOKIE_DOMAIN` | the parent domain with a leading dot, e.g. `.example.com` |
 | `TRUST_PROXY` | `true` when the API sits behind exactly one reverse proxy, otherwise `false` |
+| `MFA_ENCRYPTION_KEY` | 32 random bytes as 64 hex characters (`openssl rand -hex 32`). Losing it locks out every gameMaster, CEO and COO, so back it up with the other secrets. |
+| `HRMS_JOBS_ENABLED` | `true` (default). `false` stops expiry, reminders, auto check-out, scores and email. |
+| `MAIL_TRANSPORT` | `log` or `none`. **No real email transport exists yet**; in production `log` writes the recipient and subject only, so invite and recovery links are not delivered until one is added. |
 | `RATE_LIMIT_GLOBAL_PER_MIN` | `100` |
 | `RATE_LIMIT_GLOBAL_BLOCK_SECONDS` | `60` |
 | `RATE_LIMIT_AUTH_PER_MIN` | `10` |
 | `RATE_LIMIT_AUTH_BLOCK_SECONDS` | `300` |
+| `HRMS_MIGRATE_DATABASE_URL` | Owner login. Set only where you run the migrate, seed and create-game-master commands, never on the API host. |
 
 `SEED_DEMO_PASSWORD` is only used by the development seed. Do not set it in production.
 
@@ -60,20 +62,17 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 | Variable | Production value |
 | --- | --- |
-| `NEXT_PUBLIC_API_URL` | `https://api.example.com/api/v1` |
+| `NEXT_PUBLIC_API_URL` | `https://api.example.com/api` |
 
 This value is compiled into the bundle, so it must be set **when you build**, not only
 when you start.
 
 ## 3. Build and start
 
-Install and build from a checkout with all dependencies (the migration and
-game-master scripts need `drizzle-kit` and `tsx`, which are dev dependencies).
-
 ```bash
 pnpm install --frozen-lockfile
 pnpm --filter backend build
-NEXT_PUBLIC_API_URL=https://api.example.com/api/v1 pnpm --filter frontend build
+NEXT_PUBLIC_API_URL=https://api.example.com/api pnpm --filter frontend build
 ```
 
 Do not build with `NODE_ENV=development` exported in your shell; `next build` fails with a
@@ -88,53 +87,57 @@ NODE_ENV=production pnpm --filter frontend start
 ```
 
 Run both under a process manager (systemd, pm2, ...) so they restart on failure. Check the
-API with `GET /api/v1/health`: `200` means Postgres and Redis both answered, `503` means one
+API with `GET /api/health`: `200` means Postgres and Redis both answered, `503` means one
 did not.
 
-## 4. Migrations on deploy
+## 4. Database changes on deploy
 
-Run migrations **before** starting the new backend, from the checkout you are deploying:
+Run before starting the new backend, from the checkout you are deploying, as the owner:
 
 ```bash
-pnpm db:migrate
+HRMS_MIGRATE_DATABASE_URL=postgres://<owner>@host/office_ledger_hrms pnpm db:migrate
 ```
 
-- It applies the committed SQL in `backend/drizzle/` and is safe to run again.
-- Never run `drizzle-kit push` against a shared or production database.
-- Never edit a migration that has already been released; add a new one.
-- Take a `pg_dump` first when the release contains a migration (see [Backups](#backups)).
-- Prefer migrations that are compatible with the previous release, so a rollback of the app
+- It applies `docs/hrms/hrms_schema.sql`, then the numbered files in order, each once,
+  recorded in `public.hrms_migration_log` with a checksum.
+- It stops if an applied file changed on disk. Never edit an applied file; add a new
+  numbered one.
+- Take a `pg_dump` first when the release contains a new file (see [Backups](#backups)).
+- Prefer changes that are compatible with the previous release, so a rollback of the app
   does not need a database rollback.
+- Never run `docs/hrms/hrms_rule_tests.sql` on this database. It adds sample data and
+  changes plan limits.
 
-## 5. First login: create the game master
+## 5. First login: create the gameMaster
 
-The seed refuses to run when `NODE_ENV=production`. A fresh production database has no
-users, so create the first game master once:
+The seed refuses to run when `NODE_ENV=production`. A fresh database has no users, so create
+the first gameMaster once, as the owner:
 
 ```bash
 GAME_MASTER_EMAIL=owner@example.com \
 GAME_MASTER_PASSWORD='a-long-one-time-password' \
 GAME_MASTER_NAME='Site Owner' \
-NODE_ENV=production pnpm db:create-game-master
+HRMS_MIGRATE_DATABASE_URL=postgres://<owner>@host/office_ledger_hrms \
+pnpm db:create-game-master
 ```
 
 - The password must be 10 to 128 characters and must not equal the email.
-- The account is flagged to change its password at first login, so the value you typed here
-  is only good once.
-- The script refuses to run if the email already exists and changes nothing in that case.
+- The script refuses an email that already exists and changes nothing in that case.
 - Clear the password from your shell history afterwards.
+- The first sign-in forces enrolment of an authenticator app.
 
-Then log in as the game master and create companies from the UI. Each company gets its admin
-and a one-time temporary password.
+Then sign in as the gameMaster and create organisations from the console. Each organisation's
+CEO receives a one-time link to set their own password.
 
 ## 6. Reverse proxy, HTTPS and cookies
 
 - Serve both hostnames over HTTPS only and redirect HTTP to HTTPS.
-- Forward the client IP (`X-Forwarded-For`) and set `TRUST_PROXY=true`. Rate limits and the
-  login throttle use the client IP; with the wrong setting everyone shares one IP, or the IP
-  can be spoofed.
-- Auth cookies are `HttpOnly`, `SameSite=Lax` and, with `COOKIE_SECURE=true`, `Secure`.
-  `COOKIE_DOMAIN=.example.com` lets the frontend host see the cookies set by the API host.
+- Forward the client IP (`X-Forwarded-For`) and set `TRUST_PROXY=true`. Rate limits, the login
+  throttle and the office-network check at check-in use the client IP; with the wrong setting
+  everyone shares one IP, or the IP can be spoofed.
+- Auth cookies (`hrms_access`, `hrms_refresh`) are `HttpOnly`, `SameSite=Lax` and, with
+  `COOKIE_SECURE=true`, `Secure`. `COOKIE_DOMAIN=.example.com` lets the frontend host see
+  the cookies set by the API host.
 - Cross-site state-changing requests are rejected unless their `Origin` equals
   `FRONTEND_URL`, so it must match what the browser sends exactly (scheme, host, port).
 
@@ -143,18 +146,17 @@ and a one-time temporary password.
 Daily logical backup, kept for at least 14 days, stored off the database host:
 
 ```bash
-pg_dump --format=custom --file="office_ledger_$(date +%F).dump" "$DATABASE_URL"
+pg_dump --format=custom --file="office_ledger_hrms_$(date +%F).dump" "$HRMS_MIGRATE_DATABASE_URL"
 ```
 
-Redis holds only caches and rate-limit counters. Flushing it is always safe, so it needs no
-backup.
+Redis holds only rate-limit counters. Flushing it is always safe, so it needs no backup.
 
 **Test the restore** before launch and after any major change, into a scratch database:
 
 ```bash
 createdb office_ledger_restore_test
-pg_restore --no-owner --dbname=office_ledger_restore_test office_ledger_YYYY-MM-DD.dump
-psql office_ledger_restore_test -c "select count(*) from users;"
+pg_restore --no-owner --dbname=office_ledger_restore_test office_ledger_hrms_YYYY-MM-DD.dump
+psql office_ledger_restore_test -c "select count(*) from hrms.users;"
 dropdb office_ledger_restore_test
 ```
 
@@ -166,15 +168,15 @@ Use a throwaway database. This is also how to confirm the guide works:
 
 ```bash
 export NODE_ENV=production PORT=4100 \
-  DATABASE_URL=postgres://user:pass@localhost:5432/office_ledger_prodtest \
+  DATABASE_URL=postgres://hrms_api:pass@localhost:5432/office_ledger_prodtest \
   REDIS_URL=redis://localhost:6379/1 FRONTEND_URL=http://localhost:3000 \
   JWT_ACCESS_SECRET="$(node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))")" \
+  MFA_ENCRYPTION_KEY="$(openssl rand -hex 32)" \
   COOKIE_SECURE=true TRUST_PROXY=false
 
-pnpm db:migrate
-pnpm db:seed                 # must print "Refusing to seed a production database."
+pnpm db:seed                 # must refuse: it is development only
 pnpm --filter backend build && pnpm --filter backend start:prod
-curl -s localhost:4100/api/v1/health     # {"status":"ok"}
+curl -s localhost:4100/api/health     # {"status":"ok"}
 ```
 
 With `COOKIE_SECURE=false` the API must refuse to start. Browsers only keep `Secure` cookies
@@ -193,10 +195,12 @@ Copy this into the release PR or ticket and tick every line.
 - [ ] `FRONTEND_URL` is the exact production origin and is not `*`.
 - [ ] `NEXT_PUBLIC_API_URL` was set at frontend build time.
 - [ ] `SEED_DEMO_PASSWORD` is not set.
+- [ ] `DATABASE_URL` is the `hrms_api` login, not the owner.
 
 **Secrets and network**
 
 - [ ] `JWT_ACCESS_SECRET` is unique to production, random and at least 32 characters.
+- [ ] `MFA_ENCRYPTION_KEY` is set and backed up separately.
 - [ ] Database and Redis passwords are unique and strong.
 - [ ] Redis is not reachable from the public internet (private network or firewall).
 - [ ] PostgreSQL is not reachable from the public internet.
@@ -211,12 +215,15 @@ Copy this into the release PR or ticket and tick every line.
 **Data**
 
 - [ ] `pnpm db:migrate` has run against the production database.
-- [ ] The first game master exists, and its one-time password has been changed.
+- [ ] The first gameMaster exists and has enrolled an authenticator.
+- [ ] A real email transport is in place (otherwise invites are not delivered).
 - [ ] Daily `pg_dump` is scheduled and the restore was tested end to end.
 
 **Smoke test after deploy**
 
-- [ ] `GET /api/v1/health` returns 200.
-- [ ] Log in as the game master over HTTPS and create a test company.
+- [ ] `GET /api/health` returns 200.
+- [ ] Sign in as the gameMaster over HTTPS and create a test organisation.
+- [ ] The CEO sets a password from the link, signs in with a code, adds a member, creates a
+  project and a task.
 - [ ] A foreign `Origin` on a POST is rejected (403).
-- [ ] Deactivate the test company and confirm its users are signed out.
+- [ ] Block the test organisation in the console and confirm its people are refused.
