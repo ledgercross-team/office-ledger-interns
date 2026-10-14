@@ -33,12 +33,60 @@ import { RequestsController } from './requests/requests.controller';
 import { RequestsService } from './requests/requests.service';
 import { TasksController } from './tasks/tasks.controller';
 import { TasksService } from './tasks/tasks.service';
+import {
+  MessagesController,
+  PlatformMessagesController,
+  ReportsController,
+} from './messages/messages.controller';
+import { MessagesService } from './messages/messages.service';
 import { OrgController } from './org/org.controller';
 import { OrgService } from './org/org.service';
 
 @Module({
   imports: [HrmsDbModule, JwtModule.register({})],
-  controllers: [HrmsHealthController, HrmsAuthController, OrgController, MembersController, ProjectsController, InvitesController, TasksController, RequestsController, AttendanceController, LeaveController, CalendarController, RatingsController, NotificationsController, AuditController, ExportController, PlatformController, OrgRecoveryController],
-  providers: [HrmsTokenService, HrmsAuthService, HrmsAuthGuard, OrgService, MembersService, ProjectsService, InvitesService, TasksService, RequestsService, AttendanceService, LeaveService, CalendarService, RatingsService, NotificationsService, MailService, HrmsJobsService, AuditService, ExportService, PlatformService],
+  controllers: [
+    HrmsHealthController,
+    HrmsAuthController,
+    OrgController,
+    MembersController,
+    ProjectsController,
+    InvitesController,
+    TasksController,
+    RequestsController,
+    AttendanceController,
+    LeaveController,
+    CalendarController,
+    RatingsController,
+    NotificationsController,
+    AuditController,
+    ExportController,
+    PlatformController,
+    OrgRecoveryController,
+    MessagesController,
+    ReportsController,
+    PlatformMessagesController,
+  ],
+  providers: [
+    HrmsTokenService,
+    HrmsAuthService,
+    HrmsAuthGuard,
+    OrgService,
+    MembersService,
+    ProjectsService,
+    InvitesService,
+    TasksService,
+    RequestsService,
+    AttendanceService,
+    LeaveService,
+    CalendarService,
+    RatingsService,
+    NotificationsService,
+    MailService,
+    HrmsJobsService,
+    AuditService,
+    ExportService,
+    PlatformService,
+    MessagesService,
+  ],
 })
 export class HrmsModule {}

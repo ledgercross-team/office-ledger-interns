@@ -553,3 +553,53 @@ export interface PlatformGameMaster {
   confirmedBy: string | null;
   createdAt: string;
 }
+
+// ---- messages and reports ---------------------------------------------------
+export interface MessageThreadSummary {
+  id: string;
+  otherUserId: string;
+  otherName: string;
+  otherRole: string | null;
+  /** Only for a gameMaster: which organisation the conversation belongs to. */
+  orgName: string | null;
+  lastMessageAt: string | null;
+  lastBody: string | null;
+  unread: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  mine: boolean;
+  body: string;
+  sentAt: string | null;
+  readAt: string | null;
+}
+
+export interface MessageThreadDetail {
+  id: string;
+  otherUserId: string;
+  otherName: string;
+  otherRole: string | null;
+  orgName?: string | null;
+  closed: boolean;
+  messages: ChatMessage[];
+}
+
+export interface ReportSummary {
+  id: string;
+  subject: string;
+  anonymous: boolean;
+  reporterName: string | null;
+  createdAt: string | null;
+  lastMessageAt: string | null;
+  unread: number;
+}
+
+export interface ReportDetail {
+  id: string;
+  subject: string;
+  anonymous: boolean;
+  reporterName: string | null;
+  asCeo: boolean;
+  messages: ChatMessage[];
+}

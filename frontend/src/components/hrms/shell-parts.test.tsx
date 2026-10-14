@@ -26,7 +26,13 @@ const mockedFetch = vi.mocked(hrmsFetch);
 
 function session(overrides: Partial<HrmsSession> = {}): HrmsSession {
   return {
-    user: { id: 'u1', email: 'aisha@demo.local', fullName: 'Aisha Chowdhury', timezone: 'UTC', mfaEnabled: false },
+    user: {
+      id: 'u1',
+      email: 'aisha@demo.local',
+      fullName: 'Aisha Chowdhury',
+      timezone: 'UTC',
+      mfaEnabled: false,
+    },
     isGameMaster: false,
     memberships: [],
     activeMemberId: 'm1',
@@ -63,30 +69,59 @@ beforeEach(() => {
 
 describe('role navigation', () => {
   it('shows only the items each role may use', () => {
-    expect(navItemsFor('employee').map((i) => i.href)).toEqual(['/', '/requests', '/projects', '/tasks', '/invites', '/attendance', '/leave', '/calendar', '/ratings']);
+    expect(navItemsFor('employee').map((i) => i.href)).toEqual([
+      '/',
+      '/requests',
+      '/projects',
+      '/tasks',
+      '/messages',
+      '/invites',
+      '/attendance',
+      '/leave',
+      '/calendar',
+      '/ratings',
+    ]);
     expect(navItemsFor('manager').map((i) => i.href)).toContain('/people');
     expect(navItemsFor('manager').map((i) => i.href)).toContain('/ratings');
-    expect(navItemsFor('ceo').map((i) => i.href)).toEqual(expect.arrayContaining(['/performance', '/history', '/settings', '/workload']));
+    expect(navItemsFor('ceo').map((i) => i.href)).toEqual(
+      expect.arrayContaining(['/performance', '/history', '/settings', '/workload']),
+    );
     expect(navItemsFor('employee').map((i) => i.href)).not.toContain('/settings');
     expect(navItemsFor('gameMaster')).toEqual([]);
   });
 
   it('gives each role four bottom tabs', () => {
-    expect(bottomTabsFor('ceo').map((i) => i.href)).toEqual(['/', '/requests', '/projects', '/tasks']);
-    expect(bottomTabsFor('employee').map((i) => i.href)).toEqual(['/', '/tasks', '/leave', '/requests']);
+    expect(bottomTabsFor('ceo').map((i) => i.href)).toEqual([
+      '/',
+      '/requests',
+      '/projects',
+      '/tasks',
+    ]);
+    expect(bottomTabsFor('employee').map((i) => i.href)).toEqual([
+      '/',
+      '/tasks',
+      '/leave',
+      '/requests',
+    ]);
   });
 });
 
 describe('org banners', () => {
   it('warns in read-only mode', () => {
-    mockAuth({ session: session({ org: { id: 'o1', name: 'Acme', status: 'read_only' } }), isAuthenticated: true });
+    mockAuth({
+      session: session({ org: { id: 'o1', name: 'Acme', status: 'read_only' } }),
+      isAuthenticated: true,
+    });
     render(<OrgBanners />, { wrapper });
     expect(screen.getByText(/read-only until the subscription is renewed/)).toBeVisible();
   });
 
   it('warns CEOs about seat usage', async () => {
     mockAuth({ session: session(), isAuthenticated: true });
-    mockedFetch.mockResolvedValue({ id: 'o1', seats: { seatLimit: 10, seatsUsed: 10, percentUsed: 100, warningLevel: 100 } });
+    mockedFetch.mockResolvedValue({
+      id: 'o1',
+      seats: { seatLimit: 10, seatsUsed: 10, percentUsed: 100, warningLevel: 100 },
+    });
     render(<OrgBanners />, { wrapper });
     expect(await screen.findByText('All seats are in use.')).toBeVisible();
   });
@@ -94,28 +129,56 @@ describe('org banners', () => {
 
 describe('org picker', () => {
   const memberships: HrmsSession['memberships'] = [
-    { memberId: 'm1', orgId: 'o1', orgName: 'Acme Demo', orgStatus: 'active', role: 'manager', status: 'active', usable: true },
-    { memberId: 'm2', orgId: 'o2', orgName: 'Globex Demo', orgStatus: 'active', role: 'employee', status: 'active', usable: true },
+    {
+      memberId: 'm1',
+      orgId: 'o1',
+      orgName: 'Acme Demo',
+      orgStatus: 'active',
+      role: 'manager',
+      status: 'active',
+      usable: true,
+    },
+    {
+      memberId: 'm2',
+      orgId: 'o2',
+      orgName: 'Globex Demo',
+      orgStatus: 'active',
+      role: 'employee',
+      status: 'active',
+      usable: true,
+    },
   ];
 
   it('lists usable orgs with roles and picks one', async () => {
     const user = userEvent.setup();
     const switchOrg = vi.fn().mockResolvedValue(undefined);
-    mockAuth({ session: session({ memberships, needsOrgSelection: true }), usableMemberships: memberships, switchOrg, isAuthenticated: true });
+    mockAuth({
+      session: session({ memberships, needsOrgSelection: true }),
+      usableMemberships: memberships,
+      switchOrg,
+      isAuthenticated: true,
+    });
     render(<OrgPicker />, { wrapper });
     expect(screen.getByText('Acme Demo')).toBeVisible();
     expect(screen.getByText('Globex Demo')).toBeVisible();
-    await user.click(within(screen.getByText('Globex Demo').closest('li')!).getByRole('button', { name: 'Continue' }));
+    await user.click(
+      within(screen.getByText('Globex Demo').closest('li')!).getByRole('button', {
+        name: 'Continue',
+      }),
+    );
     expect(switchOrg).toHaveBeenCalledWith('m2');
   });
 
   it('explains when nothing is usable', () => {
-    mockAuth({ session: session({ memberships: [] }), usableMemberships: [], isAuthenticated: true });
+    mockAuth({
+      session: session({ memberships: [] }),
+      usableMemberships: [],
+      isAuthenticated: true,
+    });
     render(<OrgPicker />, { wrapper });
     expect(screen.getByText('No organisation available')).toBeVisible();
   });
 });
-
 
 describe('password strength', () => {
   it('grades by length only, like the API', () => {
@@ -127,6 +190,9 @@ describe('password strength', () => {
 
   it('announces the meter value', () => {
     render(<PasswordStrengthMeter password="twenty-characters-long!!" />);
-    expect(screen.getByRole('meter', { name: 'Password strength' })).toHaveAttribute('aria-valuenow', '3');
+    expect(screen.getByRole('meter', { name: 'Password strength' })).toHaveAttribute(
+      'aria-valuenow',
+      '3',
+    );
   });
 });

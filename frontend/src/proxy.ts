@@ -13,6 +13,7 @@ const PAGE_ROOTS = [
   '/history',
   '/invites',
   '/leave',
+  '/messages',
   '/notifications',
   '/people',
   '/performance',

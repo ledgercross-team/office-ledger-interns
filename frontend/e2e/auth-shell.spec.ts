@@ -26,7 +26,16 @@ async function transferCookies(page: Page, setCookies: string[]): Promise<void> 
   const cookies = setCookies.map((header) => {
     const parts = header.split(';').map((part) => part.trim());
     const [name, ...rest] = parts[0].split('=');
-    const cookie: { name: string; value: string; domain: string; path: string; expires?: number; httpOnly?: boolean; secure?: boolean; sameSite?: 'Lax' | 'Strict' | 'None' } = {
+    const cookie: {
+      name: string;
+      value: string;
+      domain: string;
+      path: string;
+      expires?: number;
+      httpOnly?: boolean;
+      secure?: boolean;
+      sameSite?: 'Lax' | 'Strict' | 'None';
+    } = {
       name,
       value: rest.join('='),
       domain: 'localhost',
@@ -34,10 +43,12 @@ async function transferCookies(page: Page, setCookies: string[]): Promise<void> 
     };
     for (const part of parts.slice(1)) {
       const [key, value] = part.split('=');
-      if (/^expires$/i.test(key) && value) cookie.expires = Math.floor(new Date(value).getTime() / 1000);
+      if (/^expires$/i.test(key) && value)
+        cookie.expires = Math.floor(new Date(value).getTime() / 1000);
       else if (/^httponly$/i.test(key)) cookie.httpOnly = true;
       else if (/^secure$/i.test(key)) cookie.secure = true;
-      else if (/^samesite$/i.test(key) && value) cookie.sameSite = value as 'Lax' | 'Strict' | 'None';
+      else if (/^samesite$/i.test(key) && value)
+        cookie.sameSite = value as 'Lax' | 'Strict' | 'None';
     }
     return cookie;
   });
@@ -49,7 +60,10 @@ async function apiLogin(page: Page, local: string): Promise<void> {
     data: { email: email(local), password: PASSWORD! },
   });
   if (!response.ok()) throw new Error(`setup login failed: ${response.status}`);
-  const setCookies = response.headersArray().filter((h) => h.name.toLowerCase() === 'set-cookie').map((h) => h.value);
+  const setCookies = response
+    .headersArray()
+    .filter((h) => h.name.toLowerCase() === 'set-cookie')
+    .map((h) => h.value);
   await transferCookies(page, setCookies);
 }
 
@@ -62,9 +76,48 @@ test('wrong password shows the inline error', async ({ page }) => {
 });
 
 const FULL_NAV: Record<string, string[]> = {
-  ceo: ['Dashboard', 'Requests', 'Projects', 'Tasks', 'Invites', 'People', 'Attendance', 'Leave', 'Calendar', 'Workload', 'Performance', 'History', 'Settings'],
-  manager: ['Dashboard', 'Requests', 'Projects', 'Tasks', 'Invites', 'People', 'Attendance', 'Leave', 'Calendar', 'Workload', 'Ratings'],
-  employee: ['Dashboard', 'Requests', 'Projects', 'Tasks', 'Invites', 'Attendance', 'Leave', 'Calendar', 'Ratings'],
+  ceo: [
+    'Dashboard',
+    'Requests',
+    'Projects',
+    'Tasks',
+    'Messages',
+    'Invites',
+    'People',
+    'Attendance',
+    'Leave',
+    'Calendar',
+    'Workload',
+    'Performance',
+    'History',
+    'Settings',
+  ],
+  manager: [
+    'Dashboard',
+    'Requests',
+    'Projects',
+    'Tasks',
+    'Messages',
+    'Invites',
+    'People',
+    'Attendance',
+    'Leave',
+    'Calendar',
+    'Workload',
+    'Ratings',
+  ],
+  employee: [
+    'Dashboard',
+    'Requests',
+    'Projects',
+    'Tasks',
+    'Messages',
+    'Invites',
+    'Attendance',
+    'Leave',
+    'Calendar',
+    'Ratings',
+  ],
 };
 
 const TAB_NAV: Record<string, string[]> = {
@@ -152,17 +205,28 @@ test('two-org user picks an org and switches', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Choose an organisation' })).toBeVisible();
   await expect(page.getByText('Acme Demo')).toBeVisible();
   await expect(page.getByText('Globex Demo')).toBeVisible();
-  await page.locator('li', { hasText: 'Globex Demo' }).getByRole('button', { name: 'Continue' }).click();
+  await page
+    .locator('li', { hasText: 'Globex Demo' })
+    .getByRole('button', { name: 'Continue' })
+    .click();
   await expect(page.getByRole('heading', { name: 'Lena Multi' })).toBeVisible();
-  await expect(page.getByText('Globex Demo', { exact: true }).filter({ visible: true }).first()).toBeVisible();
+  await expect(
+    page.getByText('Globex Demo', { exact: true }).filter({ visible: true }).first(),
+  ).toBeVisible();
   // Switch back through the account menu, retrying past rate-limit cool-downs.
-  const acmeVisible = page.getByText('Acme Demo', { exact: true }).filter({ visible: true }).first();
+  const acmeVisible = page
+    .getByText('Acme Demo', { exact: true })
+    .filter({ visible: true })
+    .first();
   let switched = false;
   for (let attempt = 0; attempt < 3 && !switched; attempt++) {
     if (attempt > 0) await page.waitForTimeout(65_000);
     await page.getByRole('button', { name: /Account:/ }).click();
     await page.getByRole('menuitemcheckbox', { name: /Switch to Acme Demo/ }).click();
-    switched = await acmeVisible.waitFor({ state: 'visible', timeout: 10_000 }).then(() => true).catch(() => false);
+    switched = await acmeVisible
+      .waitFor({ state: 'visible', timeout: 10_000 })
+      .then(() => true)
+      .catch(() => false);
   }
   expect(switched).toBe(true);
 });

@@ -230,3 +230,31 @@ Performance = 30% × Attendance + 50% × Rating + 20% × On-time + 1 per early-f
 Five ratings averaging 4.2, with an org average of 3.8 → smoothed (11.4 + 21) ÷ 8 = 4.05 → **76.3** rating.
 8 tasks done in the window, 7 by the due date, and none open past due → **87.5** on-time.
 Performance = 0.3 × 88.6 + 0.5 × 76.3 + 0.2 × 87.5 = **82 / 100 (Good)**.
+
+## 14. Messages and reports
+
+### Who can message whom
+One person to one person, two-way, and either side can start. Anything else is refused by the database.
+
+| Pair | |
+|---|---|
+| gameMaster ↔ CEO, gameMaster ↔ COO | a CEO or COO of any organisation can write to the platform team |
+| CEO ↔ COO | |
+| CEO ↔ manager | |
+| COO ↔ manager | |
+| COO ↔ employee | |
+
+Not allowed: manager ↔ employee, employee ↔ CEO (except by a report), people on the same level, and a gameMaster with managers or employees. The sender picks one specific person from a search box that lists only people they may write to (4 suggestions).
+
+- **Conversations:** one per pair of people, plain text up to 4,000 characters, no editing, no attachments. "Hide for me" removes a message from your own view only. Nobody else, including the CEO and COO, can read a conversation they are not part of.
+- **Refresh:** there is no push connection, so it runs on any host. An open conversation asks for new messages every 5 seconds, the lists and the unread badge every 10 seconds, and only while the tab is visible. Read routes are exempt from the per-IP limit (an office shares one IP); sending is limited to 30 a minute per person.
+- **Inactive people:** when one person is deactivated the thread stays readable and becomes read-only.
+- **Organisation status:** a read-only or suspended organisation can still write to the platform team; everything else follows the usual read-only rule.
+
+### Reports to the CEO
+A COO, manager or employee can send a private report to a CEO of their organisation, **anonymously or with their name**.
+- An anonymous report shows the CEO only "Anonymous". The CEO can reply and the reporter reads the reply under **My reports**.
+- The sender is kept in a separate table the application role cannot read; it is only returned to the sender. It is never in an API response, an audit log or an export.
+- Anonymity is "hidden", not "unrecoverable": a database administrator could unmask a sender, and in a small team the content or timing can point to someone. The screen says so before sending.
+- A new report notifies the CEO without naming the sender.
+

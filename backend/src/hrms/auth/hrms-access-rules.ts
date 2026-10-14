@@ -3,6 +3,9 @@ import type { HrmsRole, OrgStatus } from './hrms-auth.types';
 export const HRMS_AUTH_PATH = '/api/auth';
 export const HRMS_PLATFORM_PATH = '/api/platform';
 export const HRMS_ORG_PATH = '/api/org';
+// Messaging to the platform team must work in a suspended or read-only org; the database
+// refuses everything else in a read-only org.
+const HRMS_MESSAGES_PATH = '/api/messages';
 
 function under(path: string, base: string): boolean {
   return path === base || path.startsWith(`${base}/`);
@@ -27,14 +30,19 @@ export function accessDenial({ role, orgStatus, method, path }: AccessCheck): Ac
     return { code: 'PLATFORM_ONLY', message: 'Only a gameMaster can use the platform console.' };
   }
   if (role === 'gameMaster' && !platform && !auth) {
-    return { code: 'GAME_MASTER_NO_ORG_DATA', message: 'A gameMaster cannot access organisation data.' };
+    return {
+      code: 'GAME_MASTER_NO_ORG_DATA',
+      message: 'A gameMaster cannot access organisation data.',
+    };
   }
 
   if (orgStatus === 'blocked') {
     return { code: 'ORG_BLOCKED', message: 'This organisation has been blocked. Contact support.' };
   }
   if (orgStatus === 'suspended' && !auth) {
-    const mayRenew = (role === 'ceo' || role === 'coo') && under(path, HRMS_ORG_PATH);
+    const mayRenew =
+      (role === 'ceo' || role === 'coo') &&
+      (under(path, HRMS_ORG_PATH) || under(path, HRMS_MESSAGES_PATH));
     if (!mayRenew) {
       return {
         code: 'ORG_SUSPENDED',
@@ -42,8 +50,16 @@ export function accessDenial({ role, orgStatus, method, path }: AccessCheck): Ac
       };
     }
   }
-  if (orgStatus === 'read_only' && !auth && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-    return { code: 'ORG_READ_ONLY', message: 'This organisation is read-only until the subscription is renewed.' };
+  if (
+    orgStatus === 'read_only' &&
+    !auth &&
+    !under(path, HRMS_MESSAGES_PATH) &&
+    !['GET', 'HEAD', 'OPTIONS'].includes(method)
+  ) {
+    return {
+      code: 'ORG_READ_ONLY',
+      message: 'This organisation is read-only until the subscription is renewed.',
+    };
   }
   return null;
 }

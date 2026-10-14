@@ -17,13 +17,19 @@ export interface NavCounts {
   invites: number;
   /** Projects with ratings due from me. */
   ratings: number;
+  /** Unread messages plus unread report replies. */
+  messages: number;
   isLoading: boolean;
 }
 
 function pendingInvites(mine: Mine | undefined): number {
   if (!mine) return 0;
-  const waiting = (invite: ProjectInvite) => invite.status === 'pending' || invite.status === 'declined';
-  return mine.received.filter(waiting).length + mine.toReview.filter((invite) => invite.status === 'declined').length;
+  const waiting = (invite: ProjectInvite) =>
+    invite.status === 'pending' || invite.status === 'declined';
+  return (
+    mine.received.filter(waiting).length +
+    mine.toReview.filter((invite) => invite.status === 'declined').length
+  );
 }
 
 /**
@@ -60,7 +66,17 @@ export function useNavCounts(): NavCounts {
     retry: false,
   });
 
+  const messages = useQuery({
+    queryKey: ['hrms', 'messages', 'unread', memberId],
+    queryFn: () => hrmsFetch<{ messages: number; reports: number }>('/messages/unread-count'),
+    enabled: orgMember && memberId !== null,
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+    retry: false,
+  });
+
   return {
+    messages: (messages.data?.messages ?? 0) + (messages.data?.reports ?? 0),
     requests: requests.data?.total ?? 0,
     invites: pendingInvites(invites.data),
     ratings: ratings.data?.items.length ?? 0,

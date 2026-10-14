@@ -9,12 +9,14 @@ import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatDateTime } from '@/lib/hrms/time';
 import type { EmailPref, NotificationsPage } from '@/lib/hrms/types';
 
-const secondary = 'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+const secondary =
+  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
 
 const LINKS: Record<string, string> = {
   requests: '/requests',
   tasks: '/tasks',
   project_invites: '/invites',
+  reports: '/messages',
 };
 
 function EmailPrefs() {
@@ -79,7 +81,12 @@ export default function NotificationsPage() {
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold text-charcoal">Notifications</h1>
-        <button type="button" disabled={readAll.isPending || !list.data?.unread} onClick={() => readAll.mutate()} className={secondary}>
+        <button
+          type="button"
+          disabled={readAll.isPending || !list.data?.unread}
+          onClick={() => readAll.mutate()}
+          className={secondary}
+        >
           Mark all read
         </button>
       </div>
@@ -106,7 +113,11 @@ export default function NotificationsPage() {
                   </Link>
                 )}
                 {!n.readAt && (
-                  <button type="button" onClick={() => read.mutate(n.id)} className="text-forest hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => read.mutate(n.id)}
+                    className="text-forest hover:underline"
+                  >
                     Mark read
                   </button>
                 )}
@@ -116,7 +127,12 @@ export default function NotificationsPage() {
         })}
       </ul>
       {list.data && (
-        <Pagination page={page} pageSize={list.data.pageSize} total={list.data.total} onPage={setPage} />
+        <Pagination
+          page={page}
+          pageSize={list.data.pageSize}
+          total={list.data.total}
+          onPage={setPage}
+        />
       )}
       <EmailPrefs />
     </>

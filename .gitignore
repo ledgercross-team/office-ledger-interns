@@ -26,3 +26,4 @@ Thumbs.db
 !.vscode/extensions.json
 # handoff notes (local only)
 backend/scripts/export.md
+backend/scripts/demo-accounts.md

@@ -9,6 +9,7 @@ import {
   Home,
   Inbox,
   Mail,
+  MessageSquare,
   Settings,
   SquareCheckBig,
   Star,
@@ -17,7 +18,7 @@ import {
 } from 'lucide-react';
 import type { HrmsRole } from '@/lib/hrms/types';
 
-export type NavBadgeKey = 'requests' | 'invites' | 'ratings';
+export type NavBadgeKey = 'requests' | 'invites' | 'ratings' | 'messages';
 
 export interface NavItem {
   href: string;
@@ -65,6 +66,13 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['ceo', 'coo', 'manager', 'employee'],
     bottomTab: true,
     parent: '/projects',
+  },
+  {
+    href: '/messages',
+    label: 'Messages',
+    icon: MessageSquare,
+    roles: ['ceo', 'coo', 'manager', 'employee'],
+    badge: 'messages',
   },
   {
     href: '/invites',
@@ -138,6 +146,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   invites: 'Invites',
   leave: 'Leave',
   login: 'Log in',
+  messages: 'Messages',
   notifications: 'Notifications',
   people: 'People',
   performance: 'Performance',

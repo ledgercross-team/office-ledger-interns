@@ -2,16 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, Inbox, LogOut, ShieldCheck, Users } from 'lucide-react';
+import { Building2, Inbox, LogOut, MessageSquare, ShieldCheck, Users } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Button, Skeleton, ToastProvider } from '@/components/ui';
+import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 
 const ITEMS = [
   { href: '/platform', label: 'Organisations', icon: Building2 },
   { href: '/platform/requests', label: 'Platform requests', icon: Inbox },
   { href: '/platform/game-masters', label: 'GameMasters', icon: Users },
+  { href: '/platform/messages', label: 'Messages', icon: MessageSquare },
   { href: '/platform/security', label: 'Security', icon: ShieldCheck },
 ];
 
@@ -23,6 +26,15 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { session, isLoading, logout } = useHrmsAuth();
+  const isGm = Boolean(session?.isGameMaster);
+  const unread = useQuery({
+    queryKey: ['hrms', 'messages', 'unread', 'platform'],
+    queryFn: () => hrmsFetch<{ messages: number }>('/platform/messages/unread-count'),
+    enabled: isGm,
+    refetchInterval: 10_000,
+    retry: false,
+  });
+  const unreadCount = unread.data?.messages ?? 0;
 
   useEffect(() => {
     if (isLoading || !session) return;
@@ -82,6 +94,14 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
                       >
                         <Icon aria-hidden className="size-5 shrink-0" />
                         {item.label}
+                        {item.href === '/platform/messages' && unreadCount > 0 && (
+                          <span
+                            aria-label={`${unreadCount} unread`}
+                            className="rounded-full bg-primary px-1.5 text-xs tabular-nums text-primary-fg"
+                          >
+                            {unreadCount}
+                          </span>
+                        )}
                       </Link>
                     </li>
                   );
@@ -127,6 +147,14 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
                         )}
                       >
                         {item.label}
+                        {item.href === '/platform/messages' && unreadCount > 0 && (
+                          <span
+                            aria-label={`${unreadCount} unread`}
+                            className="rounded-full bg-primary px-1.5 text-xs tabular-nums text-primary-fg"
+                          >
+                            {unreadCount}
+                          </span>
+                        )}
                       </Link>
                     </li>
                   );

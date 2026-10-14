@@ -42,6 +42,8 @@ export function MemberSearch({
   name,
   placeholder = 'Search by name or email',
   required = false,
+  fetchOptions,
+  searchKey,
 }: {
   label: string;
   role?: HrmsRole;
@@ -55,6 +57,10 @@ export function MemberSearch({
   name?: string;
   placeholder?: string;
   required?: boolean;
+  /** Use another source than the members list (for example the people you may message). */
+  fetchOptions?: (q: string) => Promise<MemberOption[]>;
+  /** Cache key for `fetchOptions`. */
+  searchKey?: string;
 }) {
   const id = useId();
   const listId = `${id}-list`;
@@ -65,8 +71,17 @@ export function MemberSearch({
   const query = useDebounced(text.trim(), 250);
 
   const remote = useQuery({
-    queryKey: ['hrms', 'member-search', role ?? 'any', query],
-    queryFn: () => {
+    queryKey: ['hrms', 'member-search', searchKey ?? role ?? 'any', query],
+    queryFn: async () => {
+      if (fetchOptions) {
+        const items = await fetchOptions(query);
+        return {
+          items,
+          page: 1,
+          pageSize: items.length,
+          total: items.length,
+        } as Paginated<MemberOption>;
+      }
       const params = new URLSearchParams({
         status: 'active',
         pageSize: String(MAX_RESULTS + excludeIds.length),
