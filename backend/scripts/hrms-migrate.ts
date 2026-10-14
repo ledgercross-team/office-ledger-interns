@@ -14,16 +14,19 @@
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { config as loadEnv } from 'dotenv';
 import { Client } from 'pg';
+
+// Load the backend's local environment for manual migrations. Existing process
+// environment variables win, so CI/Render can still inject the URL directly.
+loadEnv({ path: resolve(__dirname, '../.env.local') });
 
 const SQL_DIR = resolve(__dirname, '../../docs/hrms');
 const BASE_FILE = 'hrms_schema.sql';
 const NUMBERED = /^(\d{4})_[A-Za-z0-9_-]+\.sql$/;
 
 export function listMigrationFiles(names: string[]): string[] {
-  const numbered = names
-    .filter((name) => NUMBERED.test(name))
-    .sort((a, b) => a.localeCompare(b));
+  const numbered = names.filter((name) => NUMBERED.test(name)).sort((a, b) => a.localeCompare(b));
   const seen = new Set<string>();
   for (const name of numbered) {
     const prefix = name.slice(0, 4);
@@ -69,10 +72,10 @@ async function main(): Promise<void> {
       }
       // Files carry their own BEGIN/COMMIT, so a failure rolls the file back as a whole.
       await client.query(sql);
-      await client.query('INSERT INTO public.hrms_migration_log (filename, sha256) VALUES ($1, $2)', [
-        filename,
-        sha256,
-      ]);
+      await client.query(
+        'INSERT INTO public.hrms_migration_log (filename, sha256) VALUES ($1, $2)',
+        [filename, sha256],
+      );
       console.log(`apply  ${filename}`);
     }
   } finally {
