@@ -68,24 +68,6 @@ export class HrmsAuthGuard implements CanActivate {
     });
     if (denial) forbid(denial.code, denial.message);
 
-    // A session that predates a promotion to CEO/COO must enrol before it can do anything.
-    if (
-      this.config.get<string>('MFA_ENCRYPTION_KEY') &&
-      (principal.role === 'ceo' || principal.role === 'coo' || principal.role === 'gameMaster') &&
-      !req.path.startsWith('/api/auth/')
-    ) {
-      const enrolled = await this.context.runSystem(
-        async (tx) => {
-          const r = await tx.execute<{ mfa_enabled: boolean }>(
-            sql`select mfa_enabled from users where id = ${principal.userId}`,
-          );
-          return r.rows[0]?.mfa_enabled === true;
-        },
-        { userId: principal.userId },
-      );
-      if (!enrolled) forbid('MFA_REQUIRED', 'Set up two-step sign-in. Log out and log in again.');
-    }
-
     const roles = this.reflector.getAllAndOverride<HrmsRole[] | undefined>(HRMS_ROLES_KEY, targets);
     const sessionOnly = this.reflector.getAllAndOverride<boolean>(HRMS_SESSION_KEY, targets);
 
@@ -124,7 +106,10 @@ export class HrmsAuthGuard implements CanActivate {
              where m.id = ${memberId} and m.user_id = ${userId} and m.org_id = ${orgId}`);
           const row = found.rows[0];
           if (!row || row.status !== 'active') {
-            forbid('MEMBERSHIP_INACTIVE', 'Your membership in this organisation is no longer active.');
+            forbid(
+              'MEMBERSHIP_INACTIVE',
+              'Your membership in this organisation is no longer active.',
+            );
           }
           return { userId, memberId, orgId, role: row.role, orgStatus: row.org_status };
         }

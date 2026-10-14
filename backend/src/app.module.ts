@@ -16,8 +16,10 @@ const STRICT_AUTH_PATHS = [
   '/api/auth/login',
   '/api/auth/refresh',
   '/api/auth/switch-org',
-  '/api/auth/mfa/enroll',
-  '/api/auth/mfa/verify',
+  '/api/auth/mfa/setup',
+  '/api/auth/mfa/enable',
+  '/api/auth/mfa/disable',
+  '/api/auth/mfa/backup-codes',
   '/api/auth/change-password',
   '/api/auth/accept-invite',
 ];

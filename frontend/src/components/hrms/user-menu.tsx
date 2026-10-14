@@ -53,10 +53,14 @@ export function UserMenu() {
                 onSelect: () => switchTo(m.memberId, m.orgName),
               }))
           : []),
-        { label: 'Profile', onSelect: () => router.push('/') },
-        { label: 'Security', onSelect: () => router.push('/change-password') },
+        { label: 'Profile', onSelect: () => router.push('/profile') },
+        { label: 'Security', onSelect: () => router.push('/profile#security') },
         { label: 'Email preferences', onSelect: () => router.push('/notifications') },
-        { label: 'Sign out', icon: <LogOut aria-hidden className="size-4" />, onSelect: () => void logout() },
+        {
+          label: 'Sign out',
+          icon: <LogOut aria-hidden className="size-4" />,
+          onSelect: () => void logout(),
+        },
       ]}
     />
   );

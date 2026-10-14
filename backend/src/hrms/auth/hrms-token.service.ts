@@ -11,7 +11,6 @@ import {
   HRMS_ACCESS_COOKIE,
   HRMS_JWT_AUDIENCE,
   HRMS_JWT_ISSUER,
-  HRMS_MFA_AUDIENCE,
   HRMS_REFRESH_COOKIE,
   isUsableMembership,
   type HrmsJwtPayload,
@@ -48,9 +47,7 @@ interface MembershipDbRow extends Record<string, unknown> {
 }
 
 type RefreshOutcome =
-  | { kind: 'ok'; session: Session; token: string }
-  | { kind: 'invalid' }
-  | { kind: 'reuse' };
+  { kind: 'ok'; session: Session; token: string } | { kind: 'invalid' } | { kind: 'reuse' };
 
 @Injectable()
 export class HrmsTokenService {
@@ -103,7 +100,8 @@ export class HrmsTokenService {
 
         if (row.revoked_at) {
           const rotatedRecently =
-            row.replaced_by !== null && now.getTime() - new Date(row.revoked_at).getTime() < REUSE_GRACE_MS;
+            row.replaced_by !== null &&
+            now.getTime() - new Date(row.revoked_at).getTime() < REUSE_GRACE_MS;
           if (rotatedRecently) return { kind: 'invalid' };
           await tx.execute(
             sql`update refresh_tokens set revoked_at = now() where user_id = ${row.user_id} and revoked_at is null`,
@@ -125,7 +123,9 @@ export class HrmsTokenService {
               role: current.role,
             });
           if (!usable) {
-            await tx.execute(sql`update refresh_tokens set revoked_at = now() where id = ${row.id}`);
+            await tx.execute(
+              sql`update refresh_tokens set revoked_at = now() where id = ${row.id}`,
+            );
             return { kind: 'invalid' };
           }
           orgId = current.org_id;
@@ -185,35 +185,6 @@ export class HrmsTokenService {
     }
   }
 
-  /** Five minutes to enter the code. It proves the password only; the audience keeps it from being a session. */
-  signMfaToken(userId: string): Promise<string> {
-    return this.jwt.signAsync(
-      { sub: userId, purpose: 'mfa' },
-      {
-        secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        algorithm: 'HS256',
-        issuer: HRMS_JWT_ISSUER,
-        audience: HRMS_MFA_AUDIENCE,
-        expiresIn: 300,
-      },
-    );
-  }
-
-  async verifyMfaToken(token: string): Promise<string> {
-    try {
-      const payload = await this.jwt.verifyAsync<{ sub?: string; purpose?: string }>(token, {
-        secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        algorithms: ['HS256'],
-        issuer: HRMS_JWT_ISSUER,
-        audience: HRMS_MFA_AUDIENCE,
-      });
-      if (typeof payload.sub !== 'string' || payload.purpose !== 'mfa') throw new Error('bad token');
-      return payload.sub;
-    } catch {
-      throw new UnauthorizedException('Your sign-in expired. Please log in again.');
-    }
-  }
-
   cookie(req: Request, name: string): string | undefined {
     const value = (req.cookies as Record<string, unknown> | undefined)?.[name];
     return typeof value === 'string' && value.length > 0 ? value : undefined;
@@ -237,7 +208,11 @@ export class HrmsTokenService {
 
   private async setCookies(res: Response, session: Session, refreshToken: string): Promise<void> {
     const ttl = Number(this.config.getOrThrow<number>('JWT_ACCESS_TTL_SECONDS'));
-    const payload: HrmsJwtPayload = { sub: session.userId, mid: session.memberId, oid: session.orgId };
+    const payload: HrmsJwtPayload = {
+      sub: session.userId,
+      mid: session.memberId,
+      oid: session.orgId,
+    };
     const access = await this.jwt.signAsync(payload, {
       secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
       algorithm: 'HS256',

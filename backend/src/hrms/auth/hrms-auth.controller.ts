@@ -7,19 +7,19 @@ import {
   HrmsAcceptInviteDto,
   HrmsChangePasswordDto,
   HrmsLoginDto,
-  HrmsMfaEnrollDto,
-  HrmsMfaVerifyDto,
+  HrmsMfaCodeDto,
+  HrmsMfaSetupDto,
   HrmsSwitchOrgDto,
 } from './dto/hrms-auth.dto';
 import { HrmsSession } from './hrms-auth.decorators';
 import type { HrmsAuthedRequest } from './hrms-auth.guard';
-import { HrmsAuthService, type MfaChallenge, type SessionView } from './hrms-auth.service';
+import { HrmsAuthService, type SessionView } from './hrms-auth.service';
 import type { HrmsPrincipal } from './hrms-auth.types';
 import { HrmsTokenService } from './hrms-token.service';
 
 // 2-minute windows, per IP (login: per IP and email). The strict "auth" limit also applies
 // to these paths (STRICT_AUTH_PATHS in app.module.ts).
-const LOGIN_RATE = { limit: 5, ttl: 2 * 60 * 1000 };
+const LOGIN_RATE = { limit: 10, ttl: 2 * 60 * 1000 };
 const REFRESH_RATE = { limit: 30, ttl: 2 * 60 * 1000 };
 const SENSITIVE_RATE = { limit: 5, ttl: 2 * 60 * 1000 };
 
@@ -43,30 +43,50 @@ export class HrmsAuthController {
     @Body() dto: HrmsLoginDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<SessionView | MfaChallenge> {
+  ): Promise<SessionView> {
     return this.auth.login(dto, req, res);
   }
 
-  // Public on purpose: the person has only proved their password, and the short-lived
-  // mfaToken from login is what identifies them here.
-  @Public()
+  // Profile → Security. Signed-in session only; setup also asks for the password.
+  @HrmsSession()
   @Throttle({ default: SENSITIVE_RATE })
-  @Post('mfa/enroll')
+  @Post('mfa/setup')
   @HttpCode(HttpStatus.OK)
-  mfaEnroll(@Body() dto: HrmsMfaEnrollDto): Promise<{ secret: string; otpauthUrl: string }> {
-    return this.auth.mfaEnroll(dto.mfaToken);
+  mfaSetup(
+    @Body() dto: HrmsMfaSetupDto,
+    @Req() req: HrmsAuthedRequest,
+  ): Promise<{ secret: string; otpauthUrl: string }> {
+    return this.auth.mfaSetup(principalOf(req), dto.password);
   }
 
-  @Public()
+  @HrmsSession()
   @Throttle({ default: SENSITIVE_RATE })
-  @Post('mfa/verify')
+  @Post('mfa/enable')
   @HttpCode(HttpStatus.OK)
-  mfaVerify(
-    @Body() dto: HrmsMfaVerifyDto,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<SessionView> {
-    return this.auth.mfaVerify(dto.mfaToken, dto.code, req, res);
+  mfaEnable(
+    @Body() dto: HrmsMfaCodeDto,
+    @Req() req: HrmsAuthedRequest,
+  ): Promise<{ backupCodes: string[] }> {
+    return this.auth.mfaEnable(principalOf(req), dto.code);
+  }
+
+  @HrmsSession()
+  @Throttle({ default: SENSITIVE_RATE })
+  @Post('mfa/backup-codes')
+  @HttpCode(HttpStatus.OK)
+  mfaBackupCodes(
+    @Body() dto: HrmsMfaCodeDto,
+    @Req() req: HrmsAuthedRequest,
+  ): Promise<{ backupCodes: string[] }> {
+    return this.auth.mfaNewBackupCodes(principalOf(req), dto.code);
+  }
+
+  @HrmsSession()
+  @Throttle({ default: SENSITIVE_RATE })
+  @Post('mfa/disable')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async mfaDisable(@Body() dto: HrmsMfaCodeDto, @Req() req: HrmsAuthedRequest): Promise<void> {
+    await this.auth.mfaDisable(principalOf(req), dto.code);
   }
 
   @Public()

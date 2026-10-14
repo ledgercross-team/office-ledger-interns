@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Formats staged files with Prettier (root .prettierrc) and re-stages them.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+PRETTIER=backend/node_modules/.bin/prettier
+if [ ! -x "$PRETTIER" ]; then
+  echo "pre-commit: prettier not found, run 'pnpm install'. Skipping format." >&2
+  exit 0
+fi
+
+files=$(git diff --cached --name-only --diff-filter=ACM -z -- \
+  '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs' '*.css' '*.json' | tr '\0' '\n')
+[ -z "$files" ] && exit 0
+
+# Skip files with unstaged edits so partial staging is not clobbered.
+partial=$(git diff --name-only -z | tr '\0' '\n')
+if [ -n "$partial" ]; then
+  files=$(comm -23 <(sort <<<"$files") <(sort <<<"$partial"))
+  [ -z "$files" ] && exit 0
+fi
+
+xargs -d '\n' "$PRETTIER" --write --ignore-unknown --log-level warn <<<"$files"
+xargs -d '\n' git add -- <<<"$files"

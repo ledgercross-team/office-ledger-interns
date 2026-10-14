@@ -4,7 +4,6 @@ export const HRMS_REFRESH_COOKIE = 'hrms_refresh';
 export const HRMS_JWT_ISSUER = 'office-ledger-hrms-api';
 export const HRMS_JWT_AUDIENCE = 'office-ledger-hrms-web';
 // A password-checked sign-in that still needs its one-time code. Never accepted as a session.
-export const HRMS_MFA_AUDIENCE = 'office-ledger-hrms-mfa';
 
 export type HrmsMemberRole = 'ceo' | 'coo' | 'manager' | 'employee';
 export type HrmsRole = HrmsMemberRole | 'gameMaster';
@@ -42,7 +41,9 @@ export interface MembershipView extends MembershipRow {
 }
 
 /** Active member, and the org is not blocked; a suspended org admits only CEO and COO. */
-export function isUsableMembership(m: Pick<MembershipRow, 'status' | 'orgStatus' | 'role'>): boolean {
+export function isUsableMembership(
+  m: Pick<MembershipRow, 'status' | 'orgStatus' | 'role'>,
+): boolean {
   if (m.status !== 'active') return false;
   if (m.orgStatus === 'blocked') return false;
   if (m.orgStatus === 'suspended') return m.role === 'ceo' || m.role === 'coo';

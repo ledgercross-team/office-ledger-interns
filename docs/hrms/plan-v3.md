@@ -136,7 +136,7 @@ To do ──► In progress ──► In review ──► Done          │
 - **While the org is suspended,** only CEOs and COOs can log in, and only to renew.
 
 ## 10. Security and history
-- MFA is required for gameMasters, CEOs and COOs. (This org turned it off with `MFA_REQUIRED=false`: everyone signs in with email and password.)
+- The authenticator app is **optional and off by default**, for every role. A person turns it on in Profile → Security (password, then a scanned code; 5 backup codes are shown once, and can be replaced and downloaded as a .txt file from the same page). While it is on they sign in with the 6-digit code instead of the password. Turning it off needs a current code. If they lose the phone, a backup code works, or a CEO/COO turns it off on their People page.
 - Every database query is restricted to the user's own org.
 - **History:** every create, approval, rejection, role change, assignment, task status change and deactivation is recorded with who did it, when, and from where. A CEO can **add notes or corrections** to an entry, but nobody can change or delete the original.
 

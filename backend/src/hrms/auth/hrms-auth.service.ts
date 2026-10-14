@@ -8,11 +8,19 @@ import {
 import { sql } from 'drizzle-orm';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { hashPassword, verifyPassword } from '../../common/utils/passwords';
 import { HrmsContextService, type HrmsTransaction } from '../db/hrms-context';
 import type { HrmsChangePasswordDto, HrmsLoginDto } from './dto/hrms-auth.dto';
-import { decryptSecret, encryptSecret, generateSecret, otpauthUrl, parseKey, verifyTotp } from './mfa';
+import {
+  base32Encode,
+  decryptSecret,
+  encryptSecret,
+  generateSecret,
+  otpauthUrl,
+  parseKey,
+  verifyTotp,
+} from './mfa';
 import { HrmsTokenService, type Session } from './hrms-token.service';
 import {
   isUsableMembership,
@@ -41,14 +49,6 @@ interface MembershipDbRow extends Record<string, unknown> {
   status: MembershipRow['status'];
 }
 
-/** Returned instead of a session when the person must give a one-time code first. */
-export interface MfaChallenge {
-  mfaRequired: true;
-  /** True on the first sign-in: the person has to enrol an authenticator app first. */
-  mfaEnrollmentRequired: boolean;
-  mfaToken: string;
-}
-
 export interface SessionView {
   user: { id: string; email: string; fullName: string; timezone: string; mfaEnabled: boolean };
   isGameMaster: boolean;
@@ -62,6 +62,10 @@ export interface SessionView {
 }
 
 const INVALID_LOGIN = 'Incorrect email or password.';
+const BACKUP_CODE_COUNT = 5;
+
+const backupHash = (code: string) =>
+  createHash('sha256').update(code.replace(/[\s-]/g, '').toUpperCase()).digest('hex');
 
 @Injectable()
 export class HrmsAuthService {
@@ -74,16 +78,16 @@ export class HrmsAuthService {
     private readonly config: ConfigService,
   ) {}
 
-  /** MFA is on when MFA_REQUIRED is not "false" and MFA_ENCRYPTION_KEY is set (env validation requires it). */
-  get mfaEnabledForApp(): boolean {
-    return this.config.get<boolean>('MFA_REQUIRED') !== false && Boolean(this.config.get<string>('MFA_ENCRYPTION_KEY'));
-  }
-
   private mfaKey(): Buffer {
     return parseKey(this.config.getOrThrow<string>('MFA_ENCRYPTION_KEY'));
   }
 
-  async login(dto: HrmsLoginDto, req: Request, res: Response): Promise<SessionView | MfaChallenge> {
+  /**
+   * Email plus password, or, for a person who turned the authenticator on in their profile,
+   * email plus a 6-digit code (or a backup code) in the same field. A password is not accepted
+   * for them; typing one gets a message to use the code instead.
+   */
+  async login(dto: HrmsLoginDto, req: Request, res: Response): Promise<SessionView> {
     const email = dto.email.trim().toLowerCase();
     const user = await this.context.runSystem(async (tx) => {
       const result = await tx.execute<UserRow>(sql`
@@ -92,9 +96,26 @@ export class HrmsAuthService {
       return result.rows[0] ?? null;
     });
 
-    const hash = user?.password_hash ?? (await this.getDummyHash());
-    const valid = await verifyPassword(hash, dto.password);
-    if (!user || !valid) throw new UnauthorizedException(INVALID_LOGIN);
+    if (
+      user?.mfa_enabled &&
+      !/^(\d{6}|[A-Za-z2-7]{4}-?[A-Za-z2-7]{4})$/.test(dto.password.trim())
+    ) {
+      // Said plainly so the person is not left guessing why their password fails. It does
+      // reveal that this email uses an authenticator.
+      throw new UnauthorizedException({
+        statusCode: 401,
+        code: 'MFA_CODE_REQUIRED',
+        message:
+          'Enter the 6-digit code from your app (or a backup code). This account uses an authenticator, so your password is not used to sign in.',
+      });
+    }
+    const valid = user?.mfa_enabled
+      ? await this.verifyCode(user.id, dto.password)
+      : await verifyPassword(user?.password_hash ?? (await this.getDummyHash()), dto.password);
+    if (!user || !valid)
+      throw new UnauthorizedException(
+        user?.mfa_enabled ? 'The code is not correct.' : INVALID_LOGIN,
+      );
 
     const { isGameMaster, memberships } = await this.loadIdentity(user.id);
     const usable = memberships.filter((m) => m.usable);
@@ -110,75 +131,128 @@ export class HrmsAuthService {
       });
     }
 
-    // gameMaster, CEO and COO need a one-time code. No cookie is set until it is given.
-    const needsMfa =
-      this.mfaEnabledForApp &&
-      (isGameMaster || usable.some((m) => m.role === 'ceo' || m.role === 'coo'));
-    if (needsMfa) {
-      return {
-        mfaRequired: true,
-        mfaEnrollmentRequired: !user.mfa_enabled,
-        mfaToken: await this.tokens.signMfaToken(user.id),
-      };
-    }
-
     return this.completeLogin(user, isGameMaster, memberships, req, res);
   }
 
-  /** Step 1 of first-time sign-in: makes a secret for the authenticator app. */
-  async mfaEnroll(mfaToken: string): Promise<{ secret: string; otpauthUrl: string }> {
-    if (!this.mfaEnabledForApp) throw new BadRequestException('MFA is not configured.');
-    const userId = await this.tokens.verifyMfaToken(mfaToken);
-    const user = await this.loadUser(userId);
-    if (user.mfa_enabled) throw new ConflictException('Two-step sign-in is already set up for this account.');
+  /** True for a valid authenticator code, or an unused backup code (which this spends). */
+  private async verifyCode(userId: string, input: string): Promise<boolean> {
+    const code = input.trim();
+    if (/^\d{6}$/.test(code)) {
+      const row = await this.context.runSystem(
+        async (tx) => {
+          const r = await tx.execute<{ mfa_secret_enc: Buffer | null }>(
+            sql`select mfa_secret_enc from users where id = ${userId}`,
+          );
+          return r.rows[0] ?? null;
+        },
+        { userId },
+      );
+      if (!row?.mfa_secret_enc) return false;
+      try {
+        return verifyTotp(decryptSecret(Buffer.from(row.mfa_secret_enc), this.mfaKey()), code);
+      } catch {
+        return false;
+      }
+    }
+    return this.context.runSystem(
+      async (tx) => {
+        const r = await tx.execute(sql`
+          update user_mfa_backup_codes set used_at = now()
+           where user_id = ${userId} and code_hash = ${backupHash(code)} and used_at is null
+          returning 1`);
+        return r.rows.length > 0;
+      },
+      { userId },
+    );
+  }
 
+  /** Profile → Security, step 1: needs the password, makes the secret for the authenticator app. */
+  async mfaSetup(
+    principal: HrmsPrincipal,
+    password: string,
+  ): Promise<{ secret: string; otpauthUrl: string }> {
+    const user = await this.loadUser(principal.userId);
+    if (user.mfa_enabled)
+      throw new ConflictException('The authenticator is already on. Turn it off first.');
+    if (!(await verifyPassword(user.password_hash, password))) {
+      throw new UnauthorizedException('Your password is incorrect.');
+    }
     const secret = generateSecret();
     const blob = encryptSecret(secret, this.mfaKey());
     await this.context.runSystem(
       async (tx) => {
-        await tx.execute(sql`update users set mfa_secret_enc = ${blob}, mfa_enabled = false where id = ${userId}`);
+        await tx.execute(
+          sql`update users set mfa_secret_enc = ${blob}, mfa_enabled = false where id = ${user.id}`,
+        );
       },
-      { userId },
+      { userId: user.id },
     );
     return { secret, otpauthUrl: otpauthUrl(user.email, secret) };
   }
 
-  /** Checks the code. The first valid code also finishes enrolment. */
-  async mfaVerify(
-    mfaToken: string,
-    code: string,
-    req: Request,
-    res: Response,
-  ): Promise<SessionView> {
-    if (!this.mfaEnabledForApp) throw new BadRequestException('MFA is not configured.');
-    const userId = await this.tokens.verifyMfaToken(mfaToken);
-    const row = await this.context.runSystem(
-      async (tx) => {
-        const r = await tx.execute<{ mfa_secret_enc: Buffer | null }>(
-          sql`select mfa_secret_enc from users where id = ${userId}`,
-        );
-        return r.rows[0] ?? null;
-      },
-      { userId },
-    );
-    if (!row?.mfa_secret_enc) throw new BadRequestException('Set up two-step sign-in first.');
-    let secret: string;
-    try {
-      secret = decryptSecret(Buffer.from(row.mfa_secret_enc), this.mfaKey());
-    } catch {
+  /** Step 2: a valid code from the app turns it on and returns the backup codes, once. */
+  async mfaEnable(principal: HrmsPrincipal, code: string): Promise<{ backupCodes: string[] }> {
+    const user = await this.loadUser(principal.userId);
+    if (user.mfa_enabled) throw new ConflictException('The authenticator is already on.');
+    if (!/^\d{6}$/.test(code.trim()) || !(await this.verifyCode(user.id, code))) {
       throw new UnauthorizedException('The code is not correct.');
     }
-    if (!verifyTotp(secret, code)) throw new UnauthorizedException('The code is not correct.');
+    const backupCodes = await this.replaceBackupCodes(user.id, true);
+    return { backupCodes };
+  }
 
+  /** Five fresh backup codes in place of every old one. Needs a current app code, not a backup code. */
+  async mfaNewBackupCodes(
+    principal: HrmsPrincipal,
+    code: string,
+  ): Promise<{ backupCodes: string[] }> {
+    const user = await this.loadUser(principal.userId);
+    if (!user.mfa_enabled) throw new ConflictException('Turn the authenticator on first.');
+    if (!/^\d{6}$/.test(code.trim()) || !(await this.verifyCode(user.id, code))) {
+      throw new UnauthorizedException('The code is not correct.');
+    }
+    return { backupCodes: await this.replaceBackupCodes(user.id, false) };
+  }
+
+  private async replaceBackupCodes(userId: string, turnOn: boolean): Promise<string[]> {
+    const codes = Array.from({ length: BACKUP_CODE_COUNT }, () => {
+      const raw = base32Encode(randomBytes(5));
+      return `${raw.slice(0, 4)}-${raw.slice(4)}`;
+    });
     await this.context.runSystem(
       async (tx) => {
-        await tx.execute(sql`update users set mfa_enabled = true where id = ${userId}`);
+        await tx.execute(sql`delete from user_mfa_backup_codes where user_id = ${userId}`);
+        for (const c of codes) {
+          await tx.execute(
+            sql`insert into user_mfa_backup_codes (user_id, code_hash) values (${userId}, ${backupHash(c)})`,
+          );
+        }
+        if (turnOn) await tx.execute(sql`update users set mfa_enabled = true where id = ${userId}`);
       },
       { userId },
     );
-    const user = await this.loadUser(userId);
-    const { isGameMaster, memberships } = await this.loadIdentity(userId);
-    return this.completeLogin(user, isGameMaster, memberships, req, res);
+    return codes;
+  }
+
+  /** Turning it off needs a current code (or a backup code), so a stolen session cannot do it. */
+  async mfaDisable(principal: HrmsPrincipal, code: string): Promise<void> {
+    const user = await this.loadUser(principal.userId);
+    if (!user.mfa_enabled) return;
+    if (!(await this.verifyCode(user.id, code)))
+      throw new UnauthorizedException('The code is not correct.');
+    await this.clearMfa(user.id);
+  }
+
+  async clearMfa(userId: string): Promise<void> {
+    await this.context.runSystem(
+      async (tx) => {
+        await tx.execute(sql`delete from user_mfa_backup_codes where user_id = ${userId}`);
+        await tx.execute(
+          sql`update users set mfa_enabled = false, mfa_secret_enc = null where id = ${userId}`,
+        );
+      },
+      { userId },
+    );
   }
 
   private async completeLogin(

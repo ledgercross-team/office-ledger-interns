@@ -80,4 +80,15 @@ export class MembersController {
   deactivate(@Req() req: HrmsAuthedRequest, @Param('id', ParseUUIDPipe) id: string) {
     return this.members.deactivate(principalOf(req), id);
   }
+
+  // Lost phone: turns the person's authenticator off so their password works again.
+  @HrmsRoles('ceo', 'coo')
+  @Post(':id/reset-mfa')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resetMfa(
+    @Req() req: HrmsAuthedRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    await this.members.resetMfa(principalOf(req), id);
+  }
 }

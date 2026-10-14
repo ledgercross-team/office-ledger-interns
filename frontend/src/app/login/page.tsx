@@ -12,7 +12,12 @@ import type { HrmsSession } from '@/lib/hrms/types';
 
 function loginError(error: unknown): string {
   if (error instanceof HrmsApiError) {
-    if (error.status === 401) return 'Email or password is incorrect.';
+    if (error.status === 401) {
+      // The server says so when this email uses an authenticator (or the code was wrong).
+      return error.code === 'MFA_CODE_REQUIRED' || error.message === 'The code is not correct.'
+        ? error.message
+        : 'Email or password is incorrect.';
+    }
     if (error.status === 429) {
       const wait = error.retryAfterSeconds;
       return `Too many attempts. Try again${wait === undefined ? ' shortly' : ` in ${wait} seconds`}.`;
@@ -49,6 +54,7 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [codeMode, setCodeMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [authenticated, setAuthenticated] = useState<HrmsSession | null>(null);
@@ -67,7 +73,9 @@ function LoginForm() {
   // never show a second login form. Derived during render; the effect below
   // only navigates.
   const pendingSelection =
-    !authenticated && !sessionLoading && session &&
+    !authenticated &&
+    !sessionLoading &&
+    session &&
     (session.needsOrgSelection || (session.activeMemberId === null && !session.isGameMaster))
       ? session
       : null;
@@ -89,6 +97,10 @@ function LoginForm() {
       });
       afterSession(session);
     } catch (err) {
+      if (err instanceof HrmsApiError && err.code === 'MFA_CODE_REQUIRED') {
+        setCodeMode(true);
+        setPassword('');
+      }
       setError(loginError(err));
       setPending(false);
     }
@@ -107,26 +119,56 @@ function LoginForm() {
   return (
     <AuthCard title="Log in">
       <form onSubmit={(event) => void onSubmit(event)} className="space-y-4">
-        <Input label="Email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
+        <Input
+          label="Email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            setCodeMode(false);
+          }}
+        />
         <div>
           <Input
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            autoComplete="current-password"
+            label={codeMode ? 'Authenticator code' : 'Password or authenticator code'}
+            helperText="If you turned on the authenticator, enter its 6-digit code (or a backup code) instead of your password."
+            type={showPassword || codeMode ? 'text' : 'password'}
+            inputMode={codeMode ? 'numeric' : undefined}
+            autoComplete={codeMode ? 'one-time-code' : 'current-password'}
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
           <div className="mt-1.5 flex items-center justify-between">
-            <Button variant="ghost" size="sm" onClick={() => setShowPassword((v) => !v)} aria-pressed={showPassword}>
-              {showPassword ? <><EyeOff aria-hidden className="size-4" />Hide password</> : <><Eye aria-hidden className="size-4" />Show password</>}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-pressed={showPassword}
+            >
+              {showPassword ? (
+                <>
+                  <EyeOff aria-hidden className="size-4" />
+                  Hide password
+                </>
+              ) : (
+                <>
+                  <Eye aria-hidden className="size-4" />
+                  Show password
+                </>
+              )}
             </Button>
-            <Link href="/forgot-password" className="text-sm font-medium text-primary hover:underline">
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-primary hover:underline"
+            >
               Forgot password?
             </Link>
           </div>
         </div>
-        {error && <ErrorState message={error} />}
+        {error && <ErrorState title="Could not log in" message={error} />}
         <Button type="submit" loading={pending} className="w-full">
           Log in
         </Button>

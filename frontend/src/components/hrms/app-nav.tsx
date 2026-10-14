@@ -36,17 +36,71 @@ export interface NavItem {
  * they get the separate platform shell.
  */
 export const NAV_ITEMS: NavItem[] = [
-  { href: '/', label: 'Dashboard', icon: Home, roles: ['ceo', 'coo', 'manager', 'employee'], bottomTab: true },
-  { href: '/requests', label: 'Requests', icon: Inbox, roles: ['ceo', 'coo', 'manager', 'employee'], badge: 'requests', bottomTab: true },
-  { href: '/projects', label: 'Projects', icon: FolderKanban, roles: ['ceo', 'coo', 'manager', 'employee'], bottomTab: true },
-  { href: '/tasks', label: 'Tasks', icon: SquareCheckBig, roles: ['ceo', 'coo', 'manager', 'employee'], bottomTab: true, parent: '/projects' },
-  { href: '/invites', label: 'Invites', icon: Mail, roles: ['ceo', 'coo', 'manager', 'employee'], badge: 'invites' },
+  {
+    href: '/',
+    label: 'Dashboard',
+    icon: Home,
+    roles: ['ceo', 'coo', 'manager', 'employee'],
+    bottomTab: true,
+  },
+  {
+    href: '/requests',
+    label: 'Requests',
+    icon: Inbox,
+    roles: ['ceo', 'coo', 'manager', 'employee'],
+    badge: 'requests',
+    bottomTab: true,
+  },
+  {
+    href: '/projects',
+    label: 'Projects',
+    icon: FolderKanban,
+    roles: ['ceo', 'coo', 'manager', 'employee'],
+    bottomTab: true,
+  },
+  {
+    href: '/tasks',
+    label: 'Tasks',
+    icon: SquareCheckBig,
+    roles: ['ceo', 'coo', 'manager', 'employee'],
+    bottomTab: true,
+    parent: '/projects',
+  },
+  {
+    href: '/invites',
+    label: 'Invites',
+    icon: Mail,
+    roles: ['ceo', 'coo', 'manager', 'employee'],
+    badge: 'invites',
+  },
   { href: '/people', label: 'People', icon: Users, roles: ['ceo', 'coo', 'manager'] },
-  { href: '/attendance', label: 'Attendance', icon: CalendarCheck, roles: ['ceo', 'coo', 'manager', 'employee'] },
-  { href: '/leave', label: 'Leave', icon: CalendarDays, roles: ['ceo', 'coo', 'manager', 'employee'], bottomTab: true },
-  { href: '/calendar', label: 'Calendar', icon: CalendarDays, roles: ['ceo', 'coo', 'manager', 'employee'] },
+  {
+    href: '/attendance',
+    label: 'Attendance',
+    icon: CalendarCheck,
+    roles: ['ceo', 'coo', 'manager', 'employee'],
+  },
+  {
+    href: '/leave',
+    label: 'Leave',
+    icon: CalendarDays,
+    roles: ['ceo', 'coo', 'manager', 'employee'],
+    bottomTab: true,
+  },
+  {
+    href: '/calendar',
+    label: 'Calendar',
+    icon: CalendarDays,
+    roles: ['ceo', 'coo', 'manager', 'employee'],
+  },
   { href: '/workload', label: 'Workload', icon: Gauge, roles: ['ceo', 'coo', 'manager'] },
-  { href: '/ratings', label: 'Ratings', icon: Star, roles: ['manager', 'employee'], badge: 'ratings' },
+  {
+    href: '/ratings',
+    label: 'Ratings',
+    icon: Star,
+    roles: ['manager', 'employee'],
+    badge: 'ratings',
+  },
   { href: '/performance', label: 'Performance', icon: Star, roles: ['ceo', 'coo'] },
   { href: '/history', label: 'History', icon: History, roles: ['ceo', 'coo'] },
   { href: '/settings', label: 'Settings', icon: Settings, roles: ['ceo', 'coo'] },
@@ -68,7 +122,9 @@ export function navItemsFor(role: HrmsRole | null): NavItem[] {
 export function bottomTabsFor(role: HrmsRole | null): NavItem[] {
   if (!role || role === 'gameMaster') return [];
   const picks = BOTTOM_TABS[role] ?? BOTTOM_TABS.employee;
-  return picks.flatMap((href) => NAV_ITEMS.filter((item) => item.href === href && item.roles.includes(role)));
+  return picks.flatMap((href) =>
+    NAV_ITEMS.filter((item) => item.href === href && item.roles.includes(role)),
+  );
 }
 
 /** Human-readable breadcrumb labels for shell top-bar crumbs. */
@@ -86,6 +142,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   people: 'People',
   performance: 'Performance',
   platform: 'Platform console',
+  profile: 'Profile',
   projects: 'Projects',
   ratings: 'Ratings',
   requests: 'Requests',

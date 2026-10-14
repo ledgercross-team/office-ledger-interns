@@ -226,7 +226,9 @@ export class MembersService {
     const wantsUserLevel =
       dto.fullName !== undefined || dto.phone !== undefined || dto.timezone !== undefined;
     if (wantsUserLevel && !self) {
-      throw new ForbiddenException('Only the person can change their own name, phone and time zone.');
+      throw new ForbiddenException(
+        'Only the person can change their own name, phone and time zone.',
+      );
     }
     if (dto.timezone !== undefined) {
       try {
@@ -240,7 +242,8 @@ export class MembersService {
     const memberSets: SQL[] = [];
     if (dto.designation !== undefined) memberSets.push(sql`designation = ${dto.designation}`);
     if (dto.department !== undefined) memberSets.push(sql`department = ${dto.department}`);
-    if (dto.employeeCode !== undefined) memberSets.push(sql`employee_code = ${dto.employeeCode || null}`);
+    if (dto.employeeCode !== undefined)
+      memberSets.push(sql`employee_code = ${dto.employeeCode || null}`);
     if (dto.role !== undefined) memberSets.push(sql`role = ${dto.role}::member_role`);
     if (dto.taskApprovalRequired !== undefined) {
       memberSets.push(sql`task_approval_required = ${dto.taskApprovalRequired}`);
@@ -261,7 +264,9 @@ export class MembersService {
                             where id = ${id} and org_id = current_org_id()`);
     }
     if (userSets.length > 0) {
-      await tx.execute(sql`update users set ${sql.join(userSets, sql`, `)} where id = ${target.user_id}`);
+      await tx.execute(
+        sql`update users set ${sql.join(userSets, sql`, `)} where id = ${target.user_id}`,
+      );
     }
     return this.get(p, id);
   }
@@ -277,6 +282,28 @@ export class MembersService {
          set status = 'deactivated', deactivated_at = now(), deactivated_by = ${p.memberId}
        where id = ${id} and org_id = current_org_id()`);
     return this.get(p, id);
+  }
+
+  /** CEO or COO turns a person's authenticator off (lost phone). A COO cannot reset a CEO or COO. */
+  async resetMfa(p: HrmsPrincipal, id: string): Promise<void> {
+    const target = await this.context.tx.execute<{ user_id: string; role: string }>(sql`
+      select user_id, role::text as role from org_members where id = ${id} and org_id = current_org_id()`);
+    const row = target.rows[0];
+    if (!row) throw new NotFoundException('Member not found.');
+    if (row.role === 'ceo' || (row.role === 'coo' && p.role !== 'ceo')) {
+      throw new ForbiddenException(
+        'Only a CEO can reset a COO. A CEO turns their own off in their profile.',
+      );
+    }
+    await this.context.runSystem(
+      async (tx) => {
+        await tx.execute(sql`delete from user_mfa_backup_codes where user_id = ${row.user_id}`);
+        await tx.execute(
+          sql`update users set mfa_enabled = false, mfa_secret_enc = null where id = ${row.user_id}`,
+        );
+      },
+      { userId: row.user_id },
+    );
   }
 
   /** Bulk suspend for a downgrade. All or nothing (one transaction). */

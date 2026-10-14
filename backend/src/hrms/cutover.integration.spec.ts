@@ -6,7 +6,6 @@ import { Pool } from 'pg';
 import request from 'supertest';
 import { hashPassword } from '../common/utils/passwords';
 import { HrmsModule } from './hrms.module';
-import { totp } from './auth/mfa';
 import { MailService } from './mail/mail.service';
 
 // Needs a THROWAWAY database loaded with docs/*.sql (see projects.integration.spec.ts).
@@ -21,7 +20,6 @@ const email = (name: string) => `${name}.${suffix}@cutover-test.invalid`;
 suite('HRMS cutover: a real company, end to end', () => {
   let app: INestApplication;
   let owner: Pool;
-  const secrets: Record<string, string> = {};
 
   const config = () => ({
     NODE_ENV: 'test',
@@ -37,11 +35,16 @@ suite('HRMS cutover: a real company, end to end', () => {
   beforeAll(async () => {
     owner = new Pool({ connectionString: ownerUrl, options: '-c search_path=hrms,public' });
     const moduleRef = await Test.createTestingModule({
-      imports: [ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [config] }), HrmsModule],
+      imports: [
+        ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [config] }),
+        HrmsModule,
+      ],
     }).compile();
     app = moduleRef.createNestApplication();
     app.use(cookieParser());
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+    );
     await app.init();
   });
 
@@ -50,20 +53,14 @@ suite('HRMS cutover: a real company, end to end', () => {
     await owner.end();
   });
 
-  // Signs in, enrolling the authenticator on the first time.
-  async function signInMfa(name: string, password: string): Promise<ReturnType<typeof request.agent>> {
+  async function signInMfa(
+    name: string,
+    password: string,
+  ): Promise<ReturnType<typeof request.agent>> {
     const agent = request.agent(app.getHttpServer());
     const login = await agent.post('/api/auth/login').send({ email: email(name), password });
     expect(login.status).toBe(200);
-    expect(login.body.mfaRequired).toBe(true);
-    if (login.body.mfaEnrollmentRequired) {
-      const enrol = await agent.post('/api/auth/mfa/enroll').send({ mfaToken: login.body.mfaToken });
-      secrets[name] = enrol.body.secret;
-    }
-    const done = await agent
-      .post('/api/auth/mfa/verify')
-      .send({ mfaToken: login.body.mfaToken, code: totp(secrets[name], Date.now()) });
-    expect(done.status).toBe(200);
+    expect(login.body.mfaRequired).toBeUndefined();
     return agent;
   }
 
@@ -84,11 +81,19 @@ suite('HRMS cutover: a real company, end to end', () => {
       `insert into hrms.users (email, password_hash, full_name) values ($1, $2, 'Owner') returning id`,
       [email('gm'), hash],
     );
-    await owner.query(`insert into hrms.game_masters (user_id, status, confirmed_at) values ($1, 'active', now())`, [gm.rows[0].id]);
+    await owner.query(
+      `insert into hrms.game_masters (user_id, status, confirmed_at) values ($1, 'active', now())`,
+      [gm.rows[0].id],
+    );
     const platform = await signInMfa('gm', PASSWORD);
     const org = await platform
       .post('/api/platform/orgs')
-      .send({ name: `Cutover-${suffix}`, planCode: 'standard', ceoEmail: email('ceo'), ceoFullName: 'Real CEO' });
+      .send({
+        name: `Cutover-${suffix}`,
+        planCode: 'standard',
+        ceoEmail: email('ceo'),
+        ceoFullName: 'Real CEO',
+      });
     expect(org.status).toBe(201);
     expect(org.body.ceoInvited).toBe(true);
 

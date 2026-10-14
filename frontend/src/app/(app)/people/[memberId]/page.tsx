@@ -23,6 +23,7 @@ export default function MemberDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const queryKey = ['hrms', 'members', 'one', memberId];
   const member = useQuery({
@@ -61,6 +62,15 @@ export default function MemberDetailPage() {
       setConfirming(false);
       setError(message(err));
     },
+  });
+
+  const resetMfa = useMutation({
+    mutationFn: () => hrmsFetch(`/members/${memberId}/reset-mfa`, { method: 'POST' }),
+    onSuccess: () => {
+      setError(null);
+      setNotice('Authenticator turned off. They can sign in with their password again.');
+    },
+    onError: (err) => setError(message(err)),
   });
 
   if (member.isLoading) return <p className="text-sm text-charcoal-soft">Loading…</p>;
@@ -165,7 +175,11 @@ export default function MemberDetailPage() {
             >
               Save
             </button>
-            {saved && <span role="status" className="text-sm text-evergreen">Saved</span>}
+            {saved && (
+              <span role="status" className="text-sm text-evergreen">
+                Saved
+              </span>
+            )}
           </div>
         )}
       </form>
@@ -177,9 +191,7 @@ export default function MemberDetailPage() {
             Role
             <select
               value={m.role}
-              onChange={(event) =>
-                update.mutate({ role: event.target.value as HrmsMemberRole })
-              }
+              onChange={(event) => update.mutate({ role: event.target.value as HrmsMemberRole })}
               className={input}
             >
               {(['employee', 'manager', 'coo', 'ceo'] as const)
@@ -197,7 +209,9 @@ export default function MemberDetailPage() {
                 <input
                   type="checkbox"
                   checked={m.taskApprovalRequired}
-                  onChange={(event) => update.mutate({ taskApprovalRequired: event.target.checked })}
+                  onChange={(event) =>
+                    update.mutate({ taskApprovalRequired: event.target.checked })
+                  }
                 />
                 Tasks this manager creates need approval
               </label>
@@ -214,12 +228,38 @@ export default function MemberDetailPage() {
         </section>
       )}
 
+      {isAdmin &&
+        m.id !== session?.activeMemberId &&
+        m.role !== 'ceo' &&
+        (session?.role === 'ceo' || m.role !== 'coo') && (
+          <section className="max-w-md space-y-2 rounded-2xl border border-charcoal/10 bg-white p-4">
+            <h2 className="font-medium text-charcoal">Authenticator</h2>
+            <p className="text-sm text-charcoal-soft">
+              If they lost their phone, turn their authenticator off so they can sign in with their
+              password again.
+            </p>
+            <button
+              type="button"
+              disabled={resetMfa.isPending}
+              onClick={() => resetMfa.mutate()}
+              className="rounded-xl border border-charcoal/15 bg-white px-4 py-2 text-sm disabled:opacity-60"
+            >
+              Turn off their authenticator
+            </button>
+            {notice && (
+              <p role="status" className="text-sm text-forest">
+                {notice}
+              </p>
+            )}
+          </section>
+        )}
+
       {isAdmin && m.status !== 'deactivated' && (
         <section className="max-w-md space-y-2 rounded-2xl border border-alert/30 bg-alert-tint p-4">
           <h2 className="font-medium text-alert-deep">Deactivate</h2>
           <p className="text-sm text-charcoal">
-            They are signed out of this organisation, leave every project and open task, and
-            their seat is freed. Their history is kept.
+            They are signed out of this organisation, leave every project and open task, and their
+            seat is freed. Their history is kept.
           </p>
           {confirming ? (
             <div className="flex gap-2">

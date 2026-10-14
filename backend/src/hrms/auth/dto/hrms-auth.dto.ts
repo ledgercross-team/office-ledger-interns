@@ -38,18 +38,15 @@ export class HrmsAcceptInviteDto {
   password!: string;
 }
 
-export class HrmsMfaEnrollDto {
+export class HrmsMfaSetupDto {
   @IsString()
-  @Length(20, 2000)
-  mfaToken!: string;
+  @Length(1, 200)
+  password!: string;
 }
 
-export class HrmsMfaVerifyDto {
+/** A 6-digit authenticator code, or a backup code (XXXX-XXXX). */
+export class HrmsMfaCodeDto {
   @IsString()
-  @Length(20, 2000)
-  mfaToken!: string;
-
-  @IsString()
-  @Length(6, 6)
+  @Length(6, 12)
   code!: string;
 }

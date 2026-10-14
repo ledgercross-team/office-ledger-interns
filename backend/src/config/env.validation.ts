@@ -98,12 +98,6 @@ class EnvironmentVariables {
   @IsIn(['log', 'none'])
   MAIL_TRANSPORT?: string = 'log';
 
-  // Two-step sign-in for gameMaster, CEO and COO. "false" lets everyone in with email and password.
-  @IsOptional()
-  @Transform(toBoolean)
-  @IsBoolean()
-  MFA_REQUIRED?: boolean = true;
-
   // 32 bytes (64 hex characters or base64) that encrypt MFA secrets.
   @IsString()
   @IsNotEmpty()

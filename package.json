@@ -3,6 +3,8 @@
   "private": true,
   "packageManager": "pnpm@10.0.0",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "format": "pnpm --filter backend format",
     "dev:backend": "pnpm --filter backend start:dev",
     "dev:frontend": "pnpm --filter frontend dev",
     "db:migrate": "pnpm --filter backend db:migrate",

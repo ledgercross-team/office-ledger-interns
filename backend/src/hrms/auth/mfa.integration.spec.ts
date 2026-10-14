@@ -27,7 +27,10 @@ suite('HRMS MFA, history and export (integration)', () => {
     const c = await owner.connect();
     try {
       await c.query('begin');
-      await c.query("select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)", [ids.org]);
+      await c.query(
+        "select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)",
+        [ids.org],
+      );
       const r = await fn(c);
       await c.query('commit');
       return r;
@@ -63,29 +66,23 @@ suite('HRMS MFA, history and export (integration)', () => {
     }).compile();
     const created = moduleRef.createNestApplication();
     created.use(cookieParser());
-    created.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    created.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+    );
     await created.init();
     return created;
   }
 
   const secrets: Record<string, string> = {};
 
+  // Everyone signs in with the password; the authenticator is opt-in from the profile.
   async function signInWithMfa(name: string): Promise<ReturnType<typeof request.agent>> {
     const agent = request.agent(app.getHttpServer());
-    const login = await agent.post('/api/auth/login').send({ email: email(name), password: PASSWORD });
+    const login = await agent
+      .post('/api/auth/login')
+      .send({ email: email(name), password: PASSWORD });
     expect(login.status).toBe(200);
-    expect(login.body.mfaRequired).toBe(true);
-    expect(login.headers['set-cookie']).toBeUndefined();
-    let token = login.body.mfaToken as string;
-    if (login.body.mfaEnrollmentRequired) {
-      const enrol = await agent.post('/api/auth/mfa/enroll').send({ mfaToken: token });
-      expect(enrol.status).toBe(200);
-      secrets[name] = enrol.body.secret;
-    }
-    const verified = await agent.post('/api/auth/mfa/verify').send({ mfaToken: token, code: totp(secrets[name], Date.now()) });
-    expect(verified.status).toBe(200);
-    expect(verified.body.user.mfaEnabled).toBe(true);
-    token = '';
+    expect(login.body.mfaRequired).toBeUndefined();
     return agent;
   }
 
@@ -106,10 +103,16 @@ suite('HRMS MFA, history and export (integration)', () => {
     try {
       await c.query('begin');
       ids.org = (
-        await c.query(`insert into hrms.orgs (name, plan_code) values ($1, 'premium') returning id`, [`req-${suffix}`])
+        await c.query(
+          `insert into hrms.orgs (name, plan_code) values ($1, 'premium') returning id`,
+          [`req-${suffix}`],
+        )
       ).rows[0].id;
       ids.m_ceo = (
-        await c.query(`insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'ceo') returning id`, [ids.org, ids.ceo])
+        await c.query(
+          `insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'ceo') returning id`,
+          [ids.org, ids.ceo],
+        )
       ).rows[0].id;
       await c.query('commit');
     } finally {
@@ -117,7 +120,9 @@ suite('HRMS MFA, history and export (integration)', () => {
     }
     await orgTx(async (cl) => {
       const roles: Array<[string, string]> = [
-        ['coo', 'coo'], ['lead', 'manager'], ['emp', 'employee'],
+        ['coo', 'coo'],
+        ['lead', 'manager'],
+        ['emp', 'employee'],
       ];
       for (const [n, role] of roles) {
         ids[`m_${n}`] = (
@@ -141,7 +146,9 @@ suite('HRMS MFA, history and export (integration)', () => {
 
     for (const n of ['lead', 'emp']) {
       const agent = request.agent(app.getHttpServer());
-      expect((await agent.post('/api/auth/login').send({ email: email(n), password: PASSWORD })).status).toBe(200);
+      expect(
+        (await agent.post('/api/auth/login').send({ email: email(n), password: PASSWORD })).status,
+      ).toBe(200);
       agents[n] = agent;
     }
     // CEO and COO sign in with a code (the first sign-in enrols)
@@ -168,41 +175,76 @@ suite('HRMS MFA, history and export (integration)', () => {
     await owner.end();
   });
 
+  it('is off by default, turns on from the profile, then logs in with the code alone', async () => {
+    const ceo = agents.ceo;
+    expect((await ceo.get('/api/auth/me')).body.user.mfaEnabled).toBe(false);
 
+    // setup needs the password
+    expect(
+      (await ceo.post('/api/auth/mfa/setup').send({ password: 'wrong wrong wrong' })).status,
+    ).toBe(401);
+    const setup = await ceo.post('/api/auth/mfa/setup').send({ password: PASSWORD });
+    expect(setup.status).toBe(200);
+    secrets.ceo = setup.body.secret;
 
-
-
-
-  it('does not let a CEO finish login without a valid code', async () => {
-    const agent = request.agent(app.getHttpServer());
-    const login = await agent.post('/api/auth/login').send({ email: email('ceo'), password: PASSWORD });
-    expect(login.body).toMatchObject({ mfaRequired: true, mfaEnrollmentRequired: false });
-    expect(JSON.stringify(login.body)).not.toMatch(/secret/i);
-
-    // no session without the code
-    expect((await agent.get('/api/auth/me')).status).toBe(401);
-    const wrong = await agent
-      .post('/api/auth/mfa/verify')
-      .send({ mfaToken: login.body.mfaToken, code: '000000' });
-    expect(wrong.status).toBe(401);
-    expect((await agent.get('/api/auth/me')).status).toBe(401);
-    // the pending token is not a session
-    const asCookie = await request(app.getHttpServer())
-      .get('/api/auth/me')
-      .set('Cookie', `hrms_access=${login.body.mfaToken}`);
-    expect(asCookie.status).toBe(401);
-
-    const ok = await agent
-      .post('/api/auth/mfa/verify')
-      .send({ mfaToken: login.body.mfaToken, code: totp(secrets.ceo, Date.now()) });
-    expect(ok.status).toBe(200);
-    expect((await agent.get('/api/auth/me')).status).toBe(200);
+    expect((await ceo.post('/api/auth/mfa/enable').send({ code: '000000' })).status).toBe(401);
+    const enabled = await ceo
+      .post('/api/auth/mfa/enable')
+      .send({ code: totp(secrets.ceo, Date.now()) });
+    expect(enabled.status).toBe(200);
+    expect(enabled.body.backupCodes).toHaveLength(5);
 
     // the stored secret is encrypted, never the plain text
     const row = await owner.query(`select mfa_secret_enc from hrms.users where id = $1`, [ids.ceo]);
     expect(Buffer.from(row.rows[0].mfa_secret_enc).toString('utf8')).not.toContain(secrets.ceo);
 
-    // a manager signs in with the password alone
+    // the password no longer signs them in; the code does
+    const fresh = request.agent(app.getHttpServer());
+    expect(
+      (await fresh.post('/api/auth/login').send({ email: email('ceo'), password: PASSWORD }))
+        .status,
+    ).toBe(401);
+    expect(
+      (await fresh.post('/api/auth/login').send({ email: email('ceo'), password: '000000' }))
+        .status,
+    ).toBe(401);
+    const byCode = await fresh
+      .post('/api/auth/login')
+      .send({ email: email('ceo'), password: totp(secrets.ceo, Date.now()) });
+    expect(byCode.status).toBe(200);
+
+    // a backup code works once
+    const backup = enabled.body.backupCodes[0] as string;
+    const viaBackup = request.agent(app.getHttpServer());
+    expect(
+      (await viaBackup.post('/api/auth/login').send({ email: email('ceo'), password: backup }))
+        .status,
+    ).toBe(200);
+    expect(
+      (
+        await request
+          .agent(app.getHttpServer())
+          .post('/api/auth/login')
+          .send({ email: email('ceo'), password: backup })
+      ).status,
+    ).toBe(401);
+
+    // turning it off needs a code, then the password works again
+    expect((await ceo.post('/api/auth/mfa/disable').send({ code: '000000' })).status).toBe(401);
+    const off = await ceo
+      .post('/api/auth/mfa/disable')
+      .send({ code: totp(secrets.ceo, Date.now()) });
+    expect(off.status).toBe(204);
+    expect(
+      (
+        await request
+          .agent(app.getHttpServer())
+          .post('/api/auth/login')
+          .send({ email: email('ceo'), password: PASSWORD })
+      ).status,
+    ).toBe(200);
+
+    // a manager signs in with the password alone throughout
     expect((await agents.lead.get('/api/auth/me')).status).toBe(200);
   });
 
@@ -213,9 +255,13 @@ suite('HRMS MFA, history and export (integration)', () => {
     expect(JSON.stringify(list.body)).not.toMatch(/password_hash|mfa_secret/);
     const entry = list.body.items[0];
 
-    expect((await agents.coo.post(`/api/audit/${entry.id}/notes`).send({ note: 'x' })).status).toBe(403);
+    expect((await agents.coo.post(`/api/audit/${entry.id}/notes`).send({ note: 'x' })).status).toBe(
+      403,
+    );
     expect((await agents.lead.get('/api/audit')).status).toBe(403);
-    const note = await agents.ceo.post(`/api/audit/${entry.id}/notes`).send({ note: 'Checked with the lead' });
+    const note = await agents.ceo
+      .post(`/api/audit/${entry.id}/notes`)
+      .send({ note: 'Checked with the lead' });
     expect(note.status).toBe(201);
     const again = await agents.coo.get(`/api/audit?table=projects&pageSize=5`);
     const same = again.body.items.find((i: { id: string }) => i.id === entry.id);
@@ -225,12 +271,12 @@ suite('HRMS MFA, history and export (integration)', () => {
     // the app login cannot change or delete an entry
     const app_ = new Pool({ connectionString: appUrl, options: '-c search_path=hrms,public' });
     try {
-      await expect(app_.query(`update hrms.audit_log set action = 'X' where id = $1`, [entry.id])).rejects.toThrow(
-        /permission denied/,
-      );
-      await expect(app_.query(`delete from hrms.audit_log where id = $1`, [entry.id])).rejects.toThrow(
-        /permission denied/,
-      );
+      await expect(
+        app_.query(`update hrms.audit_log set action = 'X' where id = $1`, [entry.id]),
+      ).rejects.toThrow(/permission denied/);
+      await expect(
+        app_.query(`delete from hrms.audit_log where id = $1`, [entry.id]),
+      ).rejects.toThrow(/permission denied/);
     } finally {
       await app_.end();
     }
@@ -250,7 +296,9 @@ suite('HRMS MFA, history and export (integration)', () => {
     );
     expect((await agents.ceo.post('/api/org/export').send({})).status).toBe(200);
     expect((await agents.ceo.get('/api/projects')).status).toBe(403);
-    await owner.query(`update hrms.orgs set purge_after = now() - interval '1 day' where id = $1`, [ids.org]);
+    await owner.query(`update hrms.orgs set purge_after = now() - interval '1 day' where id = $1`, [
+      ids.org,
+    ]);
     expect((await agents.ceo.post('/api/org/export').send({})).status).toBe(410);
     await owner.query(
       `update hrms.orgs set status = 'active', suspended_at = null, purge_after = null where id = $1`,
@@ -269,14 +317,26 @@ suite('HRMS MFA, history and export (integration)', () => {
         [email('otherceo')],
       );
       other.org = (
-        await c.query(`insert into hrms.orgs (name, plan_code) values ($1, 'premium') returning id`, [`other-${suffix}`])
+        await c.query(
+          `insert into hrms.orgs (name, plan_code) values ($1, 'premium') returning id`,
+          [`other-${suffix}`],
+        )
       ).rows[0].id;
       other.ceo = (
-        await c.query(`insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'ceo') returning id`, [other.org, u.rows[0].id])
+        await c.query(
+          `insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'ceo') returning id`,
+          [other.org, u.rows[0].id],
+        )
       ).rows[0].id;
-      await c.query("select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)", [other.org]);
+      await c.query(
+        "select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)",
+        [other.org],
+      );
       other.project = (
-        await c.query(`insert into hrms.projects (org_id, name, created_by) values ($1, 'Secret', $2) returning id`, [other.org, other.ceo])
+        await c.query(
+          `insert into hrms.projects (org_id, name, created_by) values ($1, 'Secret', $2) returning id`,
+          [other.org, other.ceo],
+        )
       ).rows[0].id;
       other.task = (
         await c.query(
@@ -326,9 +386,13 @@ suite('HRMS MFA, history and export (integration)', () => {
     expect([403, 404]).toContain(patch.status);
     const archive = await agents.ceo.post(`/api/projects/${other.project}/archive`).send({});
     expect([403, 404]).toContain(archive.status);
-    const respond = await agents.ceo.post(`/api/meetings/${other.meeting}/respond`).send({ response: 'accepted' });
+    const respond = await agents.ceo
+      .post(`/api/meetings/${other.meeting}/respond`)
+      .send({ response: 'accepted' });
     expect([403, 404]).toContain(respond.status);
-    const stillThere = await owner.query(`select name from hrms.projects where id = $1`, [other.project]);
+    const stillThere = await owner.query(`select name from hrms.projects where id = $1`, [
+      other.project,
+    ]);
     expect(stillThere.rows[0].name).toBe('Secret');
   });
 });
