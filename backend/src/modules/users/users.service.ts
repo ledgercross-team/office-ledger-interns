@@ -78,7 +78,7 @@ export class UsersService {
     const roles = directoryRoles(caller.role).filter((role) => !query.role || role === query.role);
     const search = query.search?.trim();
     const where = and(
-      this.directoryScope(caller),
+      this.directoryListScope(caller),
       inArray(users.role, roles),
       query.isActive === undefined ? undefined : eq(users.isActive, query.isActive),
       query.managerId ? eq(users.managerId, query.managerId) : undefined,
@@ -103,6 +103,25 @@ export class UsersService {
     return { items, page: query.page, pageSize: query.pageSize, total };
   }
 
+  async listAssignable(caller: AuthUser) {
+    const roles: ('manager' | 'employee')[] =
+      caller.role === 'admin' ? ['manager', 'employee'] : ['employee'];
+    const items = await this.database
+      .select(USER_COLUMNS)
+      .from(users)
+      .leftJoin(manager, eq(manager.id, users.managerId))
+      .where(
+        and(
+          eq(users.companyId, caller.companyId as string),
+          inArray(users.role, roles),
+          eq(users.isActive, true),
+        ),
+      )
+      .orderBy(asc(users.fullName));
+
+    return { items, page: 1, pageSize: items.length, total: items.length };
+  }
+
   async listManagers(caller: AuthUser) {
     const items = await this.database
       .select({ id: users.id, fullName: users.fullName })
@@ -120,7 +139,7 @@ export class UsersService {
   }
 
   get(caller: AuthUser, userId: string) {
-    return this.findVisible(caller, userId);
+    return this.findReadable(caller, userId);
   }
 
   async create(caller: AuthUser, dto: CreateUserDto) {
@@ -131,8 +150,8 @@ export class UsersService {
       throw new BadRequestException('Only employees have a manager.');
     }
 
-    // A manager's new employees report to that manager; an admin may pick one or leave it open.
-    const managerId = caller.role === 'manager' ? caller.id : (dto.managerId ?? null);
+    // Assignment is always explicit. Leave it empty to keep the employee unassigned.
+    const managerId = dto.managerId ?? null;
     if (managerId) {
       await this.assertActiveManager(caller, managerId);
     }
@@ -227,6 +246,15 @@ export class UsersService {
     );
   }
 
+  // Managers can browse every employee in their company, while admins keep the full directory scope.
+  private directoryListScope(caller: AuthUser) {
+    return and(
+      eq(users.companyId, caller.companyId as string),
+      ne(users.id, caller.id),
+      caller.role === 'manager' ? eq(users.role, 'employee') : undefined,
+    );
+  }
+
   // The new manager must be an active manager of the same company.
   private async assertActiveManager(caller: AuthUser, managerId: string): Promise<void> {
     const [row] = await this.database
@@ -268,6 +296,22 @@ export class UsersService {
         this.directoryScope(caller),
         inArray(users.role, directoryRoles(caller.role)),
       ),
+    );
+  }
+
+  // A manager may read every employee in the company, but edit/reset remains team-scoped.
+  private findReadable(caller: AuthUser, userId: string): Promise<PersonRow> {
+    const scope =
+      caller.role === 'manager'
+        ? and(
+            eq(users.companyId, caller.companyId as string),
+            ne(users.id, caller.id),
+            eq(users.role, 'employee'),
+          )
+        : this.directoryScope(caller);
+
+    return this.select(
+      and(eq(users.id, userId), scope, inArray(users.role, directoryRoles(caller.role))),
     );
   }
 

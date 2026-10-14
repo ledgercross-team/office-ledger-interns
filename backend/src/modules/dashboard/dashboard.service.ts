@@ -1,10 +1,17 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { aliasedTable, and, asc, count, eq, inArray, notInArray, sql, type SQL } from 'drizzle-orm';
+import { aliasedTable, and, asc, count, eq, inArray, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import type { AuthUser } from '../../auth/auth.types';
 import { getCompanyDate } from '../../common/utils/company-time';
 import { addDays, daysBetween, isWeekday } from '../../common/utils/dates';
 import { DRIZZLE, type Database } from '../../db/db.module';
-import { attendanceRecords, companies, subscriptions, tasks, users } from '../../db/schema';
+import {
+  attendanceRecords,
+  companies,
+  subscriptions,
+  taskAssignmentRequests,
+  tasks,
+  users,
+} from '../../db/schema';
 import { pickSubscription } from '../game-master/subscription-utils';
 import { managedPeople } from '../users/visibility';
 import { MessagesService } from '../messages/messages.service';
@@ -57,10 +64,13 @@ export class DashboardService {
     };
   }
 
-  // Own counts at the top level; the employees they manage under `team`.
+  // Own counts at the top level; work charts include their own tasks and direct-report tasks.
   private async manager(user: AuthUser, company: Company) {
-    // Only the employees who report to this manager.
-    const teamTasks = and(eq(tasks.companyId, company.id), managedPeople(user, assignee));
+    // Chapter 2 must agree with "My open tasks", so include the manager's assignments too.
+    const teamTasks = and(
+      eq(tasks.companyId, company.id),
+      or(eq(tasks.assigneeId, user.id), eq(tasks.createdById, user.id), managedPeople(user, assignee)),
+    );
     const people = and(
       eq(users.companyId, company.id),
       managedPeople(user),
@@ -107,6 +117,15 @@ export class DashboardService {
       .from(subscriptions)
       .where(eq(subscriptions.companyId, company.id));
     const subscription = pickSubscription(subs, today);
+    const [{ total: pendingAssignmentApprovals }] = await this.database
+      .select({ total: count() })
+      .from(taskAssignmentRequests)
+      .where(
+        and(
+          eq(taskAssignmentRequests.companyId, company.id),
+          eq(taskAssignmentRequests.status, 'pending'),
+        ),
+      );
 
     return {
       role: user.role,
@@ -124,6 +143,7 @@ export class DashboardService {
       subscriptionEndsOn: subscription?.endsOn ?? null,
       daysLeft: subscription ? daysBetween(today, subscription.endsOn) : null,
       unreadMessages: await this.messages.unreadForAdmin(company.id),
+      pendingAssignmentApprovals,
     };
   }
 

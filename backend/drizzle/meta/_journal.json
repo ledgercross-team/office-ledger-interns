@@ -22,6 +22,20 @@
       "when": 1791787496546,
       "tag": "0002_task_categories_multi_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791875617710,
+      "tag": "0003_greedy_magus",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791885852554,
+      "tag": "0004_futuristic_gideon",
+      "breakpoints": true
     }
   ]
 }

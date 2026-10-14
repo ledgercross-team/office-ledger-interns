@@ -100,7 +100,7 @@ export function TaskActionBar({ task }: { task: Task }) {
               disabled={!isEnabled || mutation.isPending}
               title={isEnabled ? undefined : spec.hint}
               onClick={() => press(spec)}
-              className="w-full rounded-xl border border-charcoal/15 bg-white px-2 py-1.5 text-center text-sm font-medium text-charcoal transition-colors hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 bg-white px-2 py-1.5 text-center text-sm font-medium text-charcoal transition-colors hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
             >
               {spec.label}
             </button>
@@ -114,7 +114,7 @@ export function TaskActionBar({ task }: { task: Task }) {
               setDeleteError(null);
               setDeleteDialog(true);
             }}
-            className="w-full rounded-xl border border-alert/30 bg-alert-tint px-2 py-1.5 text-center text-sm font-medium text-alert-deep transition-colors hover:bg-alert-tint/70 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-alert/30 bg-alert-tint px-2 py-1.5 text-center text-sm font-medium text-alert-deep transition-colors hover:bg-alert-tint/70 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Delete
           </button>
@@ -161,21 +161,21 @@ export function TaskActionBar({ task }: { task: Task }) {
                 {error}
               </p>
             )}
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="flex flex-col justify-end gap-2 sm:flex-row">
               <button
                 type="button"
                 onClick={() => {
                   setDialog(null);
                   setError(null);
                 }}
-                className="rounded-xl border border-charcoal/15 px-4 py-2 text-sm font-medium hover:bg-mist"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-4 py-2 text-sm font-medium hover:bg-mist sm:w-auto"
               >
                 Close
               </button>
               <button
                 type="submit"
                 disabled={mutation.isPending || comment.trim() === ''}
-                className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-evergreen-dark disabled:opacity-60"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-evergreen-dark disabled:opacity-60 sm:w-auto"
               >
                 {mutation.isPending ? 'Saving…' : dialog.label}
               </button>
@@ -205,7 +205,7 @@ export function TaskActionBar({ task }: { task: Task }) {
                 {deleteError}
               </p>
             )}
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="flex flex-col justify-end gap-2 sm:flex-row">
               <button
                 type="button"
                 onClick={() => {
@@ -213,7 +213,7 @@ export function TaskActionBar({ task }: { task: Task }) {
                   setDeleteError(null);
                 }}
                 disabled={deleteMutation.isPending}
-                className="rounded-xl border border-charcoal/15 px-4 py-2 text-sm font-medium hover:bg-mist disabled:opacity-60"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-4 py-2 text-sm font-medium hover:bg-mist disabled:opacity-60 sm:w-auto"
               >
                 Keep task
               </button>
@@ -221,7 +221,7 @@ export function TaskActionBar({ task }: { task: Task }) {
                 type="button"
                 onClick={() => deleteMutation.mutate()}
                 disabled={deleteMutation.isPending}
-                className="rounded-xl bg-alert px-4 py-2 text-sm font-semibold text-white hover:bg-alert-deep disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-alert px-4 py-2 text-sm font-semibold text-white hover:bg-alert-deep disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {deleteMutation.isPending ? 'Deleting…' : 'Delete permanently'}
               </button>

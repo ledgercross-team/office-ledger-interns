@@ -82,6 +82,9 @@ function PersonDetail() {
   }
 
   const person = query.data;
+  const canManage =
+    caller?.role === 'admin' ||
+    (caller?.role === 'manager' && person.role === 'employee' && person.managerId === caller.id);
 
   function onSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,7 +102,7 @@ function PersonDetail() {
   }
 
   return (
-    <div className="w-full max-w-5xl space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-6">
       <div>
         <h1 className="text-xl font-semibold">{person.fullName}</h1>
         <p className="text-sm text-charcoal-soft">
@@ -113,89 +116,112 @@ function PersonDetail() {
       {temporaryPassword && <TemporaryPasswordPanel password={temporaryPassword} />}
 
       <div className="grid gap-6 lg:grid-cols-2">
-      <form onSubmit={onSave} className="space-y-3 rounded-lg border p-4 lg:col-span-2">
-        <h2 className="font-semibold">Details</h2>
-        <div className="space-y-1">
-          <label htmlFor="fullName" className="block text-sm font-medium">
-            Full name
-          </label>
-          <input
-            id="fullName"
-            name="fullName"
-            defaultValue={person.fullName}
-            required
-            maxLength={120}
-            className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="jobTitle" className="block text-sm font-medium">
-            Job title
-          </label>
-          <input
-            id="jobTitle"
-            name="jobTitle"
-            defaultValue={person.jobTitle ?? ''}
-            maxLength={120}
-            className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
-          />
-        </div>
-        {saved && <p className="text-sm text-evergreen">Saved.</p>}
-        <button
-          type="submit"
-          disabled={update.isPending}
-          className="rounded-xl bg-evergreen px-3 py-1 text-sm text-white disabled:opacity-60"
-        >
-          Save changes
-        </button>
-      </form>
-
-      {person.role === 'employee' && (
-        <section className="space-y-3 rounded-lg border p-4">
-          <h2 className="font-semibold">Reports to</h2>
-          {caller?.role === 'manager' && (
-            <p className="text-sm text-charcoal-soft">
-              Choosing another manager hands this person over. They will leave your team.
-            </p>
-          )}
-          <form
-            key={person.managerId ?? 'none'}
-            onSubmit={(event) => {
-              event.preventDefault();
-              const value = String(new FormData(event.currentTarget).get('managerId'));
-              setError(null);
-              update.mutate({ managerId: value === '' ? null : value });
-            }}
-            className="space-y-3"
-          >
-            <label htmlFor="managerId" className="block text-sm font-medium">
-              Manager
-            </label>
-            <select
-              id="managerId"
-              name="managerId"
-              defaultValue={person.managerId ?? ''}
-              className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
-            >
-              {caller?.role === 'admin' && <option value="">No manager yet</option>}
-              {managers.data?.items.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.fullName}
-                </option>
-              ))}
-            </select>
+        {canManage ? (
+          <form onSubmit={onSave} className="space-y-3 rounded-lg border p-4 lg:col-span-2">
+            <h2 className="font-semibold">Details</h2>
+            <div className="space-y-1">
+              <label htmlFor="fullName" className="block text-sm font-medium">
+                Full name
+              </label>
+              <input
+                id="fullName"
+                name="fullName"
+                defaultValue={person.fullName}
+                required
+                maxLength={120}
+                className="min-h-11 w-full rounded-xl border border-charcoal/15 px-3 py-2"
+              />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="jobTitle" className="block text-sm font-medium">
+                Job title
+              </label>
+              <input
+                id="jobTitle"
+                name="jobTitle"
+                defaultValue={person.jobTitle ?? ''}
+                maxLength={120}
+                className="min-h-11 w-full rounded-xl border border-charcoal/15 px-3 py-2"
+              />
+            </div>
+            {saved && <p className="text-sm text-evergreen">Saved.</p>}
             <button
               type="submit"
               disabled={update.isPending}
-              className="rounded-xl bg-evergreen px-3 py-1 text-sm text-white disabled:opacity-60"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-3 py-2 text-sm text-white disabled:opacity-60 sm:w-auto"
             >
-              {update.isPending ? 'Saving…' : 'Change manager'}
+              Save changes
             </button>
           </form>
-        </section>
-      )}
+        ) : (
+          <section className="space-y-3 rounded-lg border p-4 lg:col-span-2">
+            <h2 className="font-semibold">Details</h2>
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-charcoal-soft">Full name</dt>
+                <dd className="font-medium text-charcoal">{person.fullName}</dd>
+              </div>
+              <div>
+                <dt className="text-charcoal-soft">Job title</dt>
+                <dd className="font-medium text-charcoal">{person.jobTitle ?? '—'}</dd>
+              </div>
+            </dl>
+            <p className="text-sm text-charcoal-soft">Only the employee’s assigned manager can edit these details.</p>
+          </section>
+        )}
 
-      <section className="space-y-3 rounded-lg border p-4">
+      {person.role === 'employee' && (
+        canManage ? (
+          <section className="space-y-3 rounded-lg border p-4">
+            <h2 className="font-semibold">Reports to</h2>
+            {caller?.role === 'manager' && (
+              <p className="text-sm text-charcoal-soft">
+                Choosing another manager hands this person over. They will leave your team.
+              </p>
+            )}
+            <form
+              key={person.managerId ?? 'none'}
+              onSubmit={(event) => {
+                event.preventDefault();
+                const value = String(new FormData(event.currentTarget).get('managerId'));
+                setError(null);
+                update.mutate({ managerId: value === '' ? null : value });
+              }}
+              className="space-y-3"
+            >
+              <label htmlFor="managerId" className="block text-sm font-medium">
+                Manager
+              </label>
+              <select
+                id="managerId"
+                name="managerId"
+                defaultValue={person.managerId ?? ''}
+                className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+              >
+                {caller?.role === 'admin' && <option value="">No manager yet</option>}
+                {managers.data?.items.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.fullName}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                disabled={update.isPending}
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-3 py-2 text-sm text-white disabled:opacity-60 sm:w-auto"
+              >
+                {update.isPending ? 'Saving…' : 'Change manager'}
+              </button>
+            </form>
+          </section>
+        ) : (
+          <section className="space-y-3 rounded-lg border p-4">
+            <h2 className="font-semibold">Reports to</h2>
+            <p className="text-sm text-charcoal-soft">{person.managerName ?? 'No manager assigned'}</p>
+          </section>
+        ))}
+
+      {canManage && <section className="space-y-3 rounded-lg border p-4">
         <h2 className="font-semibold">Account</h2>
 
         {confirming === 'deactivate' ? (
@@ -203,19 +229,19 @@ function PersonDetail() {
             <p>
               Deactivate {person.fullName}? They will be signed out and unable to log in.
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
                 disabled={update.isPending}
                 onClick={() => update.mutate({ isActive: false })}
-                className="rounded-xl bg-alert px-3 py-1 text-white disabled:opacity-60"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-alert px-3 py-2 text-white disabled:opacity-60 sm:w-auto"
               >
                 Yes, deactivate
               </button>
               <button
                 type="button"
                 onClick={() => setConfirming(null)}
-                className="rounded-xl border border-charcoal/15 px-3 py-1"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
               >
                 Cancel
               </button>
@@ -226,26 +252,26 @@ function PersonDetail() {
             <p>
               Reset the password for {person.fullName}? Their current sessions will be signed out.
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
                 disabled={reset.isPending}
                 onClick={() => reset.mutate()}
-                className="rounded-xl bg-alert px-3 py-1 text-white disabled:opacity-60"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-alert px-3 py-2 text-white disabled:opacity-60 sm:w-auto"
               >
                 Yes, reset password
               </button>
               <button
                 type="button"
                 onClick={() => setConfirming(null)}
-                className="rounded-xl border border-charcoal/15 px-3 py-1"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
               >
                 Cancel
               </button>
             </div>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-2 text-sm">
+          <div className="flex flex-col gap-2 text-sm sm:flex-row">
             {person.isActive ? (
               <button
                 type="button"
@@ -253,7 +279,7 @@ function PersonDetail() {
                   setError(null);
                   setConfirming('deactivate');
                 }}
-                className="rounded-xl border border-charcoal/15 px-3 py-1"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
               >
                 Deactivate
               </button>
@@ -262,7 +288,7 @@ function PersonDetail() {
                 type="button"
                 disabled={update.isPending}
                 onClick={() => update.mutate({ isActive: true })}
-                className="rounded-xl border border-charcoal/15 px-3 py-1"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
               >
                 Reactivate
               </button>
@@ -274,7 +300,7 @@ function PersonDetail() {
                 setTemporaryPassword(null);
                 setConfirming('reset');
               }}
-              className="rounded-xl border border-charcoal/15 px-3 py-1"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
             >
               Reset password
             </button>
@@ -286,7 +312,7 @@ function PersonDetail() {
             {error}
           </p>
         )}
-      </section>
+      </section>}
       </div>
 
       {person.role !== 'admin' && (

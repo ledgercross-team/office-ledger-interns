@@ -44,16 +44,12 @@ export function TaskCard({
           <StatusBadge status={task.status} />
         </div>
       </div>
-      <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm min-[420px]:grid-cols-2 sm:grid-cols-3 sm:gap-y-1">
-        <div className="flex min-w-0 flex-col items-start">
-          <dt className="text-charcoal-soft">Assignee</dt>
-          <dd className="mt-1">{task.assigneeName ?? '—'}</dd>
-        </div>
-        <div className="flex min-w-0 flex-col items-start">
-          <dt className="text-charcoal-soft">Deadline</dt>
-          <dd className="mt-1 break-words">{formatDateTime(task.deadline, timezone)}</dd>
-        </div>
+      <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-[repeat(3,minmax(0,1fr))]">
         <div className="flex min-w-0 items-center gap-2">
+          <dt className="shrink-0 text-charcoal-soft">Assignee</dt>
+          <dd className="min-w-0 break-words">{task.assigneeName ?? '—'}</dd>
+        </div>
+        <div className="flex min-w-0 items-center gap-2 sm:justify-self-center">
           <dt className="shrink-0 text-charcoal-soft">Priority</dt>
           <dd className="min-w-0">
             <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ${priority.className}`}>
@@ -61,6 +57,10 @@ export function TaskCard({
               {priority.label}
             </span>
           </dd>
+        </div>
+        <div className="flex min-w-0 items-center gap-2 sm:justify-self-end">
+          <dt className="shrink-0 text-charcoal-soft">Deadline</dt>
+          <dd className="min-w-0 break-words">{formatDateTime(task.deadline, timezone)}</dd>
         </div>
       </dl>
       <TaskActionBar task={task} />

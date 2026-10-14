@@ -41,6 +41,7 @@ function SubscriptionView() {
   }
 
   const { current, daysLeft, items } = query.data;
+  const historyItems = items.filter((item) => item.cancelledAt === null);
   const today = todayIn(user?.companyTimezone);
   // The API returns the latest subscription when none is current, so check it has not ended.
   const currentState = current ? stateOf(current, today) : null;
@@ -107,9 +108,9 @@ function SubscriptionView() {
       <section className="space-y-3 rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
         <div>
           <h2 className="font-semibold text-charcoal">Subscription history</h2>
-          <p className="mt-1 text-sm text-charcoal-soft">Every plan purchased for this company.</p>
+          <p className="mt-1 text-sm text-charcoal-soft">Every active or completed plan purchased for this company.</p>
         </div>
-        {items.length === 0 ? (
+        {historyItems.length === 0 ? (
           <p className="text-sm text-charcoal-soft">No subscriptions yet.</p>
         ) : (
           <div className="slim-scroll max-w-full overflow-x-auto">
@@ -123,7 +124,7 @@ function SubscriptionView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-charcoal/5">
-                {items.map((item) => {
+                {historyItems.map((item) => {
                   const state = stateOf(item, today);
                   return (
                     <tr key={item.id} className="transition-colors hover:bg-mist/50">

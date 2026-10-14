@@ -38,6 +38,24 @@ export const NAV_ICONS: Record<string, React.ReactNode> = {
       <path d="M12 7v5l3 2" />
     </>,
   ),
+  '/leave-request': base(
+    <>
+      <path d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
+      <path d="M8 2v4M16 2v4M3 10h18M8 14h4" />
+    </>,
+  ),
+  '/calendar': base(
+    <>
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" />
+    </>,
+  ),
+  '/complaints': base(
+    <>
+      <path d="M21 12a8 8 0 0 1-8 8H5l-2 2 1-5a8 8 0 1 1 17-5Z" />
+      <path d="M12 8v4M12 16h.01" />
+    </>,
+  ),
   '/team-attendance': base(
     <>
       <circle cx="9" cy="8" r="3.5" />

@@ -526,10 +526,9 @@ export class AttendanceService {
     return target;
   }
 
-  // Admin sees managers and employees; a manager sees their own team and themselves.
+  // Admin sees managers and employees; a manager sees only employees assigned to them.
   private visibleTo(caller: AuthUser) {
-    const managed = managedPeople(caller);
-    return caller.role === 'manager' ? or(managed, eq(users.id, caller.id)) : managed;
+    return managedPeople(caller);
   }
 
   private async getCompany(user: AuthUser) {

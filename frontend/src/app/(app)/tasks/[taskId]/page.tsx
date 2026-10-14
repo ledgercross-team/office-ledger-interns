@@ -85,7 +85,7 @@ function EditForm({ task, timezone }: { task: Task; timezone: string }) {
           defaultValue={task.title}
           required
           maxLength={200}
-          className="w-full rounded-xl border border-charcoal/15 px-3 py-2"
+          className="min-h-11 w-full rounded-xl border border-charcoal/15 px-3 py-2"
         />
       </div>
       <div className="space-y-1">
@@ -110,7 +110,7 @@ function EditForm({ task, timezone }: { task: Task; timezone: string }) {
             id="edit-category"
             name="category"
             defaultValue={task.category}
-            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+            className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
           >
             {TASK_CATEGORIES.map((item) => (
               <option key={item.value} value={item.value}>
@@ -127,7 +127,7 @@ function EditForm({ task, timezone }: { task: Task; timezone: string }) {
             id="edit-assignee"
             name="assigneeId"
             defaultValue={task.assigneeId}
-            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+            className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
           >
             {/* The current assignee stays selectable even if the list has not loaded. */}
             {!people.data?.items.some((person) => person.id === task.assigneeId) && (
@@ -150,7 +150,7 @@ function EditForm({ task, timezone }: { task: Task; timezone: string }) {
             id="edit-priority"
             name="priority"
             defaultValue={task.priority}
-            className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
+            className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2"
           >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
@@ -182,7 +182,7 @@ function EditForm({ task, timezone }: { task: Task; timezone: string }) {
       <button
         type="submit"
         disabled={save.isPending}
-        className="rounded-xl bg-evergreen px-3 py-1 text-sm text-white disabled:opacity-60"
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-3 py-2 text-sm text-white disabled:opacity-60 sm:w-auto"
       >
         {save.isPending ? 'Saving…' : 'Save changes'}
       </button>
@@ -247,7 +247,7 @@ function TaskDetail() {
   const task = query.data;
 
   return (
-    <div className="w-full max-w-3xl space-y-4">
+    <div className="mx-auto w-full min-w-0 max-w-3xl space-y-4">
       <TaskCard task={task} linkTitle={false} timezone={timezone} />
       {task.description && (
         <section className="space-y-1">

@@ -84,6 +84,7 @@ export function MessageThread({ companyId, title, subtitle, className }: Message
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['messages', companyId] }),
+        queryClient.invalidateQueries({ queryKey: ['messages', 'unread'] }),
         queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
         queryClient.invalidateQueries({ queryKey: ['companies'] }),
       ]);
@@ -208,14 +209,16 @@ export function MessageThread({ companyId, title, subtitle, className }: Message
               <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[78%] ${mine ? 'items-end' : 'items-start'} flex flex-col`}>
                   {!mine && (
-                    <p className="mb-0.5 px-1 text-xs text-charcoal-soft">
+                    <p className="mb-0.5 px-1 text-xs font-medium text-evergreen">
                       {message.senderName ?? 'Someone'}
                     </p>
                   )}
                   <div
                     title={formatDateTime(message.createdAt)}
                     className={`break-words rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap ${
-                      mine ? 'rounded-br-md bg-evergreen text-white' : 'rounded-bl-md border border-charcoal/10 bg-white text-charcoal'
+                      mine
+                        ? 'rounded-br-md bg-evergreen text-white'
+                        : 'rounded-bl-md border border-evergreen/25 bg-mist text-forest'
                     }`}
                   >
                     {message.body}

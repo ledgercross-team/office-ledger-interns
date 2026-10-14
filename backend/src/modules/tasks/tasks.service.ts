@@ -13,6 +13,7 @@ import {
   count,
   desc,
   eq,
+  inArray,
   lt,
   notInArray,
   or,
@@ -22,11 +23,12 @@ import type { AuthUser, Role } from '../../auth/auth.types';
 import { getCompanyDate } from '../../common/utils/company-time';
 import { isHoliday } from '../../common/utils/dates';
 import { DRIZZLE, type Database } from '../../db/db.module';
-import { companies, taskActivity, tasks, users } from '../../db/schema';
+import { companies, taskActivity, taskAssignmentRequests, tasks, users } from '../../db/schema';
 import { managedPeople } from '../users/visibility';
 import type {
   CommentDto,
   CreateTaskDto,
+  ListAssignmentRequestsQueryDto,
   ListTasksQueryDto,
   StatusChangeDto,
   UpdateTaskDto,
@@ -43,6 +45,9 @@ import {
 
 const assignee = aliasedTable(users, 'assignee');
 const creator = aliasedTable(users, 'creator');
+const requestManager = aliasedTable(users, 'request_manager');
+const requestEmployee = aliasedTable(users, 'request_employee');
+const employeeManager = aliasedTable(users, 'employee_manager');
 
 const CLOSED: TaskStatus[] = ['done', 'cancelled'];
 
@@ -87,8 +92,54 @@ interface TaskRow {
 }
 
 function assigneeOf(task: TaskRow): TaskAssignee {
-  return { role: task.assigneeRole, managerId: task.assigneeManagerId };
+  return {
+    role: task.assigneeRole,
+    managerId: task.assigneeManagerId,
+    taskManagerId: task.createdById,
+  };
 }
+
+export interface TaskAssignmentRequestRow {
+  id: string;
+  companyId: string;
+  managerId: string;
+  managerName: string;
+  employeeId: string;
+  employeeName: string;
+  employeeManagerName: string | null;
+  title: string;
+  description: string | null;
+  category: (typeof tasks.category.enumValues)[number];
+  priority: 'low' | 'medium' | 'high';
+  deadline: Date;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedById: string | null;
+  reviewedAt: Date | null;
+  taskId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const ASSIGNMENT_REQUEST_COLUMNS = {
+  id: taskAssignmentRequests.id,
+  companyId: taskAssignmentRequests.companyId,
+  managerId: taskAssignmentRequests.managerId,
+  managerName: requestManager.fullName,
+  employeeId: taskAssignmentRequests.employeeId,
+  employeeName: requestEmployee.fullName,
+  employeeManagerName: employeeManager.fullName,
+  title: taskAssignmentRequests.title,
+  description: taskAssignmentRequests.description,
+  category: taskAssignmentRequests.category,
+  priority: taskAssignmentRequests.priority,
+  deadline: taskAssignmentRequests.deadline,
+  status: taskAssignmentRequests.status,
+  reviewedById: taskAssignmentRequests.reviewedById,
+  reviewedAt: taskAssignmentRequests.reviewedAt,
+  taskId: taskAssignmentRequests.taskId,
+  createdAt: taskAssignmentRequests.createdAt,
+  updatedAt: taskAssignmentRequests.updatedAt,
+};
 
 @Injectable()
 export class TasksService {
@@ -134,7 +185,34 @@ export class TasksService {
   async create(user: AuthUser, dto: CreateTaskDto) {
     this.assertNotInThePast(dto.deadline);
     await this.assertNotHoliday(user, dto.deadline);
-    await this.assertAssignable(user, dto.assigneeId);
+    const target = await this.findAssignmentTarget(user, dto.assigneeId);
+
+    if (!target) {
+      throw new BadRequestException('Choose an active employee or manager from your company.');
+    }
+
+    // A manager may work with any employee, but an employee outside their own
+    // team needs an admin approval before the task is created.
+    if (user.role === 'manager' && target.managerId !== user.id) {
+      const [created] = await this.database
+        .insert(taskAssignmentRequests)
+        .values({
+          companyId: user.companyId as string,
+          managerId: user.id,
+          employeeId: target.id,
+          title: dto.title,
+          description: dto.description,
+          category: dto.category,
+          priority: dto.priority,
+          deadline: new Date(dto.deadline),
+        })
+        .returning({ id: taskAssignmentRequests.id });
+
+      return {
+        status: 'pending_approval' as const,
+        request: await this.loadAssignmentRequest(user.companyId as string, created.id),
+      };
+    }
 
     const [created] = await this.database
       .insert(tasks)
@@ -151,6 +229,131 @@ export class TasksService {
       .returning({ id: tasks.id });
 
     return this.get(user, created.id);
+  }
+
+  async listAssignmentRequests(user: AuthUser, query: ListAssignmentRequestsQueryDto) {
+    this.assertAdmin(user);
+    const status = query.status ?? 'pending';
+    const where = and(
+      eq(taskAssignmentRequests.companyId, user.companyId as string),
+      eq(taskAssignmentRequests.status, status),
+    );
+
+    const [{ total }] = await this.database
+      .select({ total: count() })
+      .from(taskAssignmentRequests)
+      .where(where);
+    const rows = await this.assignmentRequestSelect()
+      .where(where)
+      .orderBy(asc(taskAssignmentRequests.createdAt), asc(taskAssignmentRequests.id))
+      .limit(query.pageSize)
+      .offset((query.page - 1) * query.pageSize);
+
+    return { items: rows, page: query.page, pageSize: query.pageSize, total };
+  }
+
+  async approveAssignment(user: AuthUser, requestId: string) {
+    this.assertAdmin(user);
+    const taskId = await this.database.transaction(async (tx) => {
+      const [request] = await tx
+        .select({
+          id: taskAssignmentRequests.id,
+          companyId: taskAssignmentRequests.companyId,
+          managerId: taskAssignmentRequests.managerId,
+          employeeId: taskAssignmentRequests.employeeId,
+          title: taskAssignmentRequests.title,
+          description: taskAssignmentRequests.description,
+          category: taskAssignmentRequests.category,
+          priority: taskAssignmentRequests.priority,
+          deadline: taskAssignmentRequests.deadline,
+        })
+        .from(taskAssignmentRequests)
+        .where(
+          and(
+            eq(taskAssignmentRequests.id, requestId),
+            eq(taskAssignmentRequests.companyId, user.companyId as string),
+            eq(taskAssignmentRequests.status, 'pending'),
+          ),
+        )
+        .limit(1);
+
+      if (!request) {
+        throw new NotFoundException('Assignment request not found or already reviewed.');
+      }
+
+      this.assertNotInThePast(request.deadline.toISOString());
+      await this.assertNotHoliday(user, request.deadline.toISOString());
+
+      const people = await tx
+        .select({ id: users.id, role: users.role, isActive: users.isActive })
+        .from(users)
+        .where(
+          and(
+            eq(users.companyId, request.companyId),
+            inArray(users.id, [request.managerId, request.employeeId]),
+          ),
+        );
+      const manager = people.find((person) => person.id === request.managerId);
+      const employee = people.find((person) => person.id === request.employeeId);
+      if (!manager || manager.role !== 'manager' || !manager.isActive) {
+        throw new ConflictException('The requesting manager is no longer active.');
+      }
+      if (!employee || employee.role !== 'employee' || !employee.isActive) {
+        throw new ConflictException('The selected employee is no longer active.');
+      }
+
+      const [created] = await tx
+        .insert(tasks)
+        .values({
+          companyId: request.companyId,
+          title: request.title,
+          description: request.description,
+          category: request.category,
+          priority: request.priority,
+          deadline: request.deadline,
+          assigneeId: request.employeeId,
+          createdById: request.managerId,
+        })
+        .returning({ id: tasks.id });
+
+      const reviewed = await tx
+        .update(taskAssignmentRequests)
+        .set({ status: 'approved', reviewedById: user.id, reviewedAt: new Date(), taskId: created.id })
+        .where(
+          and(
+            eq(taskAssignmentRequests.id, request.id),
+            eq(taskAssignmentRequests.status, 'pending'),
+          ),
+        )
+        .returning({ id: taskAssignmentRequests.id });
+
+      if (reviewed.length === 0) {
+        throw new ConflictException('This assignment request was already reviewed.');
+      }
+      return created.id;
+    });
+
+    return this.get(user, taskId);
+  }
+
+  async rejectAssignment(user: AuthUser, requestId: string) {
+    this.assertAdmin(user);
+    const [rejected] = await this.database
+      .update(taskAssignmentRequests)
+      .set({ status: 'rejected', reviewedById: user.id, reviewedAt: new Date() })
+      .where(
+        and(
+          eq(taskAssignmentRequests.id, requestId),
+          eq(taskAssignmentRequests.companyId, user.companyId as string),
+          eq(taskAssignmentRequests.status, 'pending'),
+        ),
+      )
+      .returning({ id: taskAssignmentRequests.id, status: taskAssignmentRequests.status });
+
+    if (!rejected) {
+      throw new NotFoundException('Assignment request not found or already reviewed.');
+    }
+    return rejected;
   }
 
   async remove(user: AuthUser, taskId: string): Promise<void> {
@@ -173,7 +376,15 @@ export class TasksService {
       throw new ConflictException('Done or cancelled tasks cannot be edited.');
     }
     if (dto.assigneeId && dto.assigneeId !== task.assigneeId) {
-      await this.assertAssignable(user, dto.assigneeId);
+      const target = await this.findAssignmentTarget(user, dto.assigneeId);
+      if (!target) {
+        throw new BadRequestException('Choose an active employee or manager from your company.');
+      }
+      if (user.role === 'manager' && target.managerId !== user.id) {
+        throw new BadRequestException(
+          'Changing to an employee outside your team requires a new admin approval request.',
+        );
+      }
     }
     if (dto.deadline && new Date(dto.deadline).getTime() !== task.deadline.getTime()) {
       this.assertNotInThePast(dto.deadline);
@@ -294,7 +505,11 @@ export class TasksService {
   private visibleTo(user: AuthUser): SQL | undefined {
     if (user.role === 'admin') return undefined;
     if (user.role === 'manager') {
-      return or(managedPeople(user, assignee), eq(tasks.assigneeId, user.id));
+      return or(
+        managedPeople(user, assignee),
+        eq(tasks.assigneeId, user.id),
+        eq(tasks.createdById, user.id),
+      );
     }
     return eq(tasks.assigneeId, user.id);
   }
@@ -336,24 +551,43 @@ export class TasksService {
     }
   }
 
-  // Active, in the caller's company, and someone the caller manages: an admin assigns to any
-  // manager or employee, a manager only to the employees who report to them.
-  private async assertAssignable(user: AuthUser, assigneeId: string): Promise<void> {
+  private async findAssignmentTarget(user: AuthUser, assigneeId: string) {
+    const roles: Role[] = user.role === 'admin' ? ['manager', 'employee'] : ['employee'];
     const [person] = await this.database
-      .select({ id: users.id })
+      .select({ id: users.id, role: users.role, managerId: users.managerId })
       .from(users)
       .where(
         and(
           eq(users.id, assigneeId),
           eq(users.companyId, user.companyId as string),
           eq(users.isActive, true),
-          managedPeople(user),
+          inArray(users.role, roles),
         ),
       )
       .limit(1);
 
-    if (!person) {
-      throw new BadRequestException('Assignee must be an active person you can assign tasks to.');
+    return person;
+  }
+
+  private assignmentRequestSelect() {
+    return this.database
+      .select(ASSIGNMENT_REQUEST_COLUMNS)
+      .from(taskAssignmentRequests)
+      .innerJoin(requestManager, eq(requestManager.id, taskAssignmentRequests.managerId))
+      .innerJoin(requestEmployee, eq(requestEmployee.id, taskAssignmentRequests.employeeId))
+      .leftJoin(employeeManager, eq(employeeManager.id, requestEmployee.managerId));
+  }
+
+  private loadAssignmentRequest(companyId: string, requestId: string) {
+    return this.assignmentRequestSelect()
+      .where(and(eq(taskAssignmentRequests.companyId, companyId), eq(taskAssignmentRequests.id, requestId)))
+      .limit(1)
+      .then(([request]) => request);
+  }
+
+  private assertAdmin(user: AuthUser): void {
+    if (user.role !== 'admin') {
+      throw new ForbiddenException('Only an admin can review task assignment requests.');
     }
   }
 

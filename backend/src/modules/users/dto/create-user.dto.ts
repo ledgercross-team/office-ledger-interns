@@ -18,7 +18,7 @@ export class CreateUserDto {
   @MaxLength(120)
   jobTitle?: string;
 
-  // Employees only. A manager's new employees always report to that manager.
+  // Employees only. Leave empty to assign later; otherwise choose an active manager.
   @IsOptional()
   @IsUUID()
   managerId?: string;

@@ -20,6 +20,13 @@ export class UsersController {
     return this.service.list(user, query);
   }
 
+  // Task assignment choices are broader than the normal manager directory:
+  // a manager may request approval to assign any active employee.
+  @Get('assignable')
+  assignable(@CurrentUser() user: AuthUser) {
+    return this.service.listAssignable(user);
+  }
+
   @Throttle({ default: CREATE_RATE })
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateUserDto) {

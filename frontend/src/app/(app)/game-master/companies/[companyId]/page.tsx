@@ -379,66 +379,6 @@ function CompanyDetail() {
         </form>
       </section>
 
-      <section className="space-y-3 rounded-lg border border-alert/30 p-4">
-        <h2 className="font-semibold text-alert-deep">Danger zone</h2>
-        {confirming === 'discard'
-          ? confirmBox(
-              `Discard ${company.name}? This permanently deletes the company, its users, subscriptions, tasks, attendance, and messages.`,
-              'Yes, discard company',
-              () => discardCompany.mutate(),
-            )
-          : (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError(null);
-                    setSaved(null);
-                    setConfirming('discard');
-                  }}
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-alert px-3 py-2 text-sm text-white sm:w-auto"
-                >
-                  Discard company
-                </button>
-              </div>
-            )}
-      </section>
-
-      <section className="space-y-3 rounded-lg border p-4">
-        <h2 className="font-semibold">Company status</h2>
-
-        {confirming === 'deactivate' &&
-          confirmBox(
-            `Deactivate ${company.name}? Everyone in the company will be signed out and unable to log in.`,
-            'Yes, deactivate',
-            () => updateCompany.mutate({ isActive: false }),
-          )}
-        {(confirming === null || typeof confirming === 'object') && (
-          <div className="flex flex-col gap-2 text-sm sm:flex-row">
-            {company.isActive ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setError(null);
-                  setConfirming('deactivate');
-                }}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
-              >
-                Deactivate company
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => updateCompany.mutate({ isActive: true })}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
-              >
-                Reactivate company
-              </button>
-            )}
-          </div>
-        )}
-      </section>
-
       <section className="space-y-3 rounded-lg border p-4">
         <h2 className="font-semibold">Subscriptions</h2>
         {subscriptions.length === 0 && <p className="text-sm text-charcoal-soft">None yet.</p>}
@@ -544,6 +484,58 @@ function CompanyDetail() {
             Add subscription
           </button>
         </form>
+      </section>
+
+      <section className="space-y-3 rounded-lg border border-alert/30 p-4">
+        <h2 className="font-semibold text-alert-deep">Company actions</h2>
+
+        {confirming === 'deactivate' &&
+          confirmBox(
+            `Deactivate ${company.name}? Everyone in the company will be signed out and unable to log in.`,
+            'Yes, deactivate',
+            () => updateCompany.mutate({ isActive: false }),
+          )}
+        {confirming === 'discard' &&
+          confirmBox(
+            `Discard ${company.name}? This permanently deletes the company, its users, subscriptions, tasks, attendance, and messages.`,
+            'Yes, discard company',
+            () => discardCompany.mutate(),
+          )}
+        {(confirming === null || typeof confirming === 'object') && (
+          <div className="flex flex-col justify-end gap-2 text-sm sm:flex-row">
+            {company.isActive ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setConfirming('deactivate');
+                }}
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
+              >
+                Deactivate company
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => updateCompany.mutate({ isActive: true })}
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-charcoal/15 px-3 py-2 sm:w-auto"
+              >
+                Reactivate company
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setSaved(null);
+                setConfirming('discard');
+              }}
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-alert px-3 py-2 text-sm text-white sm:w-auto"
+            >
+              Discard company
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );

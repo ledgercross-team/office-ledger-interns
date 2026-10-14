@@ -15,6 +15,7 @@ import { TASK_CATEGORIES } from '../../../db/schema/enums';
 const PRIORITIES = ['low', 'medium', 'high'] as const;
 const STATUSES = ['todo', 'in_progress', 'delayed', 'done', 'incomplete', 'cancelled'] as const;
 const ACTIONS = ['start', 'done', 'delayed', 'incomplete', 'reopen', 'cancel'] as const;
+const ASSIGNMENT_REQUEST_STATUSES = ['pending', 'approved', 'rejected'] as const;
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
@@ -91,6 +92,12 @@ export class ListTasksQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsISO8601()
   dueBefore?: string;
+}
+
+export class ListAssignmentRequestsQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsIn(ASSIGNMENT_REQUEST_STATUSES)
+  status?: (typeof ASSIGNMENT_REQUEST_STATUSES)[number];
 }
 
 export class StatusChangeDto {

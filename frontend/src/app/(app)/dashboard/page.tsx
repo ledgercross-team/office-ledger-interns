@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { motion } from 'motion/react';
-import { MonthlyTeamInsights, PersonInsights } from '@/components/attendance-insights';
+import { MonthlyTeamInsights } from '@/components/attendance-insights';
 import { CheckInCard } from '@/components/check-in-card';
 import { OpenTaskList } from '@/components/open-task-list';
 import { OverdueList } from '@/components/overdue-list';
@@ -94,6 +94,33 @@ function TaskBars({ counts }: { counts: TasksByStatus }) {
   );
 }
 
+function EmployeeTools() {
+  const tools = [
+    { href: '/leave-request', label: 'Leave request', text: 'Ask for time away and track the decision.', icon: '＋' },
+    { href: '/calendar', label: 'Calendar', text: 'See working days and company holidays.', icon: '□' },
+    { href: '/complaints', label: 'Complaints', text: 'Raise a workplace concern privately.', icon: '!' },
+  ];
+
+  return (
+    <Reveal>
+      <section className="space-y-4 rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
+        <div>
+          <h2 className="mt-1 text-lg font-semibold text-charcoal">What do you need?</h2>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {tools.map((tool) => (
+            <Link key={tool.href} href={tool.href} className="group rounded-xl border border-charcoal/10 p-4 transition-colors hover:border-evergreen/40 hover:bg-mist/50">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-mist text-lg font-semibold text-evergreen" aria-hidden>{tool.icon}</span>
+              <span className="mt-3 block font-medium text-charcoal group-hover:text-evergreen">{tool.label}</span>
+              <span className="mt-1 block text-sm leading-5 text-charcoal-soft">{tool.text}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
 function AttendanceStory({
   attendance,
   rate,
@@ -156,26 +183,13 @@ function useTodaySpotlight(enabled: boolean, timezone: string) {
 function EmployeeDashboard({ summary }: { summary: DashboardSummary }) {
   return (
     <div className="space-y-5">
-      <Reveal>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatTile label="Open" value={summary.openTasks} />
-          <StatTile label="Overdue" value={summary.overdueTasks} tone="warning" />
-          <StatTile label="Done this week" value={summary.doneThisWeek} />
-        </div>
-      </Reveal>
+      <EmployeeTools />
       {summary.today && <CheckInCard today={summary.today} timezone={summary.timezone} />}
       <Reveal>
         <div className="rounded-2xl border border-charcoal/10 bg-white p-5 shadow-[0_1px_2px_rgba(28,43,37,0.06)]">
           <OpenTaskList title="Open tasks" />
         </div>
       </Reveal>
-      <StoryChapter
-        step="Your attendance"
-        title="How do your days look?"
-        lede="Scroll through your last 30 days of check-ins and check-outs."
-      >
-        <PersonInsights path="/attendance/stats/me" />
-      </StoryChapter>
     </div>
   );
 }
@@ -183,6 +197,21 @@ function EmployeeDashboard({ summary }: { summary: DashboardSummary }) {
 function ManagerDashboard({ summary, userId }: { summary: DashboardSummary; userId: string }) {
   const team = summary.team;
   const spotlight = useTodaySpotlight(team !== undefined, summary.timezone);
+  const ownStatus = summary.today?.status;
+  const managerAttendance = team
+    ? {
+        total: team.attendance.total + 1,
+        present: team.attendance.present + (ownStatus === 'present' ? 1 : 0),
+        late: team.attendance.late + (ownStatus === 'late' ? 1 : 0),
+        absent: team.attendance.absent + (ownStatus === 'absent' ? 1 : 0),
+      }
+    : undefined;
+  const managerSpotlight = [
+    ...(ownStatus === 'late' || ownStatus === 'absent'
+      ? [{ userId, userFullName: 'You', status: ownStatus }]
+      : []),
+    ...spotlight,
+  ].slice(0, 5);
 
   return (
     <div className="space-y-8">
@@ -198,27 +227,27 @@ function ManagerDashboard({ summary, userId }: { summary: DashboardSummary; user
 
       {team && (
         <>
-          <StoryChapter step="Chapter 1" title="How is the team doing today?" lede="Attendance across the people you manage.">
+          <StoryChapter step="Chapter 1" title="How is the team doing today?" lede="Attendance for you and the people you manage.">
             <AttendanceStory
-              attendance={team.attendance}
-              spotlight={spotlight}
+              attendance={managerAttendance ?? team.attendance}
+              spotlight={managerSpotlight}
               teamHref="/team-attendance"
             />
           </StoryChapter>
 
-          <StoryChapter step="Chapter 2" title="Where is the work stuck?" lede="Team tasks by status, then the overdue list.">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <TaskBars counts={team.tasksByStatus} />
-              <OverdueList items={team.overdueList} />
-            </div>
-          </StoryChapter>
-
           <StoryChapter
-            step="Chapter 3"
+            step="Chapter 2"
             title="Who can you count on?"
             lede="On-time, late and absent attendance for the selected month."
           >
             <MonthlyTeamInsights key={todayIn(summary.timezone).slice(0, 7)} timezone={summary.timezone} />
+          </StoryChapter>
+
+          <StoryChapter step="Chapter 3" title="Where is the work stuck?" lede="Your tasks and your team’s tasks by status, then the overdue list.">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <TaskBars counts={team.tasksByStatus} />
+              <OverdueList items={team.overdueList} />
+            </div>
           </StoryChapter>
         </>
       )}
@@ -228,14 +257,6 @@ function ManagerDashboard({ summary, userId }: { summary: DashboardSummary; user
           <OpenTaskList title="My open tasks" assigneeId={userId} />
         </div>
       </Reveal>
-
-      <StoryChapter
-        step="Your attendance"
-        title="How do your own days look?"
-        lede="Your last 30 days of check-ins and check-outs."
-      >
-        <PersonInsights path="/attendance/stats/me" />
-      </StoryChapter>
     </div>
   );
 }
@@ -249,9 +270,9 @@ function AdminDashboard({ summary }: { summary: DashboardSummary }) {
       <Reveal>
         <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-4">
           <StatTile label="Active people" value={summary.activePeople ?? 0} />
-          <StatTile label="Attendance rate" value={`${summary.todayAttendanceRate ?? 0}%`} />
           <StatTile label="Open tasks" value={summary.openTasks} />
           <StatTile label="Overdue" value={summary.overdueTasks} tone="warning" />
+          <StatTile label="Task approvals" value={summary.pendingAssignmentApprovals ?? 0} tone="warning" />
         </div>
       </Reveal>
 
@@ -302,6 +323,10 @@ function AdminDashboard({ summary }: { summary: DashboardSummary }) {
           <Link href="/messages" className="font-medium text-evergreen hover:underline">
             Messages
           </Link>
+          <span className="text-charcoal-soft">·</span>{' '}
+          <Link href="/tasks" className="font-medium text-evergreen hover:underline">
+            Review task approvals
+          </Link>
         </p>
       </StoryChapter>
     </div>
@@ -331,7 +356,7 @@ function Dashboard() {
   const story = summary.role === 'admin' || summary.role === 'manager';
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-4">
       <h1 className="text-xl font-semibold text-charcoal">Dashboard</h1>
       {story && <ScrollProgress />}
       {summary.role === 'admin' && <AdminDashboard summary={summary} />}

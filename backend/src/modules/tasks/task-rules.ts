@@ -74,13 +74,19 @@ export interface TaskForRules {
 export interface TaskAssignee {
   role: Role;
   managerId: string | null;
+  // The manager who owns the task. This can differ from managerId after an
+  // admin approves a cross-team assignment.
+  taskManagerId?: string;
 }
 
-// A company admin, or the manager the assignee reports to.
+// A company admin, the assignee's manager, or the manager who owns an
+// admin-approved cross-team task.
 export function isTaskManager(actor: TaskActor, assignee: TaskAssignee): boolean {
   return (
     actor.role === 'admin' ||
-    (actor.role === 'manager' && assignee.role === 'employee' && assignee.managerId === actor.id)
+    (actor.role === 'manager' &&
+      assignee.role === 'employee' &&
+      (assignee.managerId === actor.id || assignee.taskManagerId === actor.id))
   );
 }
 

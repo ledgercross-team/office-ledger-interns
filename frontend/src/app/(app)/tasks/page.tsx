@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Pagination } from '@/components/pagination';
@@ -8,9 +8,9 @@ import { RoleGate } from '@/components/role-gate';
 import { TaskCard } from '@/components/task-card';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
-import { buildQuery, errorMessage } from '@/lib/format';
+import { buildQuery, errorMessage, formatDateTime } from '@/lib/format';
 import { TASK_CATEGORIES } from '@/lib/task-meta';
-import type { Paginated, Task, TaskStatus } from '@/lib/types';
+import type { Paginated, Task, TaskAssignmentRequest, TaskStatus } from '@/lib/types';
 
 const PAGE_SIZE_OPTIONS = [5, 10] as const;
 
@@ -22,6 +22,90 @@ const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: 'incomplete', label: 'Incomplete' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
+
+function AssignmentApprovals() {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ['task-assignment-requests', 'pending'],
+    queryFn: () =>
+      apiFetch<Paginated<TaskAssignmentRequest>>(
+        `/tasks/assignment-requests${buildQuery({ status: 'pending', pageSize: 100 })}`,
+      ),
+    refetchInterval: 30_000,
+  });
+  const review = useMutation({
+    mutationFn: ({ requestId, decision }: { requestId: string; decision: 'approve' | 'reject' }) =>
+      apiFetch(`/tasks/assignment-requests/${requestId}/${decision}`, { method: 'POST' }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['task-assignment-requests', 'pending'] });
+      await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard', 'summary'] });
+    },
+  });
+
+  if (query.isLoading) {
+    return <p className="text-sm text-charcoal-soft">Loading assignment approvals…</p>;
+  }
+  if (query.error) {
+    return <p role="alert" className="text-sm text-alert-deep">{errorMessage(query.error)}</p>;
+  }
+  if (!query.data || query.data.items.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="space-y-4 rounded-2xl border border-brand-amber/40 bg-amber-tint/40 p-4 shadow-[0_1px_2px_rgba(28,43,37,0.06)] sm:p-5">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-deep">Admin notification</p>
+        <h2 className="mt-1 text-lg font-semibold text-charcoal">Task assignment approvals ({query.data.total})</h2>
+        <p className="mt-1 text-sm text-charcoal-soft">Managers are requesting access to employees outside their own teams.</p>
+      </div>
+      <div className="space-y-3">
+        {query.data.items.map((request) => (
+          <article key={request.id} className="rounded-xl border border-charcoal/10 bg-white p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="font-semibold break-words text-charcoal">{request.title}</h3>
+                <p className="mt-1 text-sm text-charcoal-soft">
+                  {request.managerName} wants to assign this task to {request.employeeName}.
+                </p>
+                <p className="mt-1 text-xs text-charcoal-soft">
+                  {request.employeeManagerName
+                    ? `Currently reports to ${request.employeeManagerName}.`
+                    : 'The employee is currently unassigned.'}{' '}
+                  Deadline: {formatDateTime(request.deadline)}
+                </p>
+              </div>
+              <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
+                <button
+                  type="button"
+                  disabled={review.isPending}
+                  onClick={() => review.mutate({ requestId: request.id, decision: 'approve' })}
+                  className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-evergreen px-3 py-2 text-sm font-medium text-white disabled:opacity-60 sm:flex-none"
+                >
+                  Approve & create task
+                </button>
+                <button
+                  type="button"
+                  disabled={review.isPending}
+                  onClick={() => review.mutate({ requestId: request.id, decision: 'reject' })}
+                  className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-alert/30 px-3 py-2 text-sm font-medium text-alert-deep hover:bg-alert-tint disabled:opacity-60 sm:flex-none"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+            {review.error && (
+              <p role="alert" className="mt-3 text-sm text-alert-deep">
+                {errorMessage(review.error)}
+              </p>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function TaskList() {
   const { user } = useAuth();
@@ -48,7 +132,8 @@ function TaskList() {
   const canCreate = user?.role === 'admin' || user?.role === 'manager';
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-5">
+      {user?.role === 'admin' && <AssignmentApprovals />}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-mist px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-forest">
@@ -59,7 +144,7 @@ function TaskList() {
           <p className="mt-1 text-sm text-charcoal-soft">Review the most important work first, then move through the queue.</p>
         </div>
         {canCreate && (
-          <Link href="/tasks/new" className="rounded-xl bg-evergreen px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-evergreen-dark">
+          <Link href="/tasks/new" className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-evergreen px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-evergreen-dark sm:w-auto">
             New task
           </Link>
         )}
@@ -90,7 +175,7 @@ function TaskList() {
                 setStatus(event.target.value);
                 setPage(1);
               }}
-              className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen sm:w-auto"
+              className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen sm:w-auto"
             >
               <option value="">All</option>
               {STATUS_OPTIONS.map((option) => (
@@ -111,7 +196,7 @@ function TaskList() {
                 setCategory(event.target.value);
                 setPage(1);
               }}
-              className="w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen sm:w-auto"
+              className="min-h-11 w-full rounded-xl border border-charcoal/15 bg-white px-3 py-2 outline-none focus:border-evergreen sm:w-auto"
             >
               <option value="">All</option>
               {TASK_CATEGORIES.map((option) => (
@@ -121,7 +206,7 @@ function TaskList() {
               ))}
             </select>
           </div>
-          <label className="flex items-center gap-2 pb-2 text-sm">
+          <label className="flex min-h-11 items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={overdue}

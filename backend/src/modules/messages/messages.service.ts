@@ -77,6 +77,25 @@ export class MessagesService {
     return { marked: marked.length };
   }
 
+  // Unread messages for the current user's side of every available conversation.
+  async unreadCount(user: AuthUser): Promise<number> {
+    const [row] = await this.database
+      .select({ unread: count() })
+      .from(messages)
+      .innerJoin(users, eq(users.id, messages.senderId))
+      .where(
+        user.role === 'game_master'
+          ? and(eq(users.role, 'admin'), isNull(messages.readAt))
+          : and(
+              eq(messages.companyId, user.companyId as string),
+              eq(users.role, 'game_master'),
+              isNull(messages.readAt),
+            ),
+      );
+
+    return row.unread;
+  }
+
   // Messages from the game master that the company's admin has not read yet.
   async unreadForAdmin(companyId: string): Promise<number> {
     const [row] = await this.database

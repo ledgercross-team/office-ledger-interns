@@ -43,7 +43,7 @@ export function Pagination({
               id={pageSizeId}
               value={pageSize}
               onChange={(event) => onPageSize(Number(event.target.value))}
-              className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 outline-none focus:border-evergreen"
+              className="min-h-11 rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 outline-none focus:border-evergreen"
             >
               {pageSizeOptions.map((option) => (
                 <option key={option} value={option}>
@@ -58,11 +58,11 @@ export function Pagination({
           aria-label="Previous page"
           disabled={page <= 1}
           onClick={() => onPage(Math.max(1, page - 1))}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
         >
           ‹ <span className="sr-only">Previous</span>
         </button>
-        <span className="rounded-lg bg-evergreen px-3 py-1.5 font-medium text-white" aria-current="page">
+        <span className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-evergreen px-3 py-1.5 font-medium text-white" aria-current="page">
           {page}
         </span>
         <button
@@ -70,7 +70,7 @@ export function Pagination({
           aria-label="Next page"
           disabled={page >= pages}
           onClick={() => onPage(Math.min(pages, page + 1))}
-          className="rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-charcoal hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
         >
           <span className="sr-only">Next</span> ›
         </button>
