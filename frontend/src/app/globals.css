@@ -40,8 +40,8 @@
   --color-alert-tint: var(--ds-danger-soft);
   --color-alert-deep: var(--ds-danger-fg);
   --color-amber-deep: var(--ds-warning-fg);
-  --font-sans: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-roboto-mono), ui-monospace, monospace;
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
   --text-2xs: 0.75rem;
   --text-xs: 0.8125rem;
   --text-sm: 0.875rem;
@@ -121,7 +121,7 @@ body {
   overflow-x: hidden;
   background: var(--ds-bg);
   color: var(--ds-fg);
-  font-family: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
+  font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 1rem;
   line-height: 1.5;
 }

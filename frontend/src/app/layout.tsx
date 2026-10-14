@@ -1,23 +1,11 @@
-import type { Metadata, Viewport } from "next";
-import { Roboto, Roboto_Mono } from "next/font/google";
-import { QueryProvider } from "@/lib/query-provider";
-import { HrmsAuthProvider } from "@/lib/hrms/auth-context";
-import "./globals.css";
-
-const roboto = Roboto({
-  variable: "--font-roboto",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-});
-
-const robotoMono = Roboto_Mono({
-  variable: "--font-roboto-mono",
-  subsets: ["latin"],
-});
+import type { Metadata, Viewport } from 'next';
+import { QueryProvider } from '@/lib/query-provider';
+import { HrmsAuthProvider } from '@/lib/hrms/auth-context';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "office-ledger",
-  description: "Attendance, tasks and subscriptions for companies",
+  title: 'office-ledger',
+  description: 'Attendance, tasks and subscriptions for companies',
 };
 
 export const viewport: Viewport = {
@@ -25,12 +13,9 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html
-      lang="en"
-      className={`${roboto.variable} ${robotoMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <QueryProvider>
           <HrmsAuthProvider>{children}</HrmsAuthProvider>
