@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { sql, type SQL } from 'drizzle-orm';
-import { hashPassword } from '../../common/utils/passwords';
+import { generateTempPassword, hashPassword } from '../../common/utils/passwords';
 import type { HrmsPrincipal } from '../auth/hrms-auth.types';
 import { MailService } from '../mail/mail.service';
 import { HrmsContextService } from '../db/hrms-context';
@@ -142,7 +142,13 @@ export class MembersService {
     return rows.rows[0];
   }
 
-  async create(p: HrmsPrincipal, dto: CreateMemberDto) {
+  /**
+   * `issuePassword`: a new account gets a one-time temporary password, returned once to the
+   * person adding them (who hands it over); they must choose their own at first sign-in. A
+   * request that was approved elsewhere cannot hand it over, so it keeps the emailed invite link.
+   */
+  async create(p: HrmsPrincipal, dto: CreateMemberDto, options: { issuePassword?: boolean } = {}) {
+    const issuePassword = options.issuePassword ?? true;
     if ((dto.role === 'ceo' || dto.role === 'coo') && p.role !== 'ceo') {
       throw new ForbiddenException('Only a CEO can add CEOs and COOs.');
     }
@@ -154,6 +160,7 @@ export class MembersService {
     );
     let userId = existing.rows[0]?.id;
     let inviteToken: string | null = null;
+    let temporaryPassword: string | undefined;
 
     if (userId) {
       const gm = await tx.execute(
@@ -169,24 +176,46 @@ export class MembersService {
         throw new ConflictException('This person is already a member of this organisation.');
       }
     } else {
-      // The account cannot be signed into until the person sets a password from the invite.
-      const unusableHash = await hashPassword(randomBytes(32).toString('base64url'));
-      const created = await tx.execute<{ id: string }>(sql`
-        insert into users (email, password_hash, full_name)
-        values (${email}, ${unusableHash}, ${dto.fullName.trim()}) returning id`);
-      userId = created.rows[0].id;
+      if (issuePassword) {
+        temporaryPassword = generateTempPassword();
+        const hash = await hashPassword(temporaryPassword);
+        const created = await tx.execute<{ id: string }>(sql`
+          insert into users (email, password_hash, full_name, must_change_password, email_verified_at)
+          values (${email}, ${hash}, ${dto.fullName.trim()}, true, now()) returning id`);
+        userId = created.rows[0].id;
+      } else {
+        // The account cannot be signed into until the person sets a password from the invite.
+        const unusableHash = await hashPassword(randomBytes(32).toString('base64url'));
+        const created = await tx.execute<{ id: string }>(sql`
+          insert into users (email, password_hash, full_name)
+          values (${email}, ${unusableHash}, ${dto.fullName.trim()}) returning id`);
+        userId = created.rows[0].id;
 
-      inviteToken = randomBytes(32).toString('base64url');
-      await tx.execute(sql`
-        insert into password_resets (user_id, purpose, token_hash, expires_at)
-        values (${userId}, 'invite', ${createHash('sha256').update(inviteToken).digest('hex')},
-                now() + ${`${INVITE_TTL_DAYS} days`}::interval)`);
+        inviteToken = randomBytes(32).toString('base64url');
+        await tx.execute(sql`
+          insert into password_resets (user_id, purpose, token_hash, expires_at)
+          values (${userId}, 'invite', ${createHash('sha256').update(inviteToken).digest('hex')},
+                  now() + ${`${INVITE_TTL_DAYS} days`}::interval)`);
+      }
+    }
+
+    // Every new person gets the next code (EMP-0001, EMP-0002, ...). The lock makes two
+    // people added at the same moment take different numbers; the database keeps codes unique.
+    let employeeCode = dto.employeeCode?.trim() || null;
+    if (!employeeCode) {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext('employee_code'), hashtext(current_org_id()::text))`,
+      );
+      const next = await tx.execute<{ n: number }>(sql`
+        select coalesce(max(substring(employee_code from '^EMP-([0-9]+)$')::int), 0) + 1 as n
+          from org_members where org_id = current_org_id()`);
+      employeeCode = `EMP-${String(next.rows[0].n).padStart(4, '0')}`;
     }
 
     const inserted = await tx.execute<{ id: string }>(sql`
       insert into org_members (org_id, user_id, role, designation, department, employee_code)
       values (current_org_id(), ${userId}, ${dto.role}::member_role,
-              ${dto.designation ?? null}, ${dto.department ?? null}, ${dto.employeeCode ?? null})
+              ${dto.designation ?? null}, ${dto.department ?? null}, ${employeeCode})
       returning id`);
 
     // The invite link is a one-time password-setting link. It is never returned by the API
@@ -203,8 +232,9 @@ export class MembersService {
     const member = await this.find(p, inserted.rows[0].id);
     return {
       member: member ? toMember(member) : null,
-      attached: inviteToken === null,
+      attached: inviteToken === null && temporaryPassword === undefined,
       invited: inviteToken !== null,
+      temporaryPassword,
     };
   }
 

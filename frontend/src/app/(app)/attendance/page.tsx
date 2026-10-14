@@ -3,7 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
-import { CorrectionDialog, message, MonthTable, StatusPill, time } from '@/components/hrms/attendance-parts';
+import {
+  CorrectionDialog,
+  message,
+  MonthTable,
+  StatusPill,
+  time,
+} from '@/components/hrms/attendance-parts';
 import { HoldButton } from '@/components/hrms/hold-button';
 import { useReadOnly } from '@/components/hrms/read-only';
 import { hrmsFetch } from '@/lib/hrms/api-client';
@@ -37,7 +43,8 @@ export default function AttendancePage() {
   });
 
   const today = data.data?.today;
-  const canSeeTeam = session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
+  const canSeeTeam =
+    session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
 
   return (
     <>
@@ -60,17 +67,30 @@ export default function AttendancePage() {
         </div>
         <div className="flex gap-2">
           {!today?.checkInAt && (
-            <HoldButton busy={act.isPending} disabled={readOnly.readOnly} disabledReason={readOnly.reason ?? undefined} onHold={() => act.mutate('check-in')}>
+            <HoldButton
+              busy={act.isPending}
+              disabled={readOnly.readOnly}
+              disabledReason={readOnly.reason ?? undefined}
+              onHold={() => act.mutate('check-in')}
+            >
               Hold to check in
             </HoldButton>
           )}
           {today?.checkInAt && !today.checkOutAt && (
-            <HoldButton busy={act.isPending} disabled={readOnly.readOnly} disabledReason={readOnly.reason ?? undefined} onHold={() => act.mutate('check-out')}>
+            <HoldButton
+              busy={act.isPending}
+              disabled={readOnly.readOnly}
+              disabledReason={readOnly.reason ?? undefined}
+              onHold={() => act.mutate('check-out')}
+            >
               Hold to check out
             </HoldButton>
           )}
         </div>
-        <p className="text-xs text-charcoal-soft">Press and hold for 2.5 seconds. If your CEO or COO has set office IP addresses, check-in works from those only.</p>
+        <p className="text-xs text-charcoal-soft">
+          Press and hold for 2.5 seconds. If your CEO or COO has set office IP addresses, check-in
+          works from those only.
+        </p>
         {error && (
           <p role="alert" className="text-sm text-alert-deep">
             {error}
@@ -94,7 +114,12 @@ export default function AttendancePage() {
         </p>
       )}
       {data.data && (
-        <MonthTable days={data.data.days} corrections={data.data.corrections} onCorrect={setCorrecting} />
+        <MonthTable
+          days={data.data.days}
+          corrections={data.data.corrections}
+          todayDate={data.data.todayDate}
+          onCorrect={setCorrecting}
+        />
       )}
       {correcting && (
         <CorrectionDialog day={correcting} onClose={() => setCorrecting(null)} onDone={refresh} />

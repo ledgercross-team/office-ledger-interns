@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { MemberChips, MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
+import { meetingProblem } from '@/lib/hrms/meeting';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { CalendarFeed, CalendarItem, HrmsMeeting } from '@/lib/hrms/types';
 
@@ -11,7 +12,8 @@ const input =
   'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
 const primary =
   'rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
-const secondary = 'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+const secondary =
+  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
 
 const KIND_CLASS: Record<CalendarItem['kind'], string> = {
   task_due: 'bg-amber-100 text-amber-900',
@@ -34,7 +36,8 @@ function addDays(date: string, n: number): string {
 function daysOf(item: CalendarItem): string[] {
   if (item.allDay && item.startDate && item.endDate) {
     const out: string[] = [];
-    for (let d = item.startDate; d <= item.endDate && out.length < 62; d = addDays(d, 1)) out.push(d);
+    for (let d = item.startDate; d <= item.endDate && out.length < 62; d = addDays(d, 1))
+      out.push(d);
     return out;
   }
   return [item.startsAtLocal.slice(0, 10)];
@@ -45,7 +48,15 @@ function label(item: CalendarItem): string {
   return `${t}${item.title}${item.member ? ` · ${item.member.fullName}` : ''}`;
 }
 
-function MeetingDialog({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
+function MeetingDialog({
+  id,
+  onClose,
+  onChanged,
+}: {
+  id: string;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
   const { session } = useHrmsAuth();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +86,11 @@ function MeetingDialog({ id, onClose, onChanged }: { id: string; onClose: () => 
   const mine = m?.invitees.find((i) => i.memberId === session?.activeMemberId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4"
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="w-full max-w-md space-y-3 rounded-2xl bg-white p-4">
         {!m && <p className="text-sm text-charcoal-soft">Loading…</p>}
         {m && (
@@ -86,7 +101,12 @@ function MeetingDialog({ id, onClose, onChanged }: { id: string; onClose: () => 
             </p>
             <p className="text-sm text-charcoal">
               {m.meetingLink ? (
-                <a href={m.meetingLink} target="_blank" rel="noopener noreferrer" className="text-forest hover:underline">
+                <a
+                  href={m.meetingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-forest hover:underline"
+                >
                   Join the meeting
                 </a>
               ) : (
@@ -106,10 +126,18 @@ function MeetingDialog({ id, onClose, onChanged }: { id: string; onClose: () => 
             <div className="flex flex-wrap gap-2">
               {mine && !m.cancelled && (
                 <>
-                  <button type="button" onClick={() => respond.mutate('accepted')} className={primary}>
+                  <button
+                    type="button"
+                    onClick={() => respond.mutate('accepted')}
+                    className={primary}
+                  >
                     Accept
                   </button>
-                  <button type="button" onClick={() => respond.mutate('declined')} className={secondary}>
+                  <button
+                    type="button"
+                    onClick={() => respond.mutate('declined')}
+                    className={secondary}
+                  >
                     Decline
                   </button>
                 </>
@@ -147,6 +175,17 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
     event.preventDefault();
     const form = event.currentTarget;
     const f = new FormData(form);
+    const start = new Date(String(f.get('start')));
+    const end = new Date(String(f.get('end')));
+    const problem = meetingProblem(
+      start,
+      end,
+      where === 'link' ? String(f.get('place')).trim() : null,
+    );
+    if (problem) {
+      setError(problem);
+      return;
+    }
     // Typed in the browser's zone, sent as an exact instant.
     const at = (k: string) => new Date(String(f.get(k))).toISOString();
     setError(null);
@@ -175,7 +214,10 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-lg space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4">
+    <form
+      onSubmit={onSubmit}
+      className="max-w-lg space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4"
+    >
       <h2 className="font-medium text-charcoal">New meeting</h2>
       <input name="title" required maxLength={200} placeholder="Title" className={input} />
       <div className="grid gap-3 sm:grid-cols-2">
@@ -193,7 +235,12 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
           <input type="radio" checked={where === 'link'} onChange={() => setWhere('link')} /> Online
         </label>
         <label className="flex items-center gap-2">
-          <input type="radio" checked={where === 'location'} onChange={() => setWhere('location')} /> In person
+          <input
+            type="radio"
+            checked={where === 'location'}
+            onChange={() => setWhere('location')}
+          />{' '}
+          In person
         </label>
       </div>
       <input
@@ -282,20 +329,29 @@ export default function CalendarPage() {
         <button type="button" onClick={() => step(-1)} className={secondary} aria-label="Previous">
           ‹
         </button>
-        <span className="text-sm text-charcoal">{view === 'month' ? from.slice(0, 7) : `Week of ${from}`}</span>
+        <span className="text-sm text-charcoal">
+          {view === 'month' ? from.slice(0, 7) : `Week of ${from}`}
+        </span>
         <button type="button" onClick={() => step(1)} className={secondary} aria-label="Next">
           ›
         </button>
-        <button type="button" onClick={() => setView(view === 'month' ? 'week' : 'month')} className={secondary}>
+        <button
+          type="button"
+          onClick={() => setView(view === 'month' ? 'week' : 'month')}
+          className={secondary}
+        >
           {view === 'month' ? 'Week view' : 'Month view'}
         </button>
         {canTeam && (
           <label className="flex items-center gap-2 text-sm text-charcoal">
-            <input type="checkbox" checked={team} onChange={(e) => setTeam(e.target.checked)} /> Team
+            <input type="checkbox" checked={team} onChange={(e) => setTeam(e.target.checked)} />{' '}
+            Team
           </label>
         )}
       </div>
-      {feed.data && <p className="text-xs text-charcoal-soft">Times are in {feed.data.timezone}.</p>}
+      {feed.data && (
+        <p className="text-xs text-charcoal-soft">Times are in {feed.data.timezone}.</p>
+      )}
       {feed.error && (
         <p role="alert" className="text-sm text-alert-deep">
           {message(feed.error)}
@@ -314,7 +370,9 @@ export default function CalendarPage() {
         ))}
         {days.map((d) => (
           <div key={d} className="min-h-16 rounded-xl border border-charcoal/10 bg-white p-1.5">
-            <p className="text-xs text-charcoal-soft">{view === 'month' ? Number(d.slice(8)) : d}</p>
+            <p className="text-xs text-charcoal-soft">
+              {view === 'month' ? Number(d.slice(8)) : d}
+            </p>
             <ul className="space-y-0.5">
               {(byDay.get(d) ?? []).map((item, i) => (
                 <li key={`${item.kind}-${item.refId}-${i}`}>
@@ -335,7 +393,9 @@ export default function CalendarPage() {
       </div>
 
       {canMeet && (
-        <NewMeeting onDone={() => void queryClient.invalidateQueries({ queryKey: ['hrms', 'calendar'] })} />
+        <NewMeeting
+          onDone={() => void queryClient.invalidateQueries({ queryKey: ['hrms', 'calendar'] })}
+        />
       )}
       {open && (
         <MeetingDialog

@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { sql, type SQL } from 'drizzle-orm';
 import type { HrmsPrincipal } from '../auth/hrms-auth.types';
 import { HrmsContextService } from '../db/hrms-context';
@@ -161,7 +166,11 @@ export class AttendanceService {
       throw new BadRequestException('Give the corrected check-in time, check-out time, or both.');
     }
     const tx = this.context.tx;
-    const day = await tx.execute<{ id: string | null; has_check_in: boolean | null; ok: boolean }>(sql`
+    const day = await tx.execute<{
+      id: string | null;
+      has_check_in: boolean | null;
+      ok: boolean;
+    }>(sql`
       select a.id, (a.check_in_at is not null) as has_check_in,
              (coalesce((${dto.checkInAt ?? null}::timestamptz at time zone s.timezone)::date, ${dto.workDate}::date) = ${dto.workDate}::date
               and coalesce((${dto.checkOutAt ?? null}::timestamptz at time zone s.timezone)::date, ${dto.workDate}::date) = ${dto.workDate}::date) as ok
@@ -183,14 +192,18 @@ export class AttendanceService {
       on conflict (org_id, dedupe_key) where status = 'pending' and dedupe_key is not null do nothing
       returning id`);
     const requestId = created.rows[0]?.id;
-    if (!requestId) throw new ConflictException('A correction for this day is already waiting for a decision.');
+    if (!requestId)
+      throw new ConflictException('A correction for this day is already waiting for a decision.');
 
     await tx.execute(sql`
       insert into attendance_corrections
         (request_id, org_id, member_id, work_date, attendance_day_id, requested_check_in, requested_check_out, reason)
       values (${requestId}, current_org_id(), ${p.memberId}, ${dto.workDate}::date, ${info.id},
               ${dto.checkInAt ?? null}::timestamptz, ${dto.checkOutAt ?? null}::timestamptz, ${dto.reason.trim()})`);
-    await this.notifications.notifyDeciders(requestId, 'An attendance correction is waiting for your decision');
+    await this.notifications.notifyDeciders(
+      requestId,
+      'An attendance correction is waiting for your decision',
+    );
     return { requestId };
   }
 
@@ -223,7 +236,8 @@ export class AttendanceService {
       returning id`);
     if (updated.rows.length > 0) return;
 
-    if (!row.requested_check_in) throw new BadRequestException('A day with no entry needs a check-in time.');
+    if (!row.requested_check_in)
+      throw new BadRequestException('A day with no entry needs a check-in time.');
     // No entry for the day: there is no real address, so the first office network (if any) stands in.
     await tx.execute(sql`
       insert into attendance_days (org_id, member_id, work_date, status, check_in_at, check_in_ip,
@@ -262,7 +276,9 @@ export class AttendanceService {
        where m.org_id = current_org_id() and m.role in ('manager', 'employee') and ${this.visibleTo(p)}
        group by u.full_name, u.email, m.role
        order by u.full_name`);
-    const lines = [['Name', 'Email', 'Role', 'Month', 'Present', 'Late', 'Absent', 'On leave', 'Hours worked']];
+    const lines = [
+      ['Name', 'Email', 'Role', 'Month', 'Present', 'Late', 'Absent', 'On leave', 'Hours worked'],
+    ];
     for (const r of rows.rows) {
       lines.push([
         r.full_name,
@@ -331,6 +347,8 @@ export class AttendanceService {
 
     return {
       month,
+      // The org's calendar date today, so the screen can put today first and skip the future.
+      todayDate: todayStr,
       days: days.rows.map((d) => {
         const isoDow = ((new Date(`${d.day}T00:00:00Z`).getUTCDay() + 6) % 7) + 1;
         const fallback = d.holiday_name

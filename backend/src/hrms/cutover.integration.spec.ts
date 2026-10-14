@@ -86,14 +86,12 @@ suite('HRMS cutover: a real company, end to end', () => {
       [gm.rows[0].id],
     );
     const platform = await signInMfa('gm', PASSWORD);
-    const org = await platform
-      .post('/api/platform/orgs')
-      .send({
-        name: `Cutover-${suffix}`,
-        planCode: 'standard',
-        ceoEmail: email('ceo'),
-        ceoFullName: 'Real CEO',
-      });
+    const org = await platform.post('/api/platform/orgs').send({
+      name: `Cutover-${suffix}`,
+      planCode: 'standard',
+      ceoEmail: email('ceo'),
+      ceoFullName: 'Real CEO',
+    });
     expect(org.status).toBe(201);
     expect(org.body.ceoInvited).toBe(true);
 
@@ -118,7 +116,7 @@ suite('HRMS cutover: a real company, end to end', () => {
       .post('/api/members')
       .send({ email: email('employee'), fullName: 'New Employee', role: 'employee' });
     expect(employee.status).toBe(201);
-    expect(linkFor(email('manager'))).toBeTruthy();
+    expect(manager.body.temporaryPassword).toEqual(expect.any(String));
 
     const project = await ceo
       .post('/api/projects')

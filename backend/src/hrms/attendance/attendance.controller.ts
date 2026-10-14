@@ -3,6 +3,7 @@ import { HrmsRoles } from '../auth/hrms-auth.decorators';
 import type { HrmsAuthedRequest } from '../auth/hrms-auth.guard';
 import type { HrmsPrincipal } from '../auth/hrms-auth.types';
 import { HrmsController } from '../hrms-controller.decorator';
+import { RequestsService } from '../requests/requests.service';
 import { AttendanceService } from './attendance.service';
 import { FileCorrectionDto, MonthQueryDto, TeamAttendanceQueryDto } from './dto/attendance.dto';
 
@@ -16,7 +17,10 @@ const ALL = ['ceo', 'coo', 'manager', 'employee'] as const;
 // There is no edit or delete route: a wrong day is changed through a correction request.
 @HrmsController('attendance')
 export class AttendanceController {
-  constructor(private readonly attendance: AttendanceService) {}
+  constructor(
+    private readonly attendance: AttendanceService,
+    private readonly requests: RequestsService,
+  ) {}
 
   @HrmsRoles(...ALL)
   @HttpCode(HttpStatus.OK)
@@ -42,13 +46,23 @@ export class AttendanceController {
   @Get()
   team(@Req() req: HrmsAuthedRequest, @Query() q: TeamAttendanceQueryDto) {
     const p = principalOf(req);
-    return q.memberId ? this.attendance.forMember(p, q.memberId, q.month) : this.attendance.teamDay(p, q.date);
+    return q.memberId
+      ? this.attendance.forMember(p, q.memberId, q.month)
+      : this.attendance.teamDay(p, q.date);
   }
 
   @HrmsRoles(...ALL)
   @Post('corrections')
-  correction(@Req() req: HrmsAuthedRequest, @Body() dto: FileCorrectionDto) {
-    return this.attendance.fileCorrection(principalOf(req), dto);
+  async correction(@Req() req: HrmsAuthedRequest, @Body() dto: FileCorrectionDto) {
+    const p = principalOf(req);
+    const filed = await this.attendance.fileCorrection(p, dto);
+    // A CEO may approve their own request, so theirs is applied at once. The request and the
+    // original entry are still kept.
+    if (p.role === 'ceo') {
+      await this.requests.approve(p, filed.requestId);
+      return { ...filed, autoApproved: true };
+    }
+    return { ...filed, autoApproved: false };
   }
 
   @HrmsRoles('ceo', 'coo', 'manager')

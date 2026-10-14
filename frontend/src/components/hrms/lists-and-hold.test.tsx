@@ -44,7 +44,9 @@ describe('Pagination', () => {
     expect(onPage).toHaveBeenLastCalledWith(2);
   });
   it('renders nothing for a single page', () => {
-    const { container } = render(<Pagination page={1} pageSize={25} total={10} onPage={() => {}} />);
+    const { container } = render(
+      <Pagination page={1} pageSize={25} total={10} onPage={() => {}} />,
+    );
     expect(container).toBeEmptyDOMElement();
   });
 });
@@ -58,7 +60,9 @@ describe('HoldButton', () => {
     render(<HoldButton onHold={onHold}>Hold to check in</HoldButton>);
     const button = screen.getByRole('button');
     act(() => {
-      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+      button.dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }),
+      );
     });
     act(() => vi.advanceTimersByTime(HOLD_MS - 100));
     expect(onHold).not.toHaveBeenCalled();
@@ -71,7 +75,9 @@ describe('HoldButton', () => {
     render(<HoldButton onHold={onHold}>Hold to check in</HoldButton>);
     const button = screen.getByRole('button');
     act(() => {
-      button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+      button.dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }),
+      );
     });
     act(() => vi.advanceTimersByTime(1000));
     act(() => {
@@ -83,20 +89,31 @@ describe('HoldButton', () => {
 
   it('does not start while disabled or busy', () => {
     const onHold = vi.fn();
-    render(<HoldButton onHold={onHold} busy>Hold to check in</HoldButton>);
+    render(
+      <HoldButton onHold={onHold} busy>
+        Hold to check in
+      </HoldButton>,
+    );
     expect(screen.getByRole('button')).toBeDisabled();
   });
 });
 
 describe('MemberSearch', () => {
   it('searches the API with the typed text instead of listing everyone', async () => {
-    mockedFetch.mockResolvedValue({ items: [{ id: 'm1', fullName: 'Sara Ahmed', role: 'employee', email: 's@x.io' }], total: 1, page: 1, pageSize: 8 });
+    mockedFetch.mockResolvedValue({
+      items: [{ id: 'm1', fullName: 'Sara Ahmed', role: 'employee', email: 's@x.io' }],
+      total: 1,
+      page: 1,
+      pageSize: 4,
+    });
     const onSelect = vi.fn();
     const user = userEvent.setup();
     render(<MemberSearch label="Person" onSelect={onSelect} />, { wrapper });
     await user.type(screen.getByRole('combobox', { name: 'Person' }), 'sara');
-    await waitFor(() => expect(mockedFetch).toHaveBeenCalledWith(expect.stringContaining('q=sara')));
-    expect(String(mockedFetch.mock.calls.at(-1)?.[0])).toContain('pageSize=8');
+    await waitFor(() =>
+      expect(mockedFetch).toHaveBeenCalledWith(expect.stringContaining('q=sara')),
+    );
+    expect(String(mockedFetch.mock.calls.at(-1)?.[0])).toContain('pageSize=4');
     await user.click(await screen.findByRole('option', { name: /Sara Ahmed/ }));
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 'm1' }));
   });

@@ -1,10 +1,15 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
+import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatTime } from '@/lib/hrms/time';
-import type { AttendanceCorrectionEntry, AttendanceDayEntry, AttendanceDayStatus } from '@/lib/hrms/types';
+import type {
+  AttendanceCorrectionEntry,
+  AttendanceDayEntry,
+  AttendanceDayStatus,
+} from '@/lib/hrms/types';
 
 const STATUS_LABEL: Record<AttendanceDayStatus, string> = {
   present: 'Present',
@@ -45,19 +50,27 @@ export function time(value: string | null): string {
 }
 
 export function hours(minutes: number | null): string {
-  return minutes === null ? '—' : `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
+  return minutes === null
+    ? '—'
+    : `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
 }
 
 /** Month table. onCorrect is given only on the person's own view. */
 export function MonthTable({
   days,
   corrections,
+  todayDate,
   onCorrect,
 }: {
   days: AttendanceDayEntry[];
   corrections: AttendanceCorrectionEntry[];
+  todayDate?: string;
   onCorrect?: (day: AttendanceDayEntry) => void;
 }) {
+  // Newest first, and no rows for days that have not happened yet.
+  const shown = [...days]
+    .filter((d) => !todayDate || d.date <= todayDate)
+    .sort((a, b) => b.date.localeCompare(a.date));
   const byDate = new Map<string, AttendanceCorrectionEntry[]>();
   for (const c of corrections) byDate.set(c.workDate, [...(byDate.get(c.workDate) ?? []), c]);
 
@@ -75,14 +88,22 @@ export function MonthTable({
           </tr>
         </thead>
         <tbody>
-          {days.map((d) => (
-            <tr key={d.date} className="border-t border-charcoal/10 align-top">
+          {shown.map((d) => (
+            <tr
+              key={d.date}
+              className={`border-t border-charcoal/10 align-top ${d.date === todayDate ? 'bg-mist/50' : ''}`}
+            >
               <td className="p-3 whitespace-nowrap">
                 {new Date(`${d.date}T00:00:00`).toLocaleDateString([], {
                   weekday: 'short',
                   day: 'numeric',
                   month: 'short',
                 })}
+                {d.date === todayDate && (
+                  <span className="ml-2 rounded-full bg-evergreen px-2 py-0.5 text-xs text-white">
+                    Today
+                  </span>
+                )}
               </td>
               <td className="p-3">
                 <StatusPill status={d.status} />
@@ -94,7 +115,9 @@ export function MonthTable({
                 {(byDate.get(d.date) ?? []).map((c) => (
                   <p key={c.requestId} className="mt-1 text-xs text-charcoal-soft">
                     Correction {c.status === 'applied' ? 'applied' : c.status}
-                    {c.original?.status ? ` (was ${c.original.status}, in ${time(c.original.check_in_at ?? null)})` : ''}
+                    {c.original?.status
+                      ? ` (was ${c.original.status}, in ${time(c.original.check_in_at ?? null)})`
+                      : ''}
                     {c.decisionReason ? `: ${c.decisionReason}` : ''}
                   </p>
                 ))}
@@ -121,6 +144,38 @@ export function MonthTable({
   );
 }
 
+/** A time field with an OK button: confirms the time and closes the browser's picker. */
+function TimeField({ name, label }: { name: string; label: string }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-1 text-sm text-charcoal">
+      <label htmlFor={`correction-${name}`}>{label}</label>
+      <div className="flex gap-2">
+        <input
+          ref={ref}
+          id={`correction-${name}`}
+          name={name}
+          type="time"
+          className={input}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              ref.current?.blur();
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => ref.current?.blur()}
+          className="shrink-0 rounded-xl border border-charcoal/15 px-3 py-2 text-sm font-medium hover:bg-mist/60"
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function CorrectionDialog({
   day,
   onClose,
@@ -131,6 +186,8 @@ export function CorrectionDialog({
   onDone: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const { session } = useHrmsAuth();
+  const isCeo = session?.role === 'ceo';
   const file = useMutation({
     mutationFn: (body: Record<string, string | undefined>) =>
       hrmsFetch('/attendance/corrections', { method: 'POST', body }),
@@ -159,20 +216,20 @@ export function CorrectionDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4"
+      role="dialog"
+      aria-modal="true"
+    >
       <form onSubmit={onSubmit} className="w-full max-w-sm space-y-3 rounded-2xl bg-white p-4">
         <h2 className="font-medium text-charcoal">Correct {day.date}</h2>
         <p className="text-xs text-charcoal-soft">
-          This is a request. Your lead or the COO decides, and the original entry is kept.
+          {isCeo
+            ? 'As CEO your correction is applied straight away. The original entry is kept.'
+            : 'This is a request. Your lead or the COO decides, and the original entry is kept.'}
         </p>
-        <label className="block space-y-1 text-sm text-charcoal">
-          Check-in time
-          <input name="checkIn" type="time" className={input} />
-        </label>
-        <label className="block space-y-1 text-sm text-charcoal">
-          Check-out time
-          <input name="checkOut" type="time" className={input} />
-        </label>
+        <TimeField name="checkIn" label="Check-in time" />
+        <TimeField name="checkOut" label="Check-out time" />
         <label className="block space-y-1 text-sm text-charcoal">
           Reason (required)
           <textarea name="reason" required rows={2} maxLength={1000} className={input} />
@@ -188,7 +245,7 @@ export function CorrectionDialog({
             disabled={file.isPending}
             className="rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60"
           >
-            Send request
+            {isCeo ? 'Apply correction' : 'Send request'}
           </button>
           <button
             type="button"

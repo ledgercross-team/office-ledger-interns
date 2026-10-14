@@ -126,6 +126,8 @@ export interface LeaveType {
 }
 
 export interface CreateMemberResponse {
+  /** One-time password for a brand-new account. Shown once; they must change it at first sign-in. */
+  temporaryPassword?: string;
   member: HrmsMember | null;
   attached: boolean;
   invited: boolean;
@@ -313,6 +315,8 @@ export interface AttendanceCorrectionEntry {
 }
 
 export interface AttendanceMonth {
+  /** The organisation's date today (its own time zone). */
+  todayDate: string;
   month: string;
   days: AttendanceDayEntry[];
   corrections: AttendanceCorrectionEntry[];

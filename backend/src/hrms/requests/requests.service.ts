@@ -177,7 +177,12 @@ export class RequestsService {
       id = existing.rows[0]?.id;
       if (!id) throw new NotFoundException('Request not found.');
     }
-    if (!merged) await this.notifications.notifyDeciders(id, 'A request is waiting for your decision', key.split('|')[0].replace(/_/g, ' '));
+    if (!merged)
+      await this.notifications.notifyDeciders(
+        id,
+        'A request is waiting for your decision',
+        key.split('|')[0].replace(/_/g, ' '),
+      );
     return { request: await this.get(p, id), merged };
   }
 
@@ -193,7 +198,8 @@ export class RequestsService {
 
   async reject(p: HrmsPrincipal, id: string, reason: string | undefined) {
     const text = reason?.trim() ?? '';
-    if (text.length === 0) throw new BadRequestException('A reason is required to reject a request.');
+    if (text.length === 0)
+      throw new BadRequestException('A reason is required to reject a request.');
     await this.load(id);
     await this.context.tx.execute(sql`
       update requests set status = 'rejected', decision_reason = ${text}
@@ -214,7 +220,7 @@ export class RequestsService {
   /** Each request runs in its own savepoint, so one refusal does not undo the others. */
   async bulk(p: HrmsPrincipal, dto: BulkRequestsDto) {
     const tx = this.context.tx;
-    if (dto.decision === 'reject' && !(dto.reason?.trim())) {
+    if (dto.decision === 'reject' && !dto.reason?.trim()) {
       throw new BadRequestException('A reason is required to reject requests.');
     }
     const results: Array<{ id: string; ok: boolean; error?: string }> = [];
@@ -246,8 +252,16 @@ export class RequestsService {
     const tx = this.context.tx;
 
     if (r.type === 'create_user') {
-      const payload = r.payload as { email: string; full_name: string; role: 'manager' | 'employee' };
-      await this.members.create(p, { email: payload.email, fullName: payload.full_name, role: payload.role });
+      const payload = r.payload as {
+        email: string;
+        full_name: string;
+        role: 'manager' | 'employee';
+      };
+      await this.members.create(
+        p,
+        { email: payload.email, fullName: payload.full_name, role: payload.role },
+        { issuePassword: false },
+      );
     } else if (r.type === 'create_project') {
       const payload = r.payload as {
         name: string;

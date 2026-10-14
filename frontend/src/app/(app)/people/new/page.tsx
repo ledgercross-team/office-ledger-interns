@@ -41,7 +41,9 @@ function NewMemberForm() {
       setDone(response);
     } catch (err) {
       // The database's rule message (seat limit, who may add whom) is shown as is.
-      setError(err instanceof HrmsApiError ? err.message : 'Something went wrong. Please try again.');
+      setError(
+        err instanceof HrmsApiError ? err.message : 'Something went wrong. Please try again.',
+      );
     } finally {
       setPending(false);
     }
@@ -51,11 +53,24 @@ function NewMemberForm() {
     return (
       <section className="space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4">
         <p className="text-lg font-semibold text-forest">{done.member.fullName} was added</p>
-        <p className="text-sm text-charcoal-soft">
-          {done.invited
-            ? 'They can set a password from the invite link.'
-            : 'They already have a login, so they can use this organisation straight away.'}
-        </p>
+        {done.temporaryPassword ? (
+          <div role="status" className="space-y-1 rounded-xl border border-forest/30 p-3">
+            <p className="text-sm text-charcoal">Temporary password for {done.member.email}</p>
+            <p className="select-all font-mono text-base tabular-nums text-charcoal">
+              {done.temporaryPassword}
+            </p>
+            <p className="text-xs text-charcoal-soft">
+              Give this to them yourself. It is shown only now, and they must choose their own
+              password the first time they sign in.
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-charcoal-soft">
+            {done.invited
+              ? 'They can set a password from the invite link.'
+              : 'They already have a login, so they can use this organisation straight away.'}
+          </p>
+        )}
         <div className="flex gap-3 text-sm">
           <Link href={`/people/${done.member.id}`} className="text-evergreen hover:underline">
             Open profile
@@ -103,8 +118,16 @@ function NewMemberForm() {
         <input name="department" maxLength={100} className={input} />
       </label>
       <label className="block space-y-1 text-sm font-medium text-charcoal">
-        Employee code (optional)
-        <input name="employeeCode" maxLength={50} className={input} />
+        Employee code
+        <input
+          name="employeeCode"
+          maxLength={50}
+          placeholder="Automatic (EMP-0001, EMP-0002…)"
+          className={input}
+        />
+        <span className="block text-xs font-normal text-charcoal-soft">
+          Leave empty and a unique code is assigned.
+        </span>
       </label>
       {error && (
         <p role="alert" className="text-sm text-alert-deep">

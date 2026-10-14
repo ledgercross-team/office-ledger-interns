@@ -105,7 +105,9 @@ function TeamAttendance() {
                   </td>
                   <td className="p-3">
                     <StatusPill status={r.status} />
-                    {r.autoCheckedOut && <span className="ml-2 text-xs text-alert-deep">Missing check-out</span>}
+                    {r.autoCheckedOut && (
+                      <span className="ml-2 text-xs text-alert-deep">Missing check-out</span>
+                    )}
                   </td>
                   <td className="p-3">{time(r.checkInAt)}</td>
                   <td className="p-3">{time(r.checkOutAt)}</td>
@@ -130,7 +132,13 @@ function TeamAttendance() {
           <h2 className="font-medium text-charcoal">
             {day.data?.items.find((i) => i.memberId === memberId)?.fullName} · {month}
           </h2>
-          {person.data && <MonthTable days={person.data.days} corrections={person.data.corrections} />}
+          {person.data && (
+            <MonthTable
+              days={person.data.days}
+              corrections={person.data.corrections}
+              todayDate={person.data.todayDate}
+            />
+          )}
         </section>
       )}
     </>

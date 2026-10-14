@@ -79,7 +79,9 @@ suite('HRMS org settings and members (integration)', () => {
 
   async function signIn(name: string): Promise<void> {
     const agent = request.agent(app.getHttpServer());
-    const res = await agent.post('/api/auth/login').send({ email: email(name), password: PASSWORD });
+    const res = await agent
+      .post('/api/auth/login')
+      .send({ email: email(name), password: PASSWORD });
     expect(res.status).toBe(200);
     agents[name] = agent;
   }
@@ -89,7 +91,10 @@ suite('HRMS org settings and members (integration)', () => {
 
     jest.spyOn(Logger.prototype, 'log').mockImplementation((message: unknown) => {
       // The mail service logs the invite email; keep just the link.
-      const link = typeof message === 'string' ? /(https?:\/\/\S+accept-invite\?token=\S+)/.exec(message) : null;
+      const link =
+        typeof message === 'string'
+          ? /(https?:\/\/\S+accept-invite\?token=\S+)/.exec(message)
+          : null;
       if (link) {
         inviteLinks.push(`Invite link: ${link[1]}`);
       }
@@ -117,14 +122,15 @@ suite('HRMS org settings and members (integration)', () => {
     }).compile();
     app = moduleRef.createNestApplication();
     app.use(cookieParser());
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+    );
     await app.init();
 
     // a plan with exactly one seat, to hit the limit
-    await owner.query(
-      `insert into hrms.plans (code, name, seat_limit) values ($1, 'Tiny', 1)`,
-      [`tiny-${suffix}`],
-    );
+    await owner.query(`insert into hrms.plans (code, name, seat_limit) values ($1, 'Tiny', 1)`, [
+      `tiny-${suffix}`,
+    ]);
 
     const ceoA = await user('ceoA');
     await user('cooA');
@@ -138,14 +144,18 @@ suite('HRMS org settings and members (integration)', () => {
     ids.orgB = await org('org-b', 'standard', ceoB);
     ids.orgS = await org('org-seat', `tiny-${suffix}`, ceoS);
     ids.m_ceoA = (
-      await owner.query(`select id from hrms.org_members where org_id = $1 and user_id = $2`, [ids.orgA, ceoA])
+      await owner.query(`select id from hrms.org_members where org_id = $1 and user_id = $2`, [
+        ids.orgA,
+        ceoA,
+      ])
     ).rows[0].id;
     await member(ids.orgA, 'cooA', 'coo');
     await member(ids.orgA, 'managerA', 'manager');
     await member(ids.orgA, 'employeeA', 'employee');
     await member(ids.orgS, 'seatHolder', 'employee'); // uses the single seat
 
-    for (const name of ['ceoA', 'cooA', 'managerA', 'employeeA', 'ceoB', 'ceoS']) await signIn(name);
+    for (const name of ['ceoA', 'cooA', 'managerA', 'employeeA', 'ceoB', 'ceoS'])
+      await signIn(name);
   });
 
   afterAll(async () => {
@@ -165,35 +175,35 @@ suite('HRMS org settings and members (integration)', () => {
 
       expect(res.status).toBe(201);
       expect(res.body.invited).toBe(true);
+      // a new person gets an automatic, unique employee code
+      expect(res.body.member.employeeCode).toMatch(/^EMP-\d{4}$/);
       expect(res.body.member.role).toBe('employee');
       expect(res.body.member.designation).toBe('Analyst');
-      expect(JSON.stringify(res.body)).not.toMatch(/password|token|mfa_secret/i);
+      // a new account gets a one-time temporary password, shown once to whoever added them
+      const temp = res.body.temporaryPassword as string;
+      expect(temp).toEqual(expect.any(String));
+      expect(JSON.stringify(res.body.member)).not.toMatch(/password|token|mfa_secret/i);
+      expect(inviteLinks).toHaveLength(0);
 
-      expect(inviteLinks).toHaveLength(1);
-      const token = new URL(inviteLinks[0].split(': ')[1]).searchParams.get('token')!;
-
-      // the new person cannot sign in before accepting
-      const before = await request(app.getHttpServer())
+      // they can sign in with it, but must choose their own before doing anything else
+      const agent = request.agent(app.getHttpServer());
+      const login = await agent
         .post('/api/auth/login')
-        .send({ email: email('newhire'), password: 'whatever-password-123' });
-      expect(before.status).toBe(401);
+        .send({ email: email('newhire'), password: temp });
+      expect(login.status).toBe(200);
+      expect(login.body.user.mustChangePassword).toBe(true);
+      expect((await agent.get('/api/tasks')).status).toBe(403);
 
-      const accept = await request(app.getHttpServer())
-        .post('/api/auth/accept-invite')
-        .send({ token, password: 'my-brand-new-password' });
-      expect(accept.status).toBe(204);
-
-      const login = await request(app.getHttpServer())
+      const change = await agent
+        .post('/api/auth/change-password')
+        .send({ currentPassword: temp, newPassword: 'my-brand-new-password' });
+      expect(change.status).toBe(204);
+      const again = request.agent(app.getHttpServer());
+      const second = await again
         .post('/api/auth/login')
         .send({ email: email('newhire'), password: 'my-brand-new-password' });
-      expect(login.status).toBe(200);
-      expect(login.body.role).toBe('employee');
-
-      // single use
-      const again = await request(app.getHttpServer())
-        .post('/api/auth/accept-invite')
-        .send({ token, password: 'another-password-123' });
-      expect(again.status).toBe(400);
+      expect(second.status).toBe(200);
+      expect(second.body.role).toBe('employee');
     });
 
     it('rejects a short password and an unknown token', async () => {
@@ -240,7 +250,9 @@ suite('HRMS org settings and members (integration)', () => {
       expect(refused.body.message).toMatch(/Seat limit reached/);
 
       // nothing was kept: not the member, not the user
-      const leftovers = await owner.query(`select 1 from hrms.users where email = $1`, [email('overflow')]);
+      const leftovers = await owner.query(`select 1 from hrms.users where email = $1`, [
+        email('overflow'),
+      ]);
       expect(leftovers.rows).toHaveLength(0);
 
       const seats = await agents.ceoS.get('/api/org');
@@ -273,9 +285,12 @@ suite('HRMS org settings and members (integration)', () => {
 
       expect((await agents.ceoB.get(`/api/members/${ids.m_managerA}`)).status).toBe(404);
       expect(
-        (await agents.ceoB.patch(`/api/members/${ids.m_managerA}`).send({ designation: 'x' })).status,
+        (await agents.ceoB.patch(`/api/members/${ids.m_managerA}`).send({ designation: 'x' }))
+          .status,
       ).toBe(404);
-      expect((await agents.ceoB.post(`/api/members/${ids.m_managerA}/deactivate`)).status).toBe(404);
+      expect((await agents.ceoB.post(`/api/members/${ids.m_managerA}/deactivate`)).status).toBe(
+        404,
+      );
     });
   });
 
@@ -301,7 +316,8 @@ suite('HRMS org settings and members (integration)', () => {
       expect((await agents.employeeA.post('/api/members').send(body)).status).toBe(403);
       expect((await agents.managerA.post('/api/members').send(body)).status).toBe(403);
       expect(
-        (await agents.cooA.post('/api/members').send({ ...body, email: email('x2'), role: 'coo' })).status,
+        (await agents.cooA.post('/api/members').send({ ...body, email: email('x2'), role: 'coo' }))
+          .status,
       ).toBe(403);
       expect(
         (await agents.cooA.post('/api/members').send({ ...body, email: email('x3') })).status,
@@ -310,11 +326,23 @@ suite('HRMS org settings and members (integration)', () => {
 
     it('keeps role and switch changes to CEO/COO, and name/phone to the person', async () => {
       const id = ids.m_employeeA;
-      expect((await agents.employeeA.patch(`/api/members/${id}`).send({ role: 'manager' })).status).toBe(403);
-      expect((await agents.managerA.patch(`/api/members/${ids.m_managerA}`).send({ canViewAllProjects: true })).status).toBe(403);
-      expect((await agents.cooA.patch(`/api/members/${id}`).send({ fullName: 'Hacked' })).status).toBe(403);
+      expect(
+        (await agents.employeeA.patch(`/api/members/${id}`).send({ role: 'manager' })).status,
+      ).toBe(403);
+      expect(
+        (
+          await agents.managerA
+            .patch(`/api/members/${ids.m_managerA}`)
+            .send({ canViewAllProjects: true })
+        ).status,
+      ).toBe(403);
+      expect(
+        (await agents.cooA.patch(`/api/members/${id}`).send({ fullName: 'Hacked' })).status,
+      ).toBe(403);
 
-      const own = await agents.employeeA.patch(`/api/members/${id}`).send({ phone: '+8801000000', designation: 'Dev' });
+      const own = await agents.employeeA
+        .patch(`/api/members/${id}`)
+        .send({ phone: '+8801000000', designation: 'Dev' });
       expect(own.status).toBe(200);
       expect(own.body.phone).toBe('+8801000000');
 
@@ -325,16 +353,28 @@ suite('HRMS org settings and members (integration)', () => {
       expect(promoted.body.taskApprovalRequired).toBe(true);
 
       // the database's own rule: switches only make sense for managers
-      const bad = await agents.ceoA.patch(`/api/members/${id}`).send({ taskApprovalRequired: true });
+      const bad = await agents.ceoA
+        .patch(`/api/members/${id}`)
+        .send({ taskApprovalRequired: true });
       expect(bad.status).toBe(422);
     });
 
     it('limits deactivate to CEO/COO, suspend, downgrade and settings to the CEO', async () => {
-      expect((await agents.managerA.post(`/api/members/${ids.m_employeeA}/deactivate`)).status).toBe(403);
-      expect((await agents.cooA.post('/api/members/suspend').send({ memberIds: [ids.m_employeeA] })).status).toBe(403);
+      expect(
+        (await agents.managerA.post(`/api/members/${ids.m_employeeA}/deactivate`)).status,
+      ).toBe(403);
+      expect(
+        (await agents.cooA.post('/api/members/suspend').send({ memberIds: [ids.m_employeeA] }))
+          .status,
+      ).toBe(403);
       expect((await agents.cooA.get('/api/members/downgrade-candidates')).status).toBe(403);
-      expect((await agents.cooA.patch('/api/org/settings').send({ lateGraceMinutes: 5 })).status).toBe(403);
-      expect((await agents.managerA.post('/api/org/holidays').send({ date: '2031-05-01', name: 'x' })).status).toBe(403);
+      expect(
+        (await agents.cooA.patch('/api/org/settings').send({ lateGraceMinutes: 5 })).status,
+      ).toBe(403);
+      expect(
+        (await agents.managerA.post('/api/org/holidays').send({ date: '2031-05-01', name: 'x' }))
+          .status,
+      ).toBe(403);
     });
   });
 
@@ -359,7 +399,11 @@ suite('HRMS org settings and members (integration)', () => {
         workloadAmberTasks: 7,
       });
       expect(ok.status).toBe(200);
-      expect(ok.body).toMatchObject({ lateGraceMinutes: 20, workStartTime: '08:30', weekendDays: [5, 6] });
+      expect(ok.body).toMatchObject({
+        lateGraceMinutes: 20,
+        workStartTime: '08:30',
+        weekendDays: [5, 6],
+      });
 
       const bad = await agents.ceoA.patch('/api/org/settings').send({ weightAttendance: 60 });
       expect(bad.status).toBe(422);
@@ -371,19 +415,29 @@ suite('HRMS org settings and members (integration)', () => {
       });
       expect(good.status).toBe(200);
 
-      expect((await agents.ceoA.patch('/api/org/settings').send({ timezone: 'Mars/Phobos' })).status).toBe(400);
+      expect(
+        (await agents.ceoA.patch('/api/org/settings').send({ timezone: 'Mars/Phobos' })).status,
+      ).toBe(400);
       expect((await agents.ceoA.patch('/api/org/settings').send({ nonsense: 1 })).status).toBe(400);
     });
 
     it('manages office networks, holidays and leave types', async () => {
-      const net = await agents.ceoA.post('/api/org/office-networks').send({ network: '203.0.113.0/24', label: 'HQ' });
+      const net = await agents.ceoA
+        .post('/api/org/office-networks')
+        .send({ network: '203.0.113.0/24', label: 'HQ' });
       expect(net.status).toBe(201);
       expect((await agents.ceoA.get('/api/org/office-networks')).body.items).toHaveLength(1);
       expect((await agents.employeeA.get('/api/org/office-networks')).status).toBe(403);
-      expect((await agents.ceoA.delete(`/api/org/office-networks/${net.body.id}`)).status).toBe(204);
-      expect((await agents.ceoA.post('/api/org/office-networks').send({ network: 'not-an-ip' })).status).toBe(400);
+      expect((await agents.ceoA.delete(`/api/org/office-networks/${net.body.id}`)).status).toBe(
+        204,
+      );
+      expect(
+        (await agents.ceoA.post('/api/org/office-networks').send({ network: 'not-an-ip' })).status,
+      ).toBe(400);
 
-      const holiday = await agents.ceoA.post('/api/org/holidays').send({ date: '2031-03-26', name: 'Independence Day' });
+      const holiday = await agents.ceoA
+        .post('/api/org/holidays')
+        .send({ date: '2031-03-26', name: 'Independence Day' });
       expect(holiday.status).toBe(201);
       expect((await agents.employeeA.get('/api/org/holidays?year=2031')).body.items).toEqual([
         { date: '2031-03-26', name: 'Independence Day' },
@@ -391,7 +445,12 @@ suite('HRMS org settings and members (integration)', () => {
       expect((await agents.ceoA.delete('/api/org/holidays/2031-03-26')).status).toBe(204);
 
       const types = await agents.employeeA.get('/api/org/leave-types');
-      expect(types.body.items.map((t: { code: string }) => t.code).sort()).toEqual(['annual', 'casual', 'sick', 'unpaid']);
+      expect(types.body.items.map((t: { code: string }) => t.code).sort()).toEqual([
+        'annual',
+        'casual',
+        'sick',
+        'unpaid',
+      ]);
       const created = await agents.ceoA.post('/api/org/leave-types').send({
         code: 'study',
         name: 'Study',
@@ -399,9 +458,17 @@ suite('HRMS org settings and members (integration)', () => {
         isPaid: true,
       });
       expect(created.status).toBe(201);
-      const edited = await agents.ceoA.patch(`/api/org/leave-types/${created.body.id}`).send({ yearlyAllowanceDays: 6.5 });
+      const edited = await agents.ceoA
+        .patch(`/api/org/leave-types/${created.body.id}`)
+        .send({ yearlyAllowanceDays: 6.5 });
       expect(edited.body.yearlyAllowanceDays).toBe(6.5);
-      expect((await agents.cooA.post('/api/org/leave-types').send({ code: 'zz', name: 'Z', yearlyAllowanceDays: 1, isPaid: true })).status).toBe(403);
+      expect(
+        (
+          await agents.cooA
+            .post('/api/org/leave-types')
+            .send({ code: 'zz', name: 'Z', yearlyAllowanceDays: 1, isPaid: true })
+        ).status,
+      ).toBe(403);
     });
   });
 

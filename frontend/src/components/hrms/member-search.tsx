@@ -13,7 +13,8 @@ export interface MemberOption {
   email?: string;
 }
 
-const MAX_RESULTS = 8;
+// Suggestions stay short however big the organisation is; typing narrows them.
+const MAX_RESULTS = 4;
 
 function useDebounced<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -66,7 +67,10 @@ export function MemberSearch({
   const remote = useQuery({
     queryKey: ['hrms', 'member-search', role ?? 'any', query],
     queryFn: () => {
-      const params = new URLSearchParams({ status: 'active', pageSize: String(MAX_RESULTS + excludeIds.length) });
+      const params = new URLSearchParams({
+        status: 'active',
+        pageSize: String(MAX_RESULTS + excludeIds.length),
+      });
       if (role) params.set('role', role);
       if (query) params.set('q', query);
       return hrmsFetch<Paginated<MemberOption>>(`/members?${params}`);
@@ -117,7 +121,11 @@ export function MemberSearch({
     <div className="relative space-y-1.5 text-sm">
       <label htmlFor={id} className="block font-medium text-fg">
         {label}
-        {required && <span className="ml-1 text-danger-fg" aria-hidden>*</span>}
+        {required && (
+          <span className="ml-1 text-danger-fg" aria-hidden>
+            *
+          </span>
+        )}
       </label>
       {name && <input type="hidden" name={name} value={selected?.id ?? ''} />}
       {selected ? (
@@ -149,7 +157,9 @@ export function MemberSearch({
           aria-expanded={open}
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-activedescendant={open && results[active] ? `${id}-opt-${results[active].id}` : undefined}
+          aria-activedescendant={
+            open && results[active] ? `${id}-opt-${results[active].id}` : undefined
+          }
           autoComplete="off"
           required={required}
           placeholder={placeholder}
@@ -173,9 +183,13 @@ export function MemberSearch({
           className="absolute left-0 right-0 z-30 mt-1 max-h-72 overflow-y-auto rounded-card border border-border bg-surface-raised p-1 shadow-float"
         >
           {loading && <li className="px-3 py-2 text-fg-muted">Searching…</li>}
-          {remote.isError && !localOptions && <li className="px-3 py-2 text-danger-fg">Could not search. Try again.</li>}
+          {remote.isError && !localOptions && (
+            <li className="px-3 py-2 text-danger-fg">Could not search. Try again.</li>
+          )}
           {!loading && !remote.isError && results.length === 0 && (
-            <li className="px-3 py-2 text-fg-muted">{needle ? 'No one matches that search.' : 'No one to show.'}</li>
+            <li className="px-3 py-2 text-fg-muted">
+              {needle ? 'No one matches that search.' : 'No one to show.'}
+            </li>
           )}
           {results.map((member, index) => (
             <li
@@ -220,7 +234,10 @@ export function MemberChips({
   return (
     <ul className="flex flex-wrap gap-2" aria-label="Chosen people">
       {members.map((m) => (
-        <li key={m.id} className="flex items-center gap-1 rounded-full border border-border bg-surface-sunken py-1 pl-3 pr-1 text-sm">
+        <li
+          key={m.id}
+          className="flex items-center gap-1 rounded-full border border-border bg-surface-sunken py-1 pl-3 pr-1 text-sm"
+        >
           {m.fullName}
           <button
             type="button"

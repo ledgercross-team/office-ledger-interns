@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { sql, type SQL } from 'drizzle-orm';
 import type { HrmsPrincipal } from '../auth/hrms-auth.types';
 import { HrmsContextService } from '../db/hrms-context';
@@ -76,8 +81,11 @@ export class CalendarService {
     const from = q.from ?? monthStart();
     const to =
       q.to ??
-      (await this.context.tx.execute<{ d: string }>(sql`select (${from}::date + interval '1 month')::date::text as d`))
-        .rows[0].d;
+      (
+        await this.context.tx.execute<{ d: string }>(
+          sql`select (${from}::date + interval '1 month')::date::text as d`,
+        )
+      ).rows[0].d;
 
     const who: SQL[] = [];
     if (q.memberId) {
@@ -136,14 +144,24 @@ export class CalendarService {
   private checkPlace(link: string | null | undefined, location: string | null | undefined): void {
     const n = [link, location].filter((x) => x !== null && x !== undefined && x !== '').length;
     if (n !== 1) {
-      throw new BadRequestException('A meeting needs either a meeting link or a location, not both and not neither.');
+      throw new BadRequestException(
+        'A meeting needs either a meeting link or a location, not both and not neither.',
+      );
     }
   }
 
   async createMeeting(p: HrmsPrincipal, dto: CreateMeetingDto) {
     this.checkPlace(dto.meetingLink, dto.location);
-    if (new Date(dto.endsAt) <= new Date(dto.startsAt)) {
-      throw new BadRequestException('The meeting must end after it starts.');
+    const start = new Date(dto.startsAt).getTime();
+    const end = new Date(dto.endsAt).getTime();
+    if (end <= start) throw new BadRequestException('The meeting must end after it starts.');
+    if (start < Date.now() - 5 * 60_000) {
+      throw new BadRequestException('The start time is in the past. Choose a time from now on.');
+    }
+    if (end - start > 24 * 3_600_000) {
+      throw new BadRequestException(
+        'A meeting cannot be longer than 24 hours. Check the start and end dates.',
+      );
     }
     const tx = this.context.tx;
     const created = await tx.execute<{ id: string }>(sql`
@@ -164,12 +182,15 @@ export class CalendarService {
   async updateMeeting(p: HrmsPrincipal, id: string, dto: UpdateMeetingDto) {
     const tx = this.context.tx;
     const cur = await this.ownMeeting(p, id);
-    const link = dto.meetingLink !== undefined ? dto.meetingLink : dto.location ? null : cur.meeting_link;
-    const location = dto.location !== undefined ? dto.location : dto.meetingLink ? null : cur.location;
+    const link =
+      dto.meetingLink !== undefined ? dto.meetingLink : dto.location ? null : cur.meeting_link;
+    const location =
+      dto.location !== undefined ? dto.location : dto.meetingLink ? null : cur.location;
     this.checkPlace(link, location);
     const startsAt = dto.startsAt ?? cur.starts_at;
     const endsAt = dto.endsAt ?? cur.ends_at;
-    if (new Date(endsAt) <= new Date(startsAt)) throw new BadRequestException('The meeting must end after it starts.');
+    if (new Date(endsAt) <= new Date(startsAt))
+      throw new BadRequestException('The meeting must end after it starts.');
 
     await tx.execute(sql`
       update meetings
@@ -255,7 +276,8 @@ export class CalendarService {
         from meetings where id = ${id} and org_id = current_org_id()`);
     const m = r.rows[0];
     if (!m) throw new NotFoundException('Meeting not found.');
-    if (m.created_by !== p.memberId) throw new ForbiddenException('Only the person who created the meeting can change it.');
+    if (m.created_by !== p.memberId)
+      throw new ForbiddenException('Only the person who created the meeting can change it.');
     if (m.cancelled_at) throw new BadRequestException('This meeting is cancelled.');
     return m;
   }
