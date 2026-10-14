@@ -26,7 +26,8 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isLoading || !session) return;
-    if (!session.isGameMaster) router.replace('/');
+    if (session.user.mustChangePassword) router.replace('/change-password');
+    else if (!session.isGameMaster) router.replace('/');
   }, [isLoading, session, router]);
 
   if (isLoading || !session) {
@@ -62,7 +63,10 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
               <p className="px-2 pb-3 text-sm font-semibold text-fg">Platform console</p>
               <ul className="space-y-1">
                 {ITEMS.map((item) => {
-                  const active = item.href === '/platform' ? pathname === '/platform' : pathname.startsWith(item.href);
+                  const active =
+                    item.href === '/platform'
+                      ? pathname === '/platform'
+                      : pathname.startsWith(item.href);
                   const Icon = item.icon;
                   return (
                     <li key={item.href}>
@@ -71,7 +75,9 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
                         aria-current={active ? 'page' : undefined}
                         className={cn(
                           'flex min-h-10 items-center gap-3 rounded-control px-3 py-2 text-sm font-medium',
-                          active ? 'bg-primary-soft text-primary' : 'text-fg-muted hover:bg-surface-sunken hover:text-fg',
+                          active
+                            ? 'bg-primary-soft text-primary'
+                            : 'text-fg-muted hover:bg-surface-sunken hover:text-fg',
                         )}
                       >
                         <Icon aria-hidden className="size-5 shrink-0" />
@@ -86,18 +92,28 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="sticky top-0 z-20 border-b border-border bg-surface">
               <div className="mx-auto flex min-h-14 w-full max-w-[1280px] items-center gap-2 px-3 sm:px-6">
-                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">Platform console</p>
-                <p className="hidden truncate text-sm text-fg-muted sm:block">{session.user.email}</p>
+                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">
+                  Platform console
+                </p>
+                <p className="hidden truncate text-sm text-fg-muted sm:block">
+                  {session.user.email}
+                </p>
                 <Button variant="secondary" size="sm" onClick={() => void logout()}>
                   <LogOut aria-hidden className="size-4" />
                   Sign out
                 </Button>
               </div>
             </header>
-            <nav aria-label="Platform sections" className="border-b border-border bg-surface md:hidden">
+            <nav
+              aria-label="Platform sections"
+              className="border-b border-border bg-surface md:hidden"
+            >
               <ul className="flex gap-1 overflow-x-auto px-3 py-2">
                 {ITEMS.map((item) => {
-                  const active = item.href === '/platform' ? pathname === '/platform' : pathname.startsWith(item.href);
+                  const active =
+                    item.href === '/platform'
+                      ? pathname === '/platform'
+                      : pathname.startsWith(item.href);
                   return (
                     <li key={item.href} className="shrink-0">
                       <Link
@@ -105,7 +121,9 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
                         aria-current={active ? 'page' : undefined}
                         className={cn(
                           'flex min-h-10 items-center rounded-control px-3 text-sm font-medium',
-                          active ? 'bg-primary-soft text-primary' : 'text-fg-muted hover:bg-surface-sunken hover:text-fg',
+                          active
+                            ? 'bg-primary-soft text-primary'
+                            : 'text-fg-muted hover:bg-surface-sunken hover:text-fg',
                         )}
                       >
                         {item.label}
@@ -115,7 +133,10 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
                 })}
               </ul>
             </nav>
-            <main id="main-content" className="mx-auto w-full max-w-[1280px] flex-1 space-y-6 p-4 sm:p-6">
+            <main
+              id="main-content"
+              className="mx-auto w-full max-w-[1280px] flex-1 space-y-6 p-4 sm:p-6"
+            >
               {children}
             </main>
           </div>

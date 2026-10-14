@@ -5,8 +5,13 @@ import { useState } from 'react';
 import { Button, Card, ErrorState, Input } from '@/components/ui';
 import { PasswordStrengthMeter, passwordStrength } from '@/components/hrms/password-strength';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
+import { HRMS_SESSION_KEY, useHrmsAuth } from '@/lib/hrms/auth-context';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function HrmsChangePasswordPage() {
+  const { session } = useHrmsAuth();
+  const queryClient = useQueryClient();
+  const first = session?.user.mustChangePassword === true;
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -31,6 +36,7 @@ export default function HrmsChangePasswordPage() {
         method: 'POST',
         body: { currentPassword: String(form.get('currentPassword')), newPassword: next },
       });
+      await queryClient.invalidateQueries({ queryKey: HRMS_SESSION_KEY });
       setDone(true);
     } catch (err) {
       setError(
@@ -60,9 +66,23 @@ export default function HrmsChangePasswordPage() {
     <main className="flex min-h-screen flex-1 items-center justify-center bg-bg p-4">
       <Card className="w-full max-w-[480px]">
         <p className="text-lg font-semibold text-primary">office-ledger</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-fg">Change password</h1>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-fg">
+          {first ? 'Choose your own password' : 'Change password'}
+        </h1>
+        {first && (
+          <p className="mt-2 text-sm text-fg-muted">
+            You signed in with a temporary password. Enter it below as the current password, then
+            choose a new one to continue.
+          </p>
+        )}
         <form onSubmit={(event) => void onSubmit(event)} className="mt-5 space-y-4">
-          <Input label="Current password" name="currentPassword" type="password" autoComplete="current-password" required />
+          <Input
+            label="Current password"
+            name="currentPassword"
+            type="password"
+            autoComplete="current-password"
+            required
+          />
           <div>
             <Input
               label="New password"
@@ -79,7 +99,14 @@ export default function HrmsChangePasswordPage() {
               <PasswordStrengthMeter password={newPassword} />
             </div>
           </div>
-          <Input label="Repeat the new password" name="confirm" type="password" autoComplete="new-password" required minLength={10} />
+          <Input
+            label="Repeat the new password"
+            name="confirm"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={10}
+          />
           {error && <ErrorState message={error} />}
           <Button type="submit" loading={pending} className="w-full">
             Change password

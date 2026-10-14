@@ -1,13 +1,26 @@
 import { randomBytes, createHash } from 'node:crypto';
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { sql } from 'drizzle-orm';
-import { hashPassword } from '../../common/utils/passwords';
+import { generateTempPassword, hashPassword } from '../../common/utils/passwords';
 import type { HrmsPrincipal } from '../auth/hrms-auth.types';
 import { HrmsContextService } from '../db/hrms-context';
 import { iso } from '../hrms-rows';
 import { MailService } from '../mail/mail.service';
-import type { CreateGameMasterDto, CreateOrgDto, LastCeoRemovalDto, RecoveryRequestDto, SetPlanDto } from './dto/platform.dto';
+import { HrmsTokenService } from '../auth/hrms-token.service';
+import type {
+  CreateGameMasterDto,
+  CreateOrgDto,
+  LastCeoRemovalDto,
+  RecoveryRequestDto,
+  SetPlanDto,
+  UpdatePersonDto,
+} from './dto/platform.dto';
 
 const INVITE_TTL_DAYS = 7;
 const RECOVERY_TTL_HOURS = 48;
@@ -18,6 +31,7 @@ export class PlatformService {
     private readonly context: HrmsContextService,
     private readonly config: ConfigService,
     private readonly mail: MailService,
+    private readonly tokens: HrmsTokenService,
   ) {}
 
   private frontend(): string {
@@ -40,9 +54,14 @@ export class PlatformService {
   }
 
   /** Finds the account for an email, or makes one nobody can sign in to until the link is used. */
-  private async userFor(email: string, fullName: string): Promise<{ id: string; created: boolean }> {
+  private async userFor(
+    email: string,
+    fullName: string,
+  ): Promise<{ id: string; created: boolean }> {
     const tx = this.context.tx;
-    const found = await tx.execute<{ id: string }>(sql`select id from users where email = ${email}`);
+    const found = await tx.execute<{ id: string }>(
+      sql`select id from users where email = ${email}`,
+    );
     if (found.rows[0]) return { id: found.rows[0].id, created: false };
     const unusable = await hashPassword(randomBytes(32).toString('base64url'));
     const made = await tx.execute<{ id: string }>(sql`
@@ -89,7 +108,8 @@ export class PlatformService {
     const email = dto.ceoEmail.trim().toLowerCase();
     const gm = await this.context.tx.execute(sql`
       select 1 from game_masters g join users u on u.id = g.user_id where u.email = ${email} and g.status <> 'removed'`);
-    if (gm.rows.length > 0) throw new ConflictException('A gameMaster cannot be the CEO of an organisation.');
+    if (gm.rows.length > 0)
+      throw new ConflictException('A gameMaster cannot be the CEO of an organisation.');
 
     const user = await this.userFor(email, dto.ceoFullName.trim());
     const created = await this.context.tx.execute<{ id: string }>(
@@ -155,12 +175,18 @@ export class PlatformService {
    */
   async verify(requestId: string) {
     const tx = this.context.tx;
-    const found = await tx.execute<{ type: string; status: string; new_email: string | null; user_id: string | null }>(sql`
+    const found = await tx.execute<{
+      type: string;
+      status: string;
+      new_email: string | null;
+      user_id: string | null;
+    }>(sql`
       select type, status, new_email, replacement_user_id as user_id
         from gm_list_platform_requests() where id = ${requestId}::uuid`);
     const req = found.rows[0];
     if (!req) throw new NotFoundException('Request not found.');
-    if (req.status !== 'pending') throw new ConflictException('This request has already been handled.');
+    if (req.status !== 'pending')
+      throw new ConflictException('This request has already been handled.');
 
     if (req.type !== 'ceo_recovery') {
       await tx.execute(sql`select gm_verify_platform_request(${requestId}::uuid)`);
@@ -219,19 +245,24 @@ export class PlatformService {
   async createGameMaster(p: HrmsPrincipal, dto: CreateGameMasterDto) {
     const email = dto.email.trim().toLowerCase();
     const user = await this.userFor(email, dto.fullName.trim());
-    const existing = await this.context.tx.execute(sql`select 1 from game_masters where user_id = ${user.id}`);
-    if (existing.rows.length > 0) throw new ConflictException('This person is already a gameMaster.');
+    const existing = await this.context.tx.execute(
+      sql`select 1 from game_masters where user_id = ${user.id}`,
+    );
+    if (existing.rows.length > 0)
+      throw new ConflictException('This person is already a gameMaster.');
     await this.context.tx.execute(sql`
       insert into game_masters (user_id, created_by) values (${user.id}, ${p.userId})`);
+    // A new person gets a one-time temporary password, shown only to the creating gameMaster
+    // (who hands it over). They must choose their own at first sign-in.
+    let temporaryPassword: string | undefined;
     if (user.created) {
-      const link = await this.oneTimeLink(user.id, 'invite', `${INVITE_TTL_DAYS} days`);
-      await this.mail.send({
-        to: email,
-        subject: 'You have been added as a gameMaster',
-        text: `Set your password:\n${this.frontend()}/accept-invite?token=${link.token}\nAn active gameMaster must confirm you before you can sign in.\n`,
-      });
+      temporaryPassword = generateTempPassword();
+      const hash = await hashPassword(temporaryPassword);
+      await this.context.tx.execute(sql`
+        update users set password_hash = ${hash}, must_change_password = true, email_verified_at = now()
+         where id = ${user.id}`);
     }
-    return { userId: user.id, status: 'pending_confirmation' };
+    return { userId: user.id, status: 'pending_confirmation', temporaryPassword };
   }
 
   /** The database refuses the person themselves as confirmer. */
@@ -239,7 +270,8 @@ export class PlatformService {
     const r = await this.context.tx.execute(sql`
       update game_masters set status = 'active', confirmed_by = ${p.userId}, confirmed_at = now()
        where user_id = ${userId} and status = 'pending_confirmation' returning user_id`);
-    if (r.rows.length === 0) throw new NotFoundException('No gameMaster is waiting for confirmation with that id.');
+    if (r.rows.length === 0)
+      throw new NotFoundException('No gameMaster is waiting for confirmation with that id.');
     return { ok: true };
   }
 
@@ -265,11 +297,132 @@ export class PlatformService {
        where id = ${dto.replacementMemberId} and org_id = current_org_id() and status = 'active'
          and role in ('coo', 'manager')`);
     const userId = replacement.rows[0]?.user_id;
-    if (!userId) throw new NotFoundException('The replacement must be an active COO or manager of this organisation.');
+    if (!userId)
+      throw new NotFoundException(
+        'The replacement must be an active COO or manager of this organisation.',
+      );
     const r = await this.context.tx.execute<{ id: string }>(sql`
       insert into platform_requests (org_id, type, requested_by, target_member_id, replacement_user_id)
       values (current_org_id(), 'remove_last_ceo', ${p.memberId}, ${p.memberId}, ${userId})
       returning id`);
     return { id: r.rows[0].id, status: 'pending' };
+  }
+
+  // ---- managing gameMasters and CEOs ------------------------------------
+  private async assertGameMaster(userId: string): Promise<{ status: string }> {
+    const r = await this.context.tx.execute<{ status: string }>(
+      sql`select status::text as status from game_masters where user_id = ${userId}`,
+    );
+    if (!r.rows[0]) throw new NotFoundException('gameMaster not found.');
+    return r.rows[0];
+  }
+
+  private async ceoUser(memberId: string): Promise<string> {
+    const r = await this.context.tx.execute<{ id: string }>(
+      sql`select gm_ceo_user(${memberId}) as id`,
+    );
+    return r.rows[0].id;
+  }
+
+  private async updatePerson(userId: string, dto: UpdatePersonDto) {
+    const fullName = dto.fullName?.trim();
+    const email = dto.email?.trim().toLowerCase();
+    if (fullName === undefined && email === undefined)
+      throw new BadRequestException('Nothing to change.');
+    if (email !== undefined) {
+      const taken = await this.context.tx.execute(
+        sql`select 1 from users where email = ${email} and id <> ${userId}`,
+      );
+      if (taken.rows.length > 0)
+        throw new ConflictException('That email address is already used by another account.');
+    }
+    await this.context.tx.execute(sql`
+      update users set full_name = coalesce(${fullName ?? null}, full_name), email = coalesce(${email ?? null}, email)
+       where id = ${userId}`);
+    return { userId };
+  }
+
+  /** A new one-time password, shown once to the gameMaster. The person must change it, and is signed out everywhere. */
+  private async resetPassword(userId: string) {
+    const temporaryPassword = generateTempPassword();
+    const hash = await hashPassword(temporaryPassword);
+    await this.context.tx.execute(sql`
+      update users set password_hash = ${hash}, must_change_password = true, email_verified_at = coalesce(email_verified_at, now())
+       where id = ${userId}`);
+    await this.tokens.revokeAllForUser(userId);
+    return { userId, temporaryPassword };
+  }
+
+  private async resetMfa(userId: string) {
+    await this.context.tx.execute(sql`delete from user_mfa_backup_codes where user_id = ${userId}`);
+    await this.context.tx.execute(
+      sql`update users set mfa_enabled = false, mfa_secret_enc = null where id = ${userId}`,
+    );
+    return { userId };
+  }
+
+  async updateGameMaster(userId: string, dto: UpdatePersonDto) {
+    await this.assertGameMaster(userId);
+    return this.updatePerson(userId, dto);
+  }
+
+  async resetGameMasterPassword(userId: string) {
+    await this.assertGameMaster(userId);
+    return this.resetPassword(userId);
+  }
+
+  async resetGameMasterMfa(userId: string) {
+    await this.assertGameMaster(userId);
+    return this.resetMfa(userId);
+  }
+
+  /** Marks the gameMaster removed (history is kept) and ends their sessions. The database keeps the last active one. */
+  async removeGameMaster(p: HrmsPrincipal, userId: string) {
+    if (userId === p.userId)
+      throw new ConflictException('You cannot remove yourself. Ask another gameMaster.');
+    const target = await this.assertGameMaster(userId);
+    if (target.status === 'removed')
+      throw new ConflictException('This gameMaster is already removed.');
+    await this.context.tx.execute(sql`
+      update game_masters set status = 'removed', removed_at = now() where user_id = ${userId}`);
+    await this.tokens.revokeAllForUser(userId);
+    return { userId, status: 'removed' };
+  }
+
+  async listOrgCeos(orgId: string) {
+    const r = await this.context.tx.execute<{
+      member_id: string;
+      user_id: string;
+      full_name: string;
+      email: string;
+      status: string;
+    }>(sql`select * from gm_list_org_ceos(${orgId})`);
+    return {
+      items: r.rows.map((c) => ({
+        memberId: c.member_id,
+        userId: c.user_id,
+        fullName: c.full_name,
+        email: c.email,
+        status: c.status,
+      })),
+    };
+  }
+
+  async updateCeo(memberId: string, dto: UpdatePersonDto) {
+    return this.updatePerson(await this.ceoUser(memberId), dto);
+  }
+
+  async resetCeoPassword(memberId: string) {
+    return this.resetPassword(await this.ceoUser(memberId));
+  }
+
+  async resetCeoMfa(memberId: string) {
+    return this.resetMfa(await this.ceoUser(memberId));
+  }
+
+  /** The org's last active CEO cannot be removed here: that goes through a platform request. */
+  async removeCeo(memberId: string) {
+    await this.context.tx.execute(sql`select gm_deactivate_ceo(${memberId})`);
+    return { memberId, status: 'deactivated' };
   }
 }

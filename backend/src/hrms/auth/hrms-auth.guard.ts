@@ -68,6 +68,21 @@ export class HrmsAuthGuard implements CanActivate {
     });
     if (denial) forbid(denial.code, denial.message);
 
+    // A temporary password must be replaced before anything else; only /api/auth/* stays open.
+    if (!req.path.startsWith('/api/auth/')) {
+      const mustChange = await this.context.runSystem(
+        async (tx) => {
+          const r = await tx.execute<{ must_change_password: boolean }>(
+            sql`select must_change_password from users where id = ${principal.userId}`,
+          );
+          return r.rows[0]?.must_change_password === true;
+        },
+        { userId: principal.userId },
+      );
+      if (mustChange)
+        forbid('PASSWORD_CHANGE_REQUIRED', 'Choose your own password before you continue.');
+    }
+
     const roles = this.reflector.getAllAndOverride<HrmsRole[] | undefined>(HRMS_ROLES_KEY, targets);
     const sessionOnly = this.reflector.getAllAndOverride<boolean>(HRMS_SESSION_KEY, targets);
 

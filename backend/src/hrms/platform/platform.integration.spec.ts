@@ -43,7 +43,9 @@ suite('HRMS platform (integration)', () => {
 
   async function signIn(name: string): Promise<ReturnType<typeof request.agent>> {
     const agent = request.agent(app.getHttpServer());
-    const res = await agent.post('/api/auth/login').send({ email: email(name), password: PASSWORD });
+    const res = await agent
+      .post('/api/auth/login')
+      .send({ email: email(name), password: PASSWORD });
     expect(res.status).toBe(200);
     return agent;
   }
@@ -51,17 +53,25 @@ suite('HRMS platform (integration)', () => {
   beforeAll(async () => {
     owner = new Pool({ connectionString: ownerUrl, options: '-c search_path=hrms,public' });
     const moduleRef = await Test.createTestingModule({
-      imports: [ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [config] }), HrmsModule],
+      imports: [
+        ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [config] }),
+        HrmsModule,
+      ],
     }).compile();
     app = moduleRef.createNestApplication();
     app.use(cookieParser());
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+    );
     await app.init();
 
     const hash = await hashPassword(PASSWORD);
     for (const n of ['gm1', 'gm3', 'ceo', 'coo', 'mgr']) ids[n] = await user(n, hash);
     // two active gameMasters to start with (bootstrap rows)
-    await owner.query(`insert into hrms.game_masters (user_id, status, confirmed_at) values ($1, 'active', now()), ($2, 'active', now())`, [ids.gm1, ids.gm3]);
+    await owner.query(
+      `insert into hrms.game_masters (user_id, status, confirmed_at) values ($1, 'active', now()), ($2, 'active', now())`,
+      [ids.gm1, ids.gm3],
+    );
 
     // a customer org, made through the platform API
     agents.gm1 = await signIn('gm1');
@@ -73,11 +83,17 @@ suite('HRMS platform (integration)', () => {
     await owner.end();
   });
 
-  async function orgTx<T>(orgId: string, fn: (c: import('pg').PoolClient) => Promise<T>): Promise<T> {
+  async function orgTx<T>(
+    orgId: string,
+    fn: (c: import('pg').PoolClient) => Promise<T>,
+  ): Promise<T> {
     const c = await owner.connect();
     try {
       await c.query('begin');
-      await c.query("select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)", [orgId]);
+      await c.query(
+        "select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)",
+        [orgId],
+      );
       const r = await fn(c);
       await c.query('commit');
       return r;
@@ -94,14 +110,24 @@ suite('HRMS platform (integration)', () => {
     const send = jest.spyOn(mail, 'send').mockResolvedValue();
     const created = await agents.gm1
       .post('/api/platform/orgs')
-      .send({ name: `Plat-${suffix}`, planCode: 'standard', ceoEmail: email('ceo'), ceoFullName: 'Test ceo' });
+      .send({
+        name: `Plat-${suffix}`,
+        planCode: 'standard',
+        ceoEmail: email('ceo'),
+        ceoFullName: 'Test ceo',
+      });
     expect(created.status).toBe(201);
     ids.org = created.body.id;
     expect(send).not.toHaveBeenCalled(); // existing account: no invite needed
 
     const fresh = await agents.gm1
       .post('/api/platform/orgs')
-      .send({ name: `Fresh-${suffix}`, planCode: 'standard', ceoEmail: email('freshceo'), ceoFullName: 'Fresh CEO' });
+      .send({
+        name: `Fresh-${suffix}`,
+        planCode: 'standard',
+        ceoEmail: email('freshceo'),
+        ceoFullName: 'Fresh CEO',
+      });
     expect(fresh.status).toBe(201);
     expect(fresh.body.ceoInvited).toBe(true);
     expect(send.mock.calls[0][0].to).toBe(email('freshceo'));
@@ -112,21 +138,37 @@ suite('HRMS platform (integration)', () => {
     const mine = list.body.items.find((o: { id: string }) => o.id === ids.org);
     expect(mine).toMatchObject({ ceoCount: 1, cooCount: 0, planCode: 'standard' });
     expect(Object.keys(mine).sort()).toEqual(
-      ['cooCount', 'ceoCount', 'id', 'name', 'overThreshold', 'planCode', 'seatLimit', 'seatsUsed', 'status'].sort(),
+      [
+        'cooCount',
+        'ceoCount',
+        'id',
+        'name',
+        'overThreshold',
+        'planCode',
+        'seatLimit',
+        'seatsUsed',
+        'status',
+      ].sort(),
     );
 
     // staff for later tests
     await orgTx(ids.org, async (c) => {
-      for (const [n, role] of [['coo', 'coo'], ['mgr', 'manager']]) {
+      for (const [n, role] of [
+        ['coo', 'coo'],
+        ['mgr', 'manager'],
+      ]) {
         ids[`m_${n}`] = (
-          await c.query(`insert into hrms.org_members (org_id, user_id, role) values ($1, $2, $3::hrms.member_role) returning id`, [
-            ids.org,
-            ids[n],
-            role,
-          ])
+          await c.query(
+            `insert into hrms.org_members (org_id, user_id, role) values ($1, $2, $3::hrms.member_role) returning id`,
+            [ids.org, ids[n], role],
+          )
         ).rows[0].id;
       }
-      ids.m_ceo = (await c.query(`select id from hrms.org_members where org_id = $1 and role = 'ceo'`, [ids.org])).rows[0].id;
+      ids.m_ceo = (
+        await c.query(`select id from hrms.org_members where org_id = $1 and role = 'ceo'`, [
+          ids.org,
+        ])
+      ).rows[0].id;
     });
   });
 
@@ -135,12 +177,24 @@ suite('HRMS platform (integration)', () => {
     const c = await pool.connect();
     try {
       await c.query('begin');
-      await c.query("select set_config('app.user_id', $1, true), set_config('app.org_id', '', true), set_config('app.member_id', '', true)", [
-        ids.gm1,
-      ]);
+      await c.query(
+        "select set_config('app.user_id', $1, true), set_config('app.org_id', '', true), set_config('app.member_id', '', true)",
+        [ids.gm1],
+      );
       for (const table of [
-        'org_members', 'org_settings', 'projects', 'project_members', 'tasks', 'requests', 'leave_requests',
-        'attendance_days', 'meetings', 'notifications', 'subscriptions', 'platform_requests', 'performance_scores',
+        'org_members',
+        'org_settings',
+        'projects',
+        'project_members',
+        'tasks',
+        'requests',
+        'leave_requests',
+        'attendance_days',
+        'meetings',
+        'notifications',
+        'subscriptions',
+        'platform_requests',
+        'performance_scores',
       ]) {
         const r = await c.query(`select count(*)::int as n from hrms.${table}`);
         expect([table, r.rows[0].n]).toEqual([table, 0]);
@@ -165,44 +219,103 @@ suite('HRMS platform (integration)', () => {
       .send({ email: email('gm2'), fullName: 'Second GM' });
     expect(created.status).toBe(201);
     ids.gm2 = created.body.userId;
-    await owner.query(`update hrms.users set password_hash = (select password_hash from hrms.users where id = $1) where id = $2`, [
-      ids.ceo,
-      ids.gm2,
-    ]);
+    await owner.query(
+      `update hrms.users set password_hash = (select password_hash from hrms.users where id = $1) where id = $2`,
+      [ids.ceo, ids.gm2],
+    );
 
     // pending: cannot sign in to the console, so cannot confirm anyone
     const pending = request.agent(app.getHttpServer());
-    const login = await pending.post('/api/auth/login').send({ email: email('gm2'), password: PASSWORD });
+    const login = await pending
+      .post('/api/auth/login')
+      .send({ email: email('gm2'), password: PASSWORD });
     expect(login.status).toBe(403);
-    expect((await pending.post(`/api/platform/game-masters/${ids.gm2}/confirm`).send({})).status).toBe(401);
+    expect(
+      (await pending.post(`/api/platform/game-masters/${ids.gm2}/confirm`).send({})).status,
+    ).toBe(401);
 
     // the person who added them can confirm
-    const byCreator = await agents.gm1.post(`/api/platform/game-masters/${ids.gm2}/confirm`).send({});
+    const byCreator = await agents.gm1
+      .post(`/api/platform/game-masters/${ids.gm2}/confirm`)
+      .send({});
     expect(byCreator.status).toBe(200);
     const all = await agents.gm1.get('/api/platform/game-masters');
-    expect(all.body.items.find((g: { userId: string }) => g.userId === ids.gm2).status).toBe('active');
+    expect(all.body.items.find((g: { userId: string }) => g.userId === ids.gm2).status).toBe(
+      'active',
+    );
+  });
+
+  it("updates and removes gameMasters and an organisation's CEOs", async () => {
+    const renamed = await agents.gm1
+      .patch(`/api/platform/game-masters/${ids.gm2}`)
+      .send({ fullName: 'Second GM Renamed' });
+    expect(renamed.status).toBe(200);
+    const reset = await agents.gm1
+      .post(`/api/platform/game-masters/${ids.gm2}/reset-password`)
+      .send({});
+    expect(reset.body.temporaryPassword).toEqual(expect.any(String));
+    expect(
+      (await agents.gm1.post(`/api/platform/game-masters/${ids.gm2}/remove`).send({})).status,
+    ).toBe(200);
+    const after = await agents.gm1.get('/api/platform/game-masters');
+    expect(after.body.items.find((g: { userId: string }) => g.userId === ids.gm2).status).toBe(
+      'removed',
+    );
+
+    // CEOs: identity only, per organisation; the only active CEO cannot be removed here
+    const ceos = await agents.gm1.get(`/api/platform/orgs/${ids.org}/ceos`);
+    expect(ceos.status).toBe(200);
+    expect(ceos.body.items.length).toBeGreaterThan(0);
+    expect(
+      (await agents.gm1.patch(`/api/platform/ceos/${ids.m_ceo}`).send({ fullName: 'Renamed CEO' }))
+        .status,
+    ).toBe(200);
+    expect((await agents.gm1.post(`/api/platform/ceos/${ids.m_ceo}/remove`).send({})).status).toBe(
+      409,
+    );
+    // a CEO or employee cannot use these routes
+    const ceo = await signIn('ceo');
+    expect((await ceo.get(`/api/platform/orgs/${ids.org}/ceos`)).status).toBe(403);
   });
 
   it('refuses a downgrade over the new limit with the database message, and blocks and unblocks', async () => {
-    const tiny = (await owner.query(`select code from hrms.plans where seat_limit = 1 limit 1`)).rows[0].code;
+    const tiny = (await owner.query(`select code from hrms.plans where seat_limit = 1 limit 1`))
+      .rows[0].code;
     await orgTx(ids.org, async (c) => {
       // the org already has one manager; a second seat takes it over a plan of one
       const u = await c.query(
         `insert into hrms.users (email, password_hash, full_name) values ($1, 'x', 'Extra') returning id`,
         [email('extra')],
       );
-      await c.query(`insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'employee')`, [ids.org, u.rows[0].id]);
+      await c.query(
+        `insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'employee')`,
+        [ids.org, u.rows[0].id],
+      );
     });
-    const refused = await agents.gm1.post(`/api/platform/orgs/${ids.org}/plan`).send({ planCode: tiny });
+    const refused = await agents.gm1
+      .post(`/api/platform/orgs/${ids.org}/plan`)
+      .send({ planCode: tiny });
     expect(refused.status).toBe(409);
     expect(refused.body.message).toMatch(/Downgrade blocked/);
 
-    expect((await agents.gm1.post(`/api/platform/orgs/${ids.org}/block`).send({})).status).toBe(400);
-    expect((await agents.gm1.post(`/api/platform/orgs/${ids.org}/block`).send({ reason: 'Abuse report' })).status).toBe(200);
+    expect((await agents.gm1.post(`/api/platform/orgs/${ids.org}/block`).send({})).status).toBe(
+      400,
+    );
+    expect(
+      (
+        await agents.gm1
+          .post(`/api/platform/orgs/${ids.org}/block`)
+          .send({ reason: 'Abuse report' })
+      ).status,
+    ).toBe(200);
     const status = async () =>
-      (await agents.gm1.get('/api/platform/orgs')).body.items.find((o: { id: string }) => o.id === ids.org).status;
+      (await agents.gm1.get('/api/platform/orgs')).body.items.find(
+        (o: { id: string }) => o.id === ids.org,
+      ).status;
     expect(await status()).toBe('blocked');
-    expect((await agents.gm1.post(`/api/platform/orgs/${ids.org}/unblock`).send({})).status).toBe(200);
+    expect((await agents.gm1.post(`/api/platform/orgs/${ids.org}/unblock`).send({})).status).toBe(
+      200,
+    );
     expect(await status()).toBe('active');
   });
 
@@ -211,15 +324,29 @@ suite('HRMS platform (integration)', () => {
     const send = jest.spyOn(mail, 'send').mockResolvedValue();
     const coo = await signIn('coo');
     const ceo = await signIn('ceo');
-    expect((await ceo.post('/api/org/recovery-requests').send({ targetMemberId: ids.m_ceo, newEmail: email('newceo') })).status).toBe(403);
-    const filed = await coo.post('/api/org/recovery-requests').send({ targetMemberId: ids.m_ceo, newEmail: email('newceo') });
+    expect(
+      (
+        await ceo
+          .post('/api/org/recovery-requests')
+          .send({ targetMemberId: ids.m_ceo, newEmail: email('newceo') })
+      ).status,
+    ).toBe(403);
+    const filed = await coo
+      .post('/api/org/recovery-requests')
+      .send({ targetMemberId: ids.m_ceo, newEmail: email('newceo') });
     expect(filed.status).toBe(201);
 
     const list = await agents.gm1.get('/api/platform/requests');
     const row = list.body.items.find((r: { id: string }) => r.id === filed.body.id);
-    expect(row).toMatchObject({ type: 'ceo_recovery', status: 'pending', newEmail: email('newceo') });
+    expect(row).toMatchObject({
+      type: 'ceo_recovery',
+      status: 'pending',
+      newEmail: email('newceo'),
+    });
 
-    expect((await agents.gm1.post(`/api/platform/requests/${filed.body.id}/verify`).send({})).status).toBe(200);
+    expect(
+      (await agents.gm1.post(`/api/platform/requests/${filed.body.id}/verify`).send({})).status,
+    ).toBe(200);
     expect(send.mock.calls.at(-1)?.[0].to).toBe(email('newceo'));
     expect(send.mock.calls.at(-1)?.[0].text).toMatch(/accept-invite\?token=/);
     send.mockRestore();
@@ -229,7 +356,10 @@ suite('HRMS platform (integration)', () => {
       [ids.ceo],
     );
     expect(reset.rows[0].n).toBe(1);
-    const u = await owner.query(`select email::text as email, mfa_enabled from hrms.users where id = $1`, [ids.ceo]);
+    const u = await owner.query(
+      `select email::text as email, mfa_enabled from hrms.users where id = $1`,
+      [ids.ceo],
+    );
     expect(u.rows[0]).toMatchObject({ email: email('newceo'), mfa_enabled: false });
   });
 
@@ -237,18 +367,27 @@ suite('HRMS platform (integration)', () => {
     // the original CEO signs in again under the new address
     await owner.query(`update hrms.users set email = $1 where id = $2`, [email('ceo'), ids.ceo]);
     const ceo = await signIn('ceo');
-    const filed = await ceo.post('/api/org/last-ceo-removal').send({ replacementMemberId: ids.m_mgr });
+    const filed = await ceo
+      .post('/api/org/last-ceo-removal')
+      .send({ replacementMemberId: ids.m_mgr });
     expect(filed.status).toBe(201);
     const id = filed.body.id as string;
 
     // not verified yet: refused
     const early = await agents.gm1.post(`/api/platform/requests/${id}/complete`).send({});
     expect(early.status).toBe(409);
-    expect((await agents.gm1.post(`/api/platform/requests/${id}/verify`).send({})).status).toBe(200);
-    expect((await agents.gm1.post(`/api/platform/requests/${id}/complete`).send({})).status).toBe(200);
+    expect((await agents.gm1.post(`/api/platform/requests/${id}/verify`).send({})).status).toBe(
+      200,
+    );
+    expect((await agents.gm1.post(`/api/platform/requests/${id}/complete`).send({})).status).toBe(
+      200,
+    );
 
     const ceos = await orgTx(ids.org, (c) =>
-      c.query(`select user_id from hrms.org_members where org_id = $1 and role = 'ceo' and status = 'active'`, [ids.org]),
+      c.query(
+        `select user_id from hrms.org_members where org_id = $1 and role = 'ceo' and status = 'active'`,
+        [ids.org],
+      ),
     );
     expect(ceos.rows.map((r) => r.user_id)).toEqual([ids.mgr]);
   });

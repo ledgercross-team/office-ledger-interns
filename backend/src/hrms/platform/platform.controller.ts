@@ -1,4 +1,14 @@
-import { Body, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Req,
+} from '@nestjs/common';
 import { HrmsRoles } from '../auth/hrms-auth.decorators';
 import type { HrmsAuthedRequest } from '../auth/hrms-auth.guard';
 import type { HrmsPrincipal } from '../auth/hrms-auth.types';
@@ -10,6 +20,7 @@ import {
   LastCeoRemovalDto,
   RecoveryRequestDto,
   SetPlanDto,
+  UpdatePersonDto,
 } from './dto/platform.dto';
 import { PlatformService } from './platform.service';
 
@@ -95,6 +106,67 @@ export class PlatformController {
   @Post('game-masters')
   createGameMaster(@Req() req: HrmsAuthedRequest, @Body() dto: CreateGameMasterDto) {
     return this.platform.createGameMaster(principalOf(req), dto);
+  }
+
+  @HrmsRoles('gameMaster')
+  @Patch('game-masters/:userId')
+  updateGameMaster(@Param('userId', uuid) userId: string, @Body() dto: UpdatePersonDto) {
+    return this.platform.updateGameMaster(userId, dto);
+  }
+
+  @HrmsRoles('gameMaster')
+  @HttpCode(HttpStatus.OK)
+  @Post('game-masters/:userId/reset-password')
+  resetGameMasterPassword(@Param('userId', uuid) userId: string) {
+    return this.platform.resetGameMasterPassword(userId);
+  }
+
+  @HrmsRoles('gameMaster')
+  @HttpCode(HttpStatus.OK)
+  @Post('game-masters/:userId/reset-mfa')
+  resetGameMasterMfa(@Param('userId', uuid) userId: string) {
+    return this.platform.resetGameMasterMfa(userId);
+  }
+
+  @HrmsRoles('gameMaster')
+  @HttpCode(HttpStatus.OK)
+  @Post('game-masters/:userId/remove')
+  removeGameMaster(@Req() req: HrmsAuthedRequest, @Param('userId', uuid) userId: string) {
+    return this.platform.removeGameMaster(principalOf(req), userId);
+  }
+
+  // CEOs, per organisation: identity and status only, never org data.
+  @HrmsRoles('gameMaster')
+  @Get('orgs/:id/ceos')
+  orgCeos(@Param('id', uuid) id: string) {
+    return this.platform.listOrgCeos(id);
+  }
+
+  @HrmsRoles('gameMaster')
+  @Patch('ceos/:memberId')
+  updateCeo(@Param('memberId', uuid) memberId: string, @Body() dto: UpdatePersonDto) {
+    return this.platform.updateCeo(memberId, dto);
+  }
+
+  @HrmsRoles('gameMaster')
+  @HttpCode(HttpStatus.OK)
+  @Post('ceos/:memberId/reset-password')
+  resetCeoPassword(@Param('memberId', uuid) memberId: string) {
+    return this.platform.resetCeoPassword(memberId);
+  }
+
+  @HrmsRoles('gameMaster')
+  @HttpCode(HttpStatus.OK)
+  @Post('ceos/:memberId/reset-mfa')
+  resetCeoMfa(@Param('memberId', uuid) memberId: string) {
+    return this.platform.resetCeoMfa(memberId);
+  }
+
+  @HrmsRoles('gameMaster')
+  @HttpCode(HttpStatus.OK)
+  @Post('ceos/:memberId/remove')
+  removeCeo(@Param('memberId', uuid) memberId: string) {
+    return this.platform.removeCeo(memberId);
   }
 
   @HrmsRoles('gameMaster')

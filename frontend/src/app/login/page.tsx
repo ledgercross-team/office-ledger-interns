@@ -79,7 +79,9 @@ function LoginForm() {
     (session.needsOrgSelection || (session.activeMemberId === null && !session.isGameMaster))
       ? session
       : null;
-  const pickerSession = authenticated ?? pendingSelection;
+  // A logged-out person never sees the picker: this form can come back from the router cache
+  // with its old state, so the stored session only counts while a session exists.
+  const pickerSession = (session ? authenticated : null) ?? pendingSelection;
 
   useEffect(() => {
     if (sessionLoading || pickerSession || !session) return;
@@ -96,6 +98,9 @@ function LoginForm() {
         body: { email: email.trim(), password },
       });
       afterSession(session);
+      // The router keeps this page's state while it is hidden, so nothing may stay behind.
+      setPassword('');
+      setPending(false);
     } catch (err) {
       if (err instanceof HrmsApiError && err.code === 'MFA_CODE_REQUIRED') {
         setCodeMode(true);

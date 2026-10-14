@@ -4,13 +4,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
+import { PersonManager } from '@/components/hrms/platform-people';
 import type { PlatformGameMaster, PlatformOrg, PlatformRequest } from '@/lib/hrms/types';
 
 const input =
   'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
 const primary =
   'rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
-const secondary = 'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+const secondary =
+  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
 const card = 'space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4';
 
 function message(error: unknown): string {
@@ -39,6 +41,71 @@ function Error({ text }: { text: string | null }) {
   ) : null;
 }
 
+function CeoPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
+  const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const list = useQuery({
+    queryKey: ['hrms', 'platform', 'ceos', orgId],
+    queryFn: () =>
+      hrmsFetch<{
+        items: Array<{ memberId: string; fullName: string; email: string; status: string }>;
+      }>(`/platform/orgs/${orgId}/ceos`),
+    enabled: open,
+  });
+  const activeCount = list.data?.items.filter((c) => c.status === 'active').length ?? 0;
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        className={secondary}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? 'Hide CEOs' : 'Manage CEOs'}
+      </button>
+      {open && (
+        <div className="space-y-2" aria-label={`CEOs of ${orgName}`}>
+          {list.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
+          {list.error && (
+            <p role="alert" className="text-sm text-alert-deep">
+              {message(list.error)}
+            </p>
+          )}
+          <ul className="space-y-2">
+            {list.data?.items.map((c) => (
+              <li key={c.memberId} className="space-y-2 rounded-xl border border-charcoal/10 p-3">
+                <p className="text-sm text-charcoal">
+                  {c.fullName}{' '}
+                  <span className="text-xs text-charcoal-soft">
+                    {c.email} · {c.status}
+                  </span>
+                </p>
+                {c.status !== 'deactivated' && (
+                  <PersonManager
+                    base={`/platform/ceos/${c.memberId}`}
+                    fullName={c.fullName}
+                    email={c.email}
+                    canRemove={activeCount > 1}
+                    onChanged={() =>
+                      void queryClient.invalidateQueries({ queryKey: ['hrms', 'platform'] })
+                    }
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
+          {activeCount === 1 && (
+            <p className="text-xs text-charcoal-soft">
+              This is the organisation&apos;s only active CEO, so it cannot be removed here. Use a
+              last-CEO removal request.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OrgRow({ org, plans, onDone }: { org: PlatformOrg; plans: string[]; onDone: () => void }) {
   const [plan, setPlan] = useState(org.planCode);
   const [reason, setReason] = useState('');
@@ -46,15 +113,23 @@ function OrgRow({ org, plans, onDone }: { org: PlatformOrg; plans: string[]; onD
   return (
     <li className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-3">
       <p className="text-sm text-charcoal">
-        <span className="font-medium">{org.name}</span> · {org.status} · {org.planCode} · seats {org.seatsUsed}/
-        {org.seatLimit}
+        <span className="font-medium">{org.name}</span> · {org.status} · {org.planCode} · seats{' '}
+        {org.seatsUsed}/{org.seatLimit}
       </p>
       <p className="text-xs text-charcoal-soft">
         {org.ceoCount} CEO, {org.cooCount} COO
-        {org.overThreshold && <span className="ml-2 text-alert-deep">More than 25 CEOs and COOs</span>}
+        {org.overThreshold && (
+          <span className="ml-2 text-alert-deep">More than 25 CEOs and COOs</span>
+        )}
       </p>
+      <CeoPanel orgId={org.id} orgName={org.name} />
       <div className="flex flex-wrap items-center gap-2">
-        <select value={plan} onChange={(e) => setPlan(e.target.value)} className={`${input} sm:w-44`} aria-label="Plan">
+        <select
+          value={plan}
+          onChange={(e) => setPlan(e.target.value)}
+          className={`${input} sm:w-44`}
+          aria-label="Plan"
+        >
           {plans.map((p) => (
             <option key={p} value={p}>
               {p}
@@ -64,7 +139,9 @@ function OrgRow({ org, plans, onDone }: { org: PlatformOrg; plans: string[]; onD
         <button
           type="button"
           disabled={plan === org.planCode || mutation.isPending}
-          onClick={() => mutation.mutate({ path: `/platform/orgs/${org.id}/plan`, body: { planCode: plan } })}
+          onClick={() =>
+            mutation.mutate({ path: `/platform/orgs/${org.id}/plan`, body: { planCode: plan } })
+          }
           className={secondary}
         >
           Change plan
@@ -89,7 +166,12 @@ function OrgRow({ org, plans, onDone }: { org: PlatformOrg; plans: string[]; onD
             <button
               type="button"
               disabled={reason.trim().length === 0 || mutation.isPending}
-              onClick={() => mutation.mutate({ path: `/platform/orgs/${org.id}/block`, body: { reason: reason.trim() } })}
+              onClick={() =>
+                mutation.mutate({
+                  path: `/platform/orgs/${org.id}/block`,
+                  body: { reason: reason.trim() },
+                })
+              }
               className={secondary}
             >
               Block
@@ -170,19 +252,27 @@ export function Requests() {
     queryKey: ['hrms', 'platform', 'requests'],
     queryFn: () => hrmsFetch<{ items: PlatformRequest[] }>('/platform/requests'),
   });
-  const { mutation, error } = useAction(() => void queryClient.invalidateQueries({ queryKey: ['hrms', 'platform'] }));
+  const { mutation, error } = useAction(
+    () => void queryClient.invalidateQueries({ queryKey: ['hrms', 'platform'] }),
+  );
   return (
     <section className="space-y-3">
       <h2 className="font-medium text-charcoal">Recovery and CEO removal</h2>
       <p className="text-xs text-charcoal-soft">
-        Check the person offline before verifying. A verified recovery sends a one-time link to the new address.
+        Check the person offline before verifying. A verified recovery sends a one-time link to the
+        new address.
       </p>
-      {list.data && list.data.items.length === 0 && <p className="text-sm text-charcoal-soft">No requests.</p>}
+      {list.data && list.data.items.length === 0 && (
+        <p className="text-sm text-charcoal-soft">No requests.</p>
+      )}
       <ul className="space-y-2">
         {list.data?.items.map((r) => (
           <li key={r.id} className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-3">
             <p className="text-sm text-charcoal">
-              {r.orgName}: {r.type === 'ceo_recovery' ? `recover CEO access to ${r.newEmail}` : 'replace the last CEO'}{' '}
+              {r.orgName}:{' '}
+              {r.type === 'ceo_recovery'
+                ? `recover CEO access to ${r.newEmail}`
+                : 'replace the last CEO'}{' '}
               <span className="text-xs text-charcoal-soft">({r.status})</span>
             </p>
             <div className="flex gap-2">
@@ -222,15 +312,26 @@ export function GameMasters() {
     queryKey: ['hrms', 'platform', 'gms'],
     queryFn: () => hrmsFetch<{ items: PlatformGameMaster[] }>('/platform/game-masters'),
   });
-  const { mutation, error } = useAction(() => void queryClient.invalidateQueries({ queryKey: ['hrms', 'platform'] }));
+  const { mutation, error } = useAction(
+    () => void queryClient.invalidateQueries({ queryKey: ['hrms', 'platform'] }),
+  );
+
+  const [issued, setIssued] = useState<{ email: string; password: string } | null>(null);
 
   function onCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const f = new FormData(form);
+    const email = String(f.get('email')).trim();
     mutation.mutate(
-      { path: '/platform/game-masters', body: { email: String(f.get('email')).trim(), fullName: String(f.get('name')).trim() } },
-      { onSuccess: () => form.reset() },
+      { path: '/platform/game-masters', body: { email, fullName: String(f.get('name')).trim() } },
+      {
+        onSuccess: (data) => {
+          form.reset();
+          const password = (data as { temporaryPassword?: string } | undefined)?.temporaryPassword;
+          setIssued(password ? { email, password } : null);
+        },
+      },
     );
   }
 
@@ -244,24 +345,61 @@ export function GameMasters() {
             className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-charcoal/10 bg-white p-3"
           >
             <span className="text-sm text-charcoal">
-              {g.fullName} <span className="text-xs text-charcoal-soft">{g.email} · {g.status.replace('_', ' ')}</span>
+              {g.fullName}{' '}
+              <span className="text-xs text-charcoal-soft">
+                {g.email} · {g.status.replace('_', ' ')}
+              </span>
             </span>
             {g.status === 'pending_confirmation' && g.userId !== session?.user.id && (
               <button
                 type="button"
                 disabled={mutation.isPending}
-                onClick={() => mutation.mutate({ path: `/platform/game-masters/${g.userId}/confirm` })}
+                onClick={() =>
+                  mutation.mutate({ path: `/platform/game-masters/${g.userId}/confirm` })
+                }
                 className={primary}
               >
                 Confirm
               </button>
             )}
+            {g.status !== 'removed' && (
+              <div className="w-full">
+                <PersonManager
+                  base={`/platform/game-masters/${g.userId}`}
+                  fullName={g.fullName}
+                  email={g.email}
+                  canRemove={g.userId !== session?.user.id}
+                  onChanged={() =>
+                    void queryClient.invalidateQueries({ queryKey: ['hrms', 'platform'] })
+                  }
+                />
+              </div>
+            )}
           </li>
         ))}
       </ul>
+      {issued && (
+        <div role="status" className={`${card} max-w-lg border-forest/30`}>
+          <h3 className="text-sm font-medium text-charcoal">
+            Temporary password for {issued.email}
+          </h3>
+          <p className="font-mono text-base tabular-nums text-charcoal select-all">
+            {issued.password}
+          </p>
+          <p className="text-xs text-charcoal-soft">
+            Give this to them yourself. It is shown only now. They must choose their own password
+            the first time they sign in, after another gameMaster confirms them.
+          </p>
+          <button type="button" onClick={() => setIssued(null)} className={primary}>
+            I have shared it
+          </button>
+        </div>
+      )}
       <form onSubmit={onCreate} className={`${card} max-w-lg`}>
         <h3 className="text-sm font-medium text-charcoal">Add a gameMaster</h3>
-        <p className="text-xs text-charcoal-soft">An active gameMaster other than them must confirm them before they can sign in.</p>
+        <p className="text-xs text-charcoal-soft">
+          An active gameMaster other than them must confirm them before they can sign in.
+        </p>
         <input name="name" required placeholder="Full name" className={input} />
         <input name="email" type="email" required placeholder="Email" className={input} />
         <Error text={error} />
@@ -272,4 +410,3 @@ export function GameMasters() {
     </section>
   );
 }
-

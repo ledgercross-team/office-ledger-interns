@@ -14,7 +14,14 @@ export interface HrmsMembership {
 }
 
 export interface HrmsSession {
-  user: { id: string; email: string; fullName: string; timezone: string; mfaEnabled: boolean };
+  user: {
+    id: string;
+    email: string;
+    fullName: string;
+    timezone: string;
+    mfaEnabled: boolean;
+    mustChangePassword?: boolean;
+  };
   isGameMaster: boolean;
   memberships: HrmsMembership[];
   activeMemberId: string | null;
@@ -176,12 +183,7 @@ export interface HrmsProjectDetail extends HrmsProject {
 }
 
 export type InviteStatus =
-  | 'pending'
-  | 'accepted'
-  | 'declined'
-  | 'decline_accepted'
-  | 'overruled'
-  | 'expired';
+  'pending' | 'accepted' | 'declined' | 'decline_accepted' | 'overruled' | 'expired';
 
 export interface ProjectInvite {
   id: string;
@@ -247,7 +249,8 @@ export type RequestType =
   | 'leave'
   | 'leave_change'
   | 'attendance_correction';
-export type RequestStatus = 'pending' | 'approved' | 'applied' | 'rejected' | 'cancelled' | 'expired';
+export type RequestStatus =
+  'pending' | 'approved' | 'applied' | 'rejected' | 'cancelled' | 'expired';
 
 export interface HrmsRequest {
   id: string;
@@ -275,12 +278,7 @@ export interface BulkResult {
 }
 
 export type AttendanceDayStatus =
-  | 'present'
-  | 'late'
-  | 'absent'
-  | 'on_leave'
-  | 'holiday'
-  | 'weekend';
+  'present' | 'late' | 'absent' | 'on_leave' | 'holiday' | 'weekend';
 
 export interface AttendanceToday {
   date: string;
@@ -405,7 +403,11 @@ export interface HrmsMeeting {
   projectId: string | null;
   createdBy: { id: string; fullName: string };
   cancelled: boolean;
-  invitees: Array<{ memberId: string; fullName: string; response: 'pending' | 'accepted' | 'declined' }>;
+  invitees: Array<{
+    memberId: string;
+    fullName: string;
+    response: 'pending' | 'accepted' | 'declined';
+  }>;
   canEdit: boolean;
 }
 
@@ -446,7 +448,12 @@ export interface PerformanceBreakdown {
   band: PerformanceBand | null;
   isNew: boolean;
   hasRatings: boolean;
-  attendance: { score: number | null; points: number | null; workingDays: number | null; weight: number | null };
+  attendance: {
+    score: number | null;
+    points: number | null;
+    workingDays: number | null;
+    weight: number | null;
+  };
   ratings: {
     score: number | null;
     average: number | null;

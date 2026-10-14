@@ -83,7 +83,8 @@ export function HrmsShell({ children }: { children: ReactNode }) {
       if (!isLoading) router.replace('/login');
       return;
     }
-    if (session.isGameMaster) router.replace('/platform');
+    if (session.user.mustChangePassword) router.replace('/change-password');
+    else if (session.isGameMaster) router.replace('/platform');
   }, [isLoading, session, router]);
 
   function toggleCollapse() {
@@ -100,7 +101,9 @@ export function HrmsShell({ children }: { children: ReactNode }) {
   if (isLoading || !session) {
     return (
       <div className="min-h-screen bg-bg text-fg">
-        <a href="#main-content" className="sr-only">Skip to content</a>
+        <a href="#main-content" className="sr-only">
+          Skip to content
+        </a>
         <ShellSkeleton />
       </div>
     );
@@ -110,7 +113,9 @@ export function HrmsShell({ children }: { children: ReactNode }) {
   if (session.isGameMaster) {
     return (
       <div className="min-h-screen bg-bg text-fg">
-        <a href="#main-content" className="sr-only">Skip to content</a>
+        <a href="#main-content" className="sr-only">
+          Skip to content
+        </a>
         <ShellSkeleton />
       </div>
     );
@@ -120,13 +125,14 @@ export function HrmsShell({ children }: { children: ReactNode }) {
   if (!role) {
     return (
       <div className="min-h-screen bg-bg text-fg">
-        <a href="#main-content" className="sr-only">Skip to content</a>
+        <a href="#main-content" className="sr-only">
+          Skip to content
+        </a>
         <main id="main-content" className="mx-auto w-full max-w-[768px] flex-1 p-4 sm:p-6">
-          <ErrorState
-            title="No active organisation"
-            message="Pick an organisation to continue."
-          />
-          <div className="mt-4"><OrgPicker /></div>
+          <ErrorState title="No active organisation" message="Pick an organisation to continue." />
+          <div className="mt-4">
+            <OrgPicker />
+          </div>
         </main>
       </div>
     );
@@ -135,36 +141,45 @@ export function HrmsShell({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
       <ReadOnlyProvider value={readOnlyReason}>
-      <div className="min-h-screen bg-bg text-fg">
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[80] focus:rounded-control focus:bg-surface-raised focus:px-4 focus:py-2 focus:text-sm focus:font-medium"
-        >
-          Skip to content
-        </a>
-        <div className="flex min-h-screen">
-          <aside className="sticky top-0 hidden h-screen shrink-0 border-r border-border bg-surface p-3 lg:block">
-            <Sidebar
-              role={role}
-              orgName={session.org?.name ?? ''}
-              counts={counts}
-              collapsed={collapsed}
-              onToggleCollapse={toggleCollapse}
-            />
-          </aside>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar onOpenNav={() => setNavOpen(true)} />
-            <OrgGate>
-              <main id="main-content" className="mx-auto w-full max-w-[1280px] flex-1 space-y-6 p-4 pb-24 sm:p-6 lg:pb-6">
-                <OrgBanners />
-                {children}
-              </main>
-            </OrgGate>
-            <BottomTabs role={role} counts={counts} />
+        <div className="min-h-screen bg-bg text-fg">
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[80] focus:rounded-control focus:bg-surface-raised focus:px-4 focus:py-2 focus:text-sm focus:font-medium"
+          >
+            Skip to content
+          </a>
+          <div className="flex min-h-screen">
+            <aside className="sticky top-0 hidden h-screen shrink-0 border-r border-border bg-surface p-3 lg:block">
+              <Sidebar
+                role={role}
+                orgName={session.org?.name ?? ''}
+                counts={counts}
+                collapsed={collapsed}
+                onToggleCollapse={toggleCollapse}
+              />
+            </aside>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <Topbar onOpenNav={() => setNavOpen(true)} />
+              <OrgGate>
+                <main
+                  id="main-content"
+                  className="mx-auto w-full max-w-[1280px] flex-1 space-y-6 p-4 pb-24 sm:p-6 lg:pb-6"
+                >
+                  <OrgBanners />
+                  {children}
+                </main>
+              </OrgGate>
+              <BottomTabs role={role} counts={counts} />
+            </div>
           </div>
+          <NavDrawer
+            role={role}
+            orgName={session.org?.name ?? ''}
+            counts={counts}
+            open={navOpen}
+            onOpenChange={setNavOpen}
+          />
         </div>
-        <NavDrawer role={role} orgName={session.org?.name ?? ''} counts={counts} open={navOpen} onOpenChange={setNavOpen} />
-      </div>
       </ReadOnlyProvider>
     </ToastProvider>
   );

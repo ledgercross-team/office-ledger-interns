@@ -21,6 +21,11 @@ export class CreateGameMasterDto {
   @IsString() @MinLength(1) @MaxLength(120) fullName!: string;
 }
 
+export class UpdatePersonDto {
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(120) fullName?: string;
+  @IsOptional() @IsEmail() @MaxLength(254) email?: string;
+}
+
 export class RecoveryRequestDto {
   @IsUUID() targetMemberId!: string;
   @IsEmail() @MaxLength(254) newEmail!: string;
