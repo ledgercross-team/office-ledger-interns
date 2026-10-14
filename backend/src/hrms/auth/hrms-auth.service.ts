@@ -39,6 +39,7 @@ interface UserRow extends Record<string, unknown> {
   timezone: string;
   mfa_enabled: boolean;
   must_change_password: boolean;
+  mfa_setup_required: boolean;
 }
 
 interface MembershipDbRow extends Record<string, unknown> {
@@ -58,6 +59,7 @@ export interface SessionView {
     timezone: string;
     mfaEnabled: boolean;
     mustChangePassword: boolean;
+    mfaSetupRequired: boolean;
   };
   isGameMaster: boolean;
   memberships: MembershipView[];
@@ -99,7 +101,7 @@ export class HrmsAuthService {
     const email = dto.email.trim().toLowerCase();
     const user = await this.context.runSystem(async (tx) => {
       const result = await tx.execute<UserRow>(sql`
-        select id, email::text as email, password_hash, full_name, timezone, mfa_enabled, must_change_password
+        select id, email::text as email, password_hash, full_name, timezone, mfa_enabled, must_change_password, mfa_setup_required
           from users where email = ${email}`);
       return result.rows[0] ?? null;
     });
@@ -235,7 +237,11 @@ export class HrmsAuthService {
             sql`insert into user_mfa_backup_codes (user_id, code_hash) values (${userId}, ${backupHash(c)})`,
           );
         }
-        if (turnOn) await tx.execute(sql`update users set mfa_enabled = true where id = ${userId}`);
+        if (turnOn) {
+          await tx.execute(
+            sql`update users set mfa_enabled = true, mfa_setup_required = false where id = ${userId}`,
+          );
+        }
       },
       { userId },
     );
@@ -395,7 +401,7 @@ export class HrmsAuthService {
   private async loadUser(userId: string): Promise<UserRow> {
     const user = await this.context.runSystem(async (tx) => {
       const result = await tx.execute<UserRow>(sql`
-        select id, email::text as email, password_hash, full_name, timezone, mfa_enabled, must_change_password
+        select id, email::text as email, password_hash, full_name, timezone, mfa_enabled, must_change_password, mfa_setup_required
           from users where id = ${userId}`);
       return result.rows[0];
     });
@@ -460,6 +466,7 @@ export class HrmsAuthService {
         timezone: user.timezone,
         mfaEnabled: user.mfa_enabled,
         mustChangePassword: user.must_change_password,
+        mfaSetupRequired: user.mfa_setup_required,
       },
       isGameMaster,
       memberships,

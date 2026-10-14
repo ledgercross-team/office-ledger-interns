@@ -122,6 +122,12 @@ export function SecurityCard() {
         </p>
       </div>
 
+      {session?.user.mfaSetupRequired && !enabled && (
+        <Banner tone="warning" title="Your administrator requires the authenticator.">
+          Turn it on below and confirm a code. Nothing else works until you have.
+        </Banner>
+      )}
+
       <div className="flex items-center gap-3">
         <button
           type="button"

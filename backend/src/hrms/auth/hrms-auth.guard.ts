@@ -68,19 +68,30 @@ export class HrmsAuthGuard implements CanActivate {
     });
     if (denial) forbid(denial.code, denial.message);
 
-    // A temporary password must be replaced before anything else; only /api/auth/* stays open.
+    // A temporary password must be replaced, and a required authenticator set up, before
+    // anything else; only /api/auth/* stays open.
     if (!req.path.startsWith('/api/auth/')) {
-      const mustChange = await this.context.runSystem(
+      const gate = await this.context.runSystem(
         async (tx) => {
-          const r = await tx.execute<{ must_change_password: boolean }>(
-            sql`select must_change_password from users where id = ${principal.userId}`,
+          const r = await tx.execute<{
+            must_change_password: boolean;
+            mfa_setup_required: boolean;
+          }>(
+            sql`select must_change_password, mfa_setup_required from users where id = ${principal.userId}`,
           );
-          return r.rows[0]?.must_change_password === true;
+          return r.rows[0];
         },
         { userId: principal.userId },
       );
-      if (mustChange)
+      if (gate?.must_change_password) {
         forbid('PASSWORD_CHANGE_REQUIRED', 'Choose your own password before you continue.');
+      }
+      if (gate?.mfa_setup_required) {
+        forbid(
+          'MFA_SETUP_REQUIRED',
+          'Your administrator requires the authenticator. Turn it on in your profile to continue.',
+        );
+      }
     }
 
     const roles = this.reflector.getAllAndOverride<HrmsRole[] | undefined>(HRMS_ROLES_KEY, targets);

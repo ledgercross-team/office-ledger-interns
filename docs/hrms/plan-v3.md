@@ -207,9 +207,14 @@ CEOs and COOs aren't scored. Each score runs from 0 to 100 and appears next to t
 - **On-time score** = 100 × tasks finished on or before the due date ÷ that total.
 - With no tasks in the window, this input is left out and its weight is shared out to the others.
 
+**D. Early-finish bonus (rolling last 30 days)**
+- A task that reaches **Done strictly before its deadline** earns **+1 point** for **every manager and employee assigned to it**.
+- The points are added to the final score (below) and the total is capped at 100. The band is decided after the bonus.
+- The CEO and COO see how many early finishes a person has in the score breakdown.
+
 ### Final score
 ```
-Performance = 30% × Attendance + 50% × Rating + 20% × On-time
+Performance = 30% × Attendance + 50% × Rating + 20% × On-time + 1 per early-finished task (D), max 100
 ```
 - **Fewer than 3 ratings:** the rating input is left out and its weight is shared out to the others. The score is labelled "No ratings yet".
 - **Only CEOs and COOs see scores.** Managers and employees can't see their own score or anyone else's. They can still see their own attendance records (§12).

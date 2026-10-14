@@ -20,6 +20,7 @@ export interface HrmsSession {
     fullName: string;
     timezone: string;
     mfaEnabled: boolean;
+    mfaSetupRequired?: boolean;
     mustChangePassword?: boolean;
   };
   isGameMaster: boolean;
@@ -56,6 +57,8 @@ export interface HrmsMember {
   employeeCode: string | null;
   /** Only present for a CEO or COO looking at someone else's profile. */
   mfaEnabled?: boolean;
+  /** A CEO or COO made them set it up; it turns on once they confirm a code. */
+  mfaSetupRequired?: boolean;
   joinedAt: string;
   lastActiveAt: string | null;
   suspendedAt: string | null;
@@ -468,6 +471,7 @@ export interface PerformanceBreakdown {
     summary: { count: number; average: number } | null;
   };
   onTime: { score: number | null; done: number; total: number; weight: number | null };
+  earlyBonus: { tasks: number };
   history: Array<{ computedOn: string; score: number | null; band: PerformanceBand | null }>;
 }
 

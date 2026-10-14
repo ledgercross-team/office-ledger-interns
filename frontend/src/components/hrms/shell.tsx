@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button, ErrorState, ReadOnlyProvider, Skeleton, ToastProvider } from '@/components/ui';
 import { NavDrawer, BottomTabs, Sidebar } from '@/components/hrms/sidebar';
@@ -66,6 +66,7 @@ function OrgGate({ children }: { children: ReactNode }) {
 
 export function HrmsShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { session, isLoading } = useHrmsAuth();
   const counts = useNavCounts();
   const { reason: readOnlyReason } = useReadOnly();
@@ -84,8 +85,9 @@ export function HrmsShell({ children }: { children: ReactNode }) {
       return;
     }
     if (session.user.mustChangePassword) router.replace('/change-password');
+    else if (session.user.mfaSetupRequired && pathname !== '/profile') router.replace('/profile');
     else if (session.isGameMaster) router.replace('/platform');
-  }, [isLoading, session, router]);
+  }, [isLoading, session, router, pathname]);
 
   function toggleCollapse() {
     setCollapsed((next) => {

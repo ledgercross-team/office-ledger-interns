@@ -192,6 +192,10 @@ Copy this into the release PR or ticket and tick every line.
 - [ ] `COOKIE_SECURE=true`.
 - [ ] `COOKIE_DOMAIN` is set to the shared parent domain (leading dot).
 - [ ] `TRUST_PROXY` matches the real proxy setup (`true` for one proxy, `false` for none).
+  After deploying, sign in from outside the office with office IP addresses set: check-in must be
+  refused. The API logs which value it started with.
+- [ ] No `@demo.local` accounts exist (`pnpm db:seed` refuses to run when `NODE_ENV=production` or
+  against a non-local host, but check the database anyway).
 - [ ] `FRONTEND_URL` is the exact production origin and is not `*`.
 - [ ] `NEXT_PUBLIC_API_URL` was set at frontend build time.
 - [ ] `SEED_DEMO_PASSWORD` is not set.

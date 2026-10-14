@@ -3,7 +3,7 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { isEnabled } from './common/utils/env';
 
@@ -33,7 +33,22 @@ async function bootstrap() {
   }
 
   // Behind exactly one reverse proxy, so req.ip is the client's IP.
-  httpApp.set('trust proxy', isEnabled(config.get('TRUST_PROXY')) ? 1 : false);
+  const trustProxy = isEnabled(config.get('TRUST_PROXY'));
+  httpApp.set('trust proxy', trustProxy ? 1 : false);
+  if (config.get<string>('NODE_ENV') === 'production') {
+    // Wrong either way: false behind a proxy gives every user the proxy's IP (office-IP check-in
+    // and rate limits break); true without a proxy lets clients spoof X-Forwarded-For.
+    new Logger('Bootstrap').warn(
+      trustProxy
+        ? 'TRUST_PROXY=true: the API must sit behind exactly one reverse proxy that sets X-Forwarded-For.'
+        : 'TRUST_PROXY=false: if a reverse proxy is in front, every client appears as the proxy IP.',
+    );
+  }
+  // API responses carry personal data and one-time secrets: never let a browser or proxy keep them.
+  httpApp.use((_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
   httpApp.use(express.json({ limit: '1mb' }));
   httpApp.use(
     express.urlencoded({

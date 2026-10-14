@@ -61,6 +61,19 @@ async function main(): Promise<void> {
   const url = process.env.HRMS_MIGRATE_DATABASE_URL;
   const password = process.env.SEED_DEMO_PASSWORD;
   if (!url) throw new Error('HRMS_MIGRATE_DATABASE_URL (the database owner login) is required.');
+  // The demo accounts share a published password, so this must never reach a real database.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Refusing to seed demo accounts when NODE_ENV is production.');
+  }
+  const host = new URL(url).hostname;
+  if (
+    !['localhost', '127.0.0.1', '::1', '[::1]', ''].includes(host) &&
+    process.env.SEED_ALLOW_REMOTE !== 'true'
+  ) {
+    throw new Error(
+      `Refusing to seed demo accounts into a non-local database (${host}). Set SEED_ALLOW_REMOTE=true to override.`,
+    );
+  }
   if (!password) throw new Error('SEED_DEMO_PASSWORD is required to seed the database.');
 
   const client = new Client({ connectionString: url, options: '-c search_path=hrms,public' });
@@ -88,13 +101,18 @@ async function main(): Promise<void> {
 
     for (const org of ORGS) {
       const ceoId = await upsertUser(org.ceo, FULL_NAMES[org.ceo] ?? org.ceo);
-      const existing = await client.query<{ id: string }>('select id from orgs where name = $1', [org.name]);
+      const existing = await client.query<{ id: string }>('select id from orgs where name = $1', [
+        org.name,
+      ]);
 
       let orgId = existing.rows[0]?.id;
       if (!orgId) {
         // gm_create_org must run in its own transaction, as the gameMaster
         await client.query('begin');
-        await client.query("select set_config('app.user_id', $1, true), set_config('app.org_id', '', true)", [gmId]);
+        await client.query(
+          "select set_config('app.user_id', $1, true), set_config('app.org_id', '', true)",
+          [gmId],
+        );
         const created = await client.query<{ gm_create_org: string }>(
           'select gm_create_org($1, $2, $3)',
           [org.name, org.plan, ceoId],
@@ -105,7 +123,10 @@ async function main(): Promise<void> {
 
       // the rest of the people, in system context (no member id) inside this org
       await client.query('begin');
-      await client.query("select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)", [orgId]);
+      await client.query(
+        "select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)",
+        [orgId],
+      );
       for (const member of org.members) {
         const userId = await upsertUser(member.email, member.name);
         await client.query(
@@ -119,7 +140,9 @@ async function main(): Promise<void> {
     }
 
     console.log(`done. Sign in at /login as <name>@${DOMAIN} with SEED_DEMO_PASSWORD.`);
-    console.log('  gm, ceo.acme, coo.acme, manager1.acme, employee1.acme, ceo.globex, multi (two orgs)');
+    console.log(
+      '  gm, ceo.acme, coo.acme, manager1.acme, employee1.acme, ceo.globex, multi (two orgs)',
+    );
   } catch (error) {
     await client.query('rollback').catch(() => undefined);
     throw error;

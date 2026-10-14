@@ -76,6 +76,15 @@ export default function MemberDetailPage() {
     },
     onError: (err) => setError(message(err)),
   });
+  const requireMfa = useMutation({
+    mutationFn: () => hrmsFetch(`/members/${memberId}/require-mfa`, { method: 'POST' }),
+    onSuccess: () => {
+      setError(null);
+      setNotice('They will be asked to set up the authenticator at their next sign-in.');
+      void queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (err) => setError(message(err)),
+  });
   const resetMfa = useMutation({
     mutationFn: () => hrmsFetch(`/members/${memberId}/reset-mfa`, { method: 'POST' }),
     onSuccess: () => {
@@ -85,6 +94,8 @@ export default function MemberDetailPage() {
     },
     onError: (err) => setError(message(err)),
   });
+
+  const authenticator = { isPending: resetMfa.isPending || requireMfa.isPending };
 
   if (member.isLoading) return <p className="text-sm text-charcoal-soft">Loading…</p>;
   if (member.error || !member.data) {
@@ -289,34 +300,52 @@ export default function MemberDetailPage() {
               <button
                 type="button"
                 role="switch"
-                aria-checked={m.mfaEnabled === true}
+                aria-checked={m.mfaEnabled === true || m.mfaSetupRequired === true}
                 aria-label="Authenticator"
-                disabled={resetMfa.isPending || m.mfaEnabled !== true}
-                onClick={() => resetMfa.mutate()}
+                disabled={authenticator.isPending}
+                onClick={() =>
+                  m.mfaEnabled || m.mfaSetupRequired ? resetMfa.mutate() : requireMfa.mutate()
+                }
                 className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors disabled:cursor-not-allowed ${
                   m.mfaEnabled
                     ? 'border-evergreen bg-evergreen'
-                    : 'border-charcoal/20 bg-charcoal/15'
+                    : m.mfaSetupRequired
+                      ? 'border-amber-500 bg-amber-400'
+                      : 'border-charcoal/20 bg-charcoal/15'
                 }`}
               >
                 <span
                   aria-hidden
                   className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform ${
-                    m.mfaEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                    m.mfaEnabled || m.mfaSetupRequired ? 'translate-x-6' : 'translate-x-0.5'
                   }`}
                 />
               </button>
               <span
-                className={`text-sm font-medium ${m.mfaEnabled ? 'text-forest' : 'text-charcoal-soft'}`}
+                className={`text-sm font-medium ${
+                  m.mfaEnabled
+                    ? 'text-forest'
+                    : m.mfaSetupRequired
+                      ? 'text-amber-700'
+                      : 'text-charcoal-soft'
+                }`}
               >
-                {resetMfa.isPending ? 'Turning off…' : m.mfaEnabled ? 'On: tap to turn off' : 'Off'}
+                {authenticator.isPending
+                  ? 'Saving…'
+                  : m.mfaEnabled
+                    ? 'On: tap to turn off'
+                    : m.mfaSetupRequired
+                      ? 'Required: waiting for them to set it up (tap to cancel)'
+                      : 'Off: tap to require it'}
               </span>
             </div>
-            {m.mfaEnabled !== true && (
-              <p className="text-xs text-charcoal-soft">
-                Off. Only the person can turn it on, from their own profile.
-              </p>
-            )}
+            <p className="text-xs text-charcoal-soft">
+              {m.mfaEnabled
+                ? 'They sign in with the 6-digit code from their app.'
+                : m.mfaSetupRequired
+                  ? 'At their next sign-in they must scan the code in their profile before anything else works.'
+                  : 'Requiring it makes them set it up at their next sign-in. Only their phone can hold the secret, so you never see it.'}
+            </p>
             {notice && (
               <p role="status" className="text-sm text-forest">
                 {notice}

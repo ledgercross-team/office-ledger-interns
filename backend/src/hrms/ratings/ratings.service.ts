@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import type { HrmsPrincipal } from '../auth/hrms-auth.types';
 import { HrmsContextService } from '../db/hrms-context';
@@ -147,7 +152,7 @@ export class RatingsService {
              s.attendance_score::text as attendance_score, s.rating_count, s.rating_avg::text as rating_avg,
              s.rating_score::text as rating_score, s.ontime_total, s.ontime_on_time,
              s.ontime_score::text as ontime_score, s.final_score::text as final_score, s.band::text as band,
-             s.is_new, s.has_ratings, u.full_name, m.role::text as role,
+             s.is_new, s.has_ratings, s.early_tasks, u.full_name, m.role::text as role,
              st.weight_attendance::text as weight_attendance, st.weight_rating::text as weight_rating,
              st.weight_ontime::text as weight_ontime
         from performance_scores s
@@ -159,7 +164,11 @@ export class RatingsService {
     const row = latest.rows[0];
     if (!row) throw new NotFoundException('No score has been computed for this person yet.');
 
-    const history = await tx.execute<{ computed_on: string; final_score: string | null; band: string | null }>(sql`
+    const history = await tx.execute<{
+      computed_on: string;
+      final_score: string | null;
+      band: string | null;
+    }>(sql`
       select computed_on::text as computed_on, final_score::text as final_score, band::text as band
         from performance_scores where member_id = ${memberId} and org_id = current_org_id()
        order by computed_on desc limit 12`);
@@ -189,7 +198,10 @@ export class RatingsService {
         weight: num(row.weight_rating as string | null),
         // Averages appear only once the org's minimum number of ratings is reached.
         summary: summary.rows[0]
-          ? { count: Number(summary.rows[0].rating_count), average: Number(summary.rows[0].rating_avg) }
+          ? {
+              count: Number(summary.rows[0].rating_count),
+              average: Number(summary.rows[0].rating_avg),
+            }
           : null,
       },
       onTime: {
@@ -198,7 +210,13 @@ export class RatingsService {
         total: row.ontime_total,
         weight: num(row.weight_ontime as string | null),
       },
-      history: history.rows.map((h) => ({ computedOn: h.computed_on, score: num(h.final_score), band: h.band })),
+      // +1 point each for tasks finished before their deadline (already in the score, capped at 100).
+      earlyBonus: { tasks: row.early_tasks as number },
+      history: history.rows.map((h) => ({
+        computedOn: h.computed_on,
+        score: num(h.final_score),
+        band: h.band,
+      })),
     };
   }
 

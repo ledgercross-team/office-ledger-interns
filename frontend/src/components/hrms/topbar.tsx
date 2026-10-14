@@ -35,7 +35,8 @@ function usePaletteItems(role: HrmsRole | null): CommandItem[] {
   const people = useQuery({
     queryKey: ['hrms', 'palette', 'people', session?.activeMemberId],
     queryFn: () => hrmsFetch<Paginated<HrmsMember>>('/members?status=active&pageSize=25'),
-    enabled,
+    // Employees may not list people; asking would only produce a 403.
+    enabled: enabled && (role === 'ceo' || role === 'coo' || role === 'manager'),
     staleTime: 60_000,
     retry: false,
   });
@@ -104,14 +105,20 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
         </div>
         <div className="min-w-0 flex-1 md:hidden">
           <p className="truncate text-sm font-semibold text-fg">
-            {crumbs(pathname).map((c) => c.label).join(' / ')}
+            {crumbs(pathname)
+              .map((c) => c.label)
+              .join(' / ')}
           </p>
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           <CommandPalette
             items={paletteItems}
             trigger={
-              <Button variant="secondary" iconOnly aria-label="Search pages, people, projects and tasks">
+              <Button
+                variant="secondary"
+                iconOnly
+                aria-label="Search pages, people, projects and tasks"
+              >
                 <Search aria-hidden className="size-4" />
               </Button>
             }

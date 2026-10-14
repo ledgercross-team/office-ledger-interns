@@ -89,6 +89,17 @@ export class MembersController {
     return this.members.resetPassword(principalOf(req), id);
   }
 
+  // Makes the person set up the authenticator at their next sign-in (the admin never sees it).
+  @HrmsRoles('ceo', 'coo')
+  @Post(':id/require-mfa')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async requireMfa(
+    @Req() req: HrmsAuthedRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    await this.members.requireMfa(principalOf(req), id);
+  }
+
   // Lost phone: turns the person's authenticator off so their password works again.
   @HrmsRoles('ceo', 'coo')
   @Post(':id/reset-mfa')

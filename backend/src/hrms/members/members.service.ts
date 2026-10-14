@@ -134,10 +134,15 @@ export class MembersService {
     const member = toMember(row);
     if (!isCeoOrCoo(p)) return member;
     // Only a CEO or COO sees whether someone's authenticator is on (to switch it off).
-    const mfa = await this.context.tx.execute<{ mfa_enabled: boolean }>(
-      sql`select mfa_enabled from users where id = ${row.user_id}`,
-    );
-    return { ...member, mfaEnabled: mfa.rows[0]?.mfa_enabled === true };
+    const mfa = await this.context.tx.execute<{
+      mfa_enabled: boolean;
+      mfa_setup_required: boolean;
+    }>(sql`select mfa_enabled, mfa_setup_required from users where id = ${row.user_id}`);
+    return {
+      ...member,
+      mfaEnabled: mfa.rows[0]?.mfa_enabled === true,
+      mfaSetupRequired: mfa.rows[0]?.mfa_setup_required === true,
+    };
   }
 
   private async find(p: HrmsPrincipal, id: string): Promise<MemberRow | undefined> {
@@ -351,8 +356,39 @@ export class MembersService {
       async (tx) => {
         await tx.execute(sql`delete from user_mfa_backup_codes where user_id = ${row.user_id}`);
         await tx.execute(
-          sql`update users set mfa_enabled = false, mfa_secret_enc = null where id = ${row.user_id}`,
+          sql`update users set mfa_enabled = false, mfa_secret_enc = null, mfa_setup_required = false where id = ${row.user_id}`,
         );
+      },
+      { userId: row.user_id },
+    );
+  }
+
+  /**
+   * CEO or COO makes someone set up the authenticator. They cannot do it for them (only the
+   * person's phone can hold the secret), so the person is sent to their profile at next sign-in.
+   */
+  async requireMfa(p: HrmsPrincipal, id: string): Promise<void> {
+    const target = await this.context.tx.execute<{ user_id: string; role: string }>(sql`
+      select user_id, role::text as role from org_members where id = ${id} and org_id = current_org_id()`);
+    const row = target.rows[0];
+    if (!row) throw new NotFoundException('Member not found.');
+    if (
+      row.role === 'ceo' ||
+      (row.role === 'coo' && p.role !== 'ceo') ||
+      row.user_id === p.userId
+    ) {
+      throw new ForbiddenException(
+        'You cannot require this for that person. They turn it on in their own profile.',
+      );
+    }
+    const user = await this.context.tx.execute<{ mfa_enabled: boolean }>(
+      sql`select mfa_enabled from users where id = ${row.user_id}`,
+    );
+    if (user.rows[0]?.mfa_enabled)
+      throw new ConflictException('Their authenticator is already on.');
+    await this.context.runSystem(
+      async (tx) => {
+        await tx.execute(sql`update users set mfa_setup_required = true where id = ${row.user_id}`);
       },
       { userId: row.user_id },
     );

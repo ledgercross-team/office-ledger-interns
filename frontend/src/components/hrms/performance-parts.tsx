@@ -20,7 +20,11 @@ const BAND_LABEL: Record<PerformanceBand, string> = {
 
 const ARROW = { up: '↑', down: '↓', flat: '→' } as const;
 
-export function ScoreBadge({ row }: { row: Pick<PerformanceRow, 'score' | 'band' | 'trend' | 'isNew'> | undefined }) {
+export function ScoreBadge({
+  row,
+}: {
+  row: Pick<PerformanceRow, 'score' | 'band' | 'trend' | 'isNew'> | undefined;
+}) {
   if (!row || row.score === null || row.band === null) {
     return <span className="text-xs text-charcoal-soft">{row?.isNew ? 'New' : '—'}</span>;
   }
@@ -35,7 +39,17 @@ export function ScoreBadge({ row }: { row: Pick<PerformanceRow, 'score' | 'band'
   );
 }
 
-function Part({ label, score, detail, weight }: { label: string; score: number | null; detail: string; weight: number | null }) {
+function Part({
+  label,
+  score,
+  detail,
+  weight,
+}: {
+  label: string;
+  score: number | null;
+  detail: string;
+  weight: number | null;
+}) {
   return (
     <div className="rounded-xl border border-charcoal/10 p-3">
       <p className="text-sm font-medium text-charcoal">
@@ -65,7 +79,11 @@ export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClo
     >
       <div className="flex items-start justify-between gap-2">
         <h2 className="font-medium text-charcoal">{d?.fullName ?? 'Performance'}</h2>
-        <button type="button" onClick={onClose} className="text-sm text-charcoal-soft hover:underline">
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-sm text-charcoal-soft hover:underline"
+        >
           Close
         </button>
       </div>
@@ -103,6 +121,14 @@ export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClo
             detail={`${d.onTime.done} of ${d.onTime.total} on time`}
             weight={d.onTime.weight}
           />
+          <div>
+            <p className="text-sm font-medium text-charcoal">Early finishes</p>
+            <p className="text-sm text-charcoal-soft">
+              {d.earlyBonus.tasks === 0
+                ? 'No tasks finished before their deadline in the last 30 days.'
+                : `+${d.earlyBonus.tasks} point${d.earlyBonus.tasks === 1 ? '' : 's'} (${d.earlyBonus.tasks} task${d.earlyBonus.tasks === 1 ? '' : 's'} finished before the deadline), already included in the score.`}
+            </p>
+          </div>
           <div>
             <p className="text-sm font-medium text-charcoal">Recent</p>
             <ul className="text-sm text-charcoal-soft">
