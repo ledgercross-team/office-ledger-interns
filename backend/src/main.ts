@@ -72,7 +72,12 @@ async function bootstrap() {
   );
   app.enableShutdownHooks();
 
-  await app.listen(positiveInteger(config.get<string>('PORT'), 4000));
+  // Render and similar reverse proxies connect over IPv4, so bind explicitly to all
+  // interfaces instead of relying on Node's platform-dependent default host.
+  await app.listen(
+    positiveInteger(config.get<string>('PORT'), 4000),
+    config.get<string>('HOST') ?? '0.0.0.0',
+  );
 }
 
 void bootstrap().catch((error: unknown) => {
