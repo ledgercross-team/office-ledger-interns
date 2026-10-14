@@ -122,19 +122,36 @@ export function SecurityCard() {
         </p>
       </div>
 
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          aria-label="Authenticator app"
+          disabled={step !== 'idle'}
+          onClick={() => setStep(enabled ? 'disable' : 'password')}
+          className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+            enabled ? 'border-primary bg-primary' : 'border-border-strong bg-surface-sunken'
+          }`}
+        >
+          <span
+            aria-hidden
+            className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform ${
+              enabled ? 'translate-x-6' : 'translate-x-0.5'
+            }`}
+          />
+        </button>
+        <span className={`text-sm font-medium ${enabled ? 'text-success-fg' : 'text-fg-muted'}`}>
+          {enabled ? 'On' : 'Off'}
+        </span>
+      </div>
+
       {step === 'idle' && (
         <div className="flex flex-wrap gap-2">
-          {enabled ? (
-            <>
-              <Button variant="secondary" onClick={() => setStep('newCodes')}>
-                New backup codes
-              </Button>
-              <Button variant="secondary" onClick={() => setStep('disable')}>
-                Turn off authenticator
-              </Button>
-            </>
-          ) : (
-            <Button onClick={() => setStep('password')}>Turn on authenticator</Button>
+          {enabled && (
+            <Button variant="secondary" onClick={() => setStep('newCodes')}>
+              New backup codes
+            </Button>
           )}
           <Button asChild variant="ghost">
             <Link href="/change-password">Change password</Link>

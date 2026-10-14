@@ -81,6 +81,14 @@ export class MembersController {
     return this.members.deactivate(principalOf(req), id);
   }
 
+  // Forgotten or shared password: a new one-time password, shown once to the CEO or COO.
+  @HrmsRoles('ceo', 'coo')
+  @Post(':id/reset-password')
+  @HttpCode(HttpStatus.OK)
+  resetPassword(@Req() req: HrmsAuthedRequest, @Param('id', ParseUUIDPipe) id: string) {
+    return this.members.resetPassword(principalOf(req), id);
+  }
+
   // Lost phone: turns the person's authenticator off so their password works again.
   @HrmsRoles('ceo', 'coo')
   @Post(':id/reset-mfa')

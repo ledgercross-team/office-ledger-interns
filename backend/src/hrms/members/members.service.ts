@@ -131,7 +131,13 @@ export class MembersService {
   async get(p: HrmsPrincipal, id: string) {
     const row = await this.find(p, id);
     if (!row) throw new NotFoundException('Member not found.');
-    return toMember(row);
+    const member = toMember(row);
+    if (!isCeoOrCoo(p)) return member;
+    // Only a CEO or COO sees whether someone's authenticator is on (to switch it off).
+    const mfa = await this.context.tx.execute<{ mfa_enabled: boolean }>(
+      sql`select mfa_enabled from users where id = ${row.user_id}`,
+    );
+    return { ...member, mfaEnabled: mfa.rows[0]?.mfa_enabled === true };
   }
 
   private async find(p: HrmsPrincipal, id: string): Promise<MemberRow | undefined> {
@@ -199,23 +205,11 @@ export class MembersService {
       }
     }
 
-    // Every new person gets the next code (EMP-0001, EMP-0002, ...). The lock makes two
-    // people added at the same moment take different numbers; the database keeps codes unique.
-    let employeeCode = dto.employeeCode?.trim() || null;
-    if (!employeeCode) {
-      await tx.execute(
-        sql`select pg_advisory_xact_lock(hashtext('employee_code'), hashtext(current_org_id()::text))`,
-      );
-      const next = await tx.execute<{ n: number }>(sql`
-        select coalesce(max(substring(employee_code from '^EMP-([0-9]+)$')::int), 0) + 1 as n
-          from org_members where org_id = current_org_id()`);
-      employeeCode = `EMP-${String(next.rows[0].n).padStart(4, '0')}`;
-    }
-
+    // The database gives every new member the org's next employee code, and never changes it.
     const inserted = await tx.execute<{ id: string }>(sql`
-      insert into org_members (org_id, user_id, role, designation, department, employee_code)
+      insert into org_members (org_id, user_id, role, designation, department)
       values (current_org_id(), ${userId}, ${dto.role}::member_role,
-              ${dto.designation ?? null}, ${dto.department ?? null}, ${employeeCode})
+              ${dto.designation ?? null}, ${dto.department ?? null})
       returning id`);
 
     // The invite link is a one-time password-setting link. It is never returned by the API
@@ -272,8 +266,6 @@ export class MembersService {
     const memberSets: SQL[] = [];
     if (dto.designation !== undefined) memberSets.push(sql`designation = ${dto.designation}`);
     if (dto.department !== undefined) memberSets.push(sql`department = ${dto.department}`);
-    if (dto.employeeCode !== undefined)
-      memberSets.push(sql`employee_code = ${dto.employeeCode || null}`);
     if (dto.role !== undefined) memberSets.push(sql`role = ${dto.role}::member_role`);
     if (dto.taskApprovalRequired !== undefined) {
       memberSets.push(sql`task_approval_required = ${dto.taskApprovalRequired}`);
@@ -312,6 +304,36 @@ export class MembersService {
          set status = 'deactivated', deactivated_at = now(), deactivated_by = ${p.memberId}
        where id = ${id} and org_id = current_org_id()`);
     return this.get(p, id);
+  }
+
+  /** CEO or COO gives someone a new one-time password (shown once). They must change it at their next sign-in. */
+  async resetPassword(p: HrmsPrincipal, id: string): Promise<{ temporaryPassword: string }> {
+    const target = await this.context.tx.execute<{ user_id: string; role: string }>(sql`
+      select user_id, role::text as role from org_members where id = ${id} and org_id = current_org_id()`);
+    const row = target.rows[0];
+    if (!row) throw new NotFoundException('Member not found.');
+    if (row.user_id === p.userId)
+      throw new ForbiddenException('Change your own password in your profile.');
+    if (row.role === 'ceo' || (row.role === 'coo' && p.role !== 'ceo')) {
+      throw new ForbiddenException(
+        'Only a CEO can reset a COO. A CEO changes their own password in their profile.',
+      );
+    }
+    const temporaryPassword = generateTempPassword();
+    const hash = await hashPassword(temporaryPassword);
+    await this.context.runSystem(
+      async (tx) => {
+        await tx.execute(sql`
+          update users set password_hash = ${hash}, must_change_password = true,
+                 email_verified_at = coalesce(email_verified_at, now())
+           where id = ${row.user_id}`);
+        await tx.execute(
+          sql`update refresh_tokens set revoked_at = now() where user_id = ${row.user_id} and revoked_at is null`,
+        );
+      },
+      { userId: row.user_id },
+    );
+    return { temporaryPassword };
   }
 
   /** CEO or COO turns a person's authenticator off (lost phone). A COO cannot reset a CEO or COO. */

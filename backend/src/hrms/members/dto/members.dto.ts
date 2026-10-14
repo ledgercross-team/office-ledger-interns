@@ -38,14 +38,12 @@ export class CreateMemberDto {
 
   @IsOptional() @IsString() @MaxLength(100) designation?: string;
   @IsOptional() @IsString() @MaxLength(100) department?: string;
-  @IsOptional() @IsString() @MaxLength(50) employeeCode?: string;
 }
 
 export class UpdateMemberDto {
   // Org-level profile fields: CEO, COO, a manager on a shared project, or the person.
   @IsOptional() @IsString() @MaxLength(100) designation?: string;
   @IsOptional() @IsString() @MaxLength(100) department?: string;
-  @IsOptional() @IsString() @MaxLength(50) employeeCode?: string;
 
   // Shared across every org the person belongs to: only the person may change these.
   @IsOptional() @IsString() @MinLength(1) @MaxLength(120) fullName?: string;

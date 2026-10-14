@@ -64,11 +64,24 @@ export default function MemberDetailPage() {
     },
   });
 
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const resetPassword = useMutation({
+    mutationFn: () =>
+      hrmsFetch<{ temporaryPassword: string }>(`/members/${memberId}/reset-password`, {
+        method: 'POST',
+      }),
+    onSuccess: (data) => {
+      setError(null);
+      setTempPassword(data.temporaryPassword);
+    },
+    onError: (err) => setError(message(err)),
+  });
   const resetMfa = useMutation({
     mutationFn: () => hrmsFetch(`/members/${memberId}/reset-mfa`, { method: 'POST' }),
     onSuccess: () => {
       setError(null);
       setNotice('Authenticator turned off. They can sign in with their password again.');
+      void queryClient.invalidateQueries({ queryKey });
     },
     onError: (err) => setError(message(err)),
   });
@@ -93,7 +106,6 @@ export default function MemberDetailPage() {
     const body: Record<string, unknown> = {
       designation: String(form.get('designation') ?? ''),
       department: String(form.get('department') ?? ''),
-      employeeCode: String(form.get('employeeCode') ?? ''),
     };
     if (self) {
       body.fullName = String(form.get('fullName'));
@@ -160,11 +172,15 @@ export default function MemberDetailPage() {
         <label className="block space-y-1 text-sm text-charcoal">
           Employee code
           <input
-            name="employeeCode"
-            defaultValue={m.employeeCode ?? ''}
-            disabled={!canEditProfile}
-            className={input}
+            value={m.employeeCode ?? ''}
+            readOnly
+            disabled
+            aria-describedby="employee-code-note"
+            className={`${input} cursor-not-allowed bg-charcoal/5 text-charcoal-soft`}
           />
+          <span id="employee-code-note" className="block text-xs font-normal text-charcoal-soft">
+            Assigned automatically and permanent. It cannot be changed.
+          </span>
         </label>
         {canEditProfile && (
           <div className="flex items-center gap-3">
@@ -233,19 +249,74 @@ export default function MemberDetailPage() {
         m.role !== 'ceo' &&
         (session?.role === 'ceo' || m.role !== 'coo') && (
           <section className="max-w-md space-y-2 rounded-2xl border border-charcoal/10 bg-white p-4">
-            <h2 className="font-medium text-charcoal">Authenticator</h2>
+            <h2 className="font-medium text-charcoal">Password and authenticator</h2>
+            <p className="text-sm text-charcoal-soft">
+              Give them a new one-time password. It is shown once, they must choose their own at the
+              next sign-in, and they are signed out everywhere.
+            </p>
+            <button
+              type="button"
+              disabled={resetPassword.isPending}
+              onClick={() => resetPassword.mutate()}
+              className="rounded-xl border border-charcoal/15 bg-white px-4 py-2 text-sm disabled:opacity-60"
+            >
+              Reset password
+            </button>
+            {tempPassword && (
+              <div role="status" className="space-y-1 rounded-xl border border-forest/30 p-3">
+                <p className="text-sm text-charcoal">New temporary password for {m.email}</p>
+                <p className="select-all font-mono text-base tabular-nums text-charcoal">
+                  {tempPassword}
+                </p>
+                <p className="text-xs text-charcoal-soft">
+                  Shown only now. Give it to them yourself.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setTempPassword(null)}
+                  className="text-sm text-forest hover:underline"
+                >
+                  I have shared it
+                </button>
+              </div>
+            )}
+            <h3 className="pt-2 text-sm font-medium text-charcoal">Authenticator</h3>
             <p className="text-sm text-charcoal-soft">
               If they lost their phone, turn their authenticator off so they can sign in with their
               password again.
             </p>
-            <button
-              type="button"
-              disabled={resetMfa.isPending}
-              onClick={() => resetMfa.mutate()}
-              className="rounded-xl border border-charcoal/15 bg-white px-4 py-2 text-sm disabled:opacity-60"
-            >
-              Turn off their authenticator
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={m.mfaEnabled === true}
+                aria-label="Authenticator"
+                disabled={resetMfa.isPending || m.mfaEnabled !== true}
+                onClick={() => resetMfa.mutate()}
+                className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors disabled:cursor-not-allowed ${
+                  m.mfaEnabled
+                    ? 'border-evergreen bg-evergreen'
+                    : 'border-charcoal/20 bg-charcoal/15'
+                }`}
+              >
+                <span
+                  aria-hidden
+                  className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform ${
+                    m.mfaEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+              <span
+                className={`text-sm font-medium ${m.mfaEnabled ? 'text-forest' : 'text-charcoal-soft'}`}
+              >
+                {resetMfa.isPending ? 'Turning off…' : m.mfaEnabled ? 'On: tap to turn off' : 'Off'}
+              </span>
+            </div>
+            {m.mfaEnabled !== true && (
+              <p className="text-xs text-charcoal-soft">
+                Off. Only the person can turn it on, from their own profile.
+              </p>
+            )}
             {notice && (
               <p role="status" className="text-sm text-forest">
                 {notice}

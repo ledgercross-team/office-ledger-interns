@@ -35,8 +35,11 @@ describe('SecurityCard', () => {
   it('is off by default and offers to turn it on', () => {
     withAuth(false);
     render(<SecurityCard />, { wrapper });
-    expect(screen.getByText('off')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Turn on authenticator' })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Authenticator app' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    expect(screen.getByText('Off')).toBeInTheDocument();
   });
 
   it('turns on with password, then a code, and shows the backup codes once', async () => {
@@ -49,7 +52,7 @@ describe('SecurityCard', () => {
       .mockResolvedValueOnce({ backupCodes: ['AAAA-BBBB', 'CCCC-DDDD'] });
     const user = userEvent.setup();
     render(<SecurityCard />, { wrapper });
-    await user.click(screen.getByRole('button', { name: 'Turn on authenticator' }));
+    await user.click(screen.getByRole('switch', { name: 'Authenticator app' }));
     await user.type(screen.getByLabelText(/Your password/), 'my password 1234');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(mockedFetch).toHaveBeenCalledWith('/auth/mfa/setup', {
@@ -71,7 +74,11 @@ describe('SecurityCard', () => {
     mockedFetch.mockRejectedValueOnce(new HrmsApiError(401, 'The code is not correct.'));
     const user = userEvent.setup();
     render(<SecurityCard />, { wrapper });
-    await user.click(screen.getByRole('button', { name: 'Turn off authenticator' }));
+    expect(screen.getByRole('switch', { name: 'Authenticator app' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await user.click(screen.getByRole('switch', { name: 'Authenticator app' }));
     await user.type(screen.getByLabelText(/Current code/), '000000');
     await user.click(screen.getByRole('button', { name: 'Turn off' }));
     expect(await screen.findByText('The code is not correct.')).toBeInTheDocument();

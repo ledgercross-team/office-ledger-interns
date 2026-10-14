@@ -13,7 +13,7 @@ export function setDisplayTimeZone(zone: string | null | undefined): void {
 function validZone(zone: string | null): string | undefined {
   if (!zone) return undefined;
   try {
-    new Intl.DateTimeFormat('en-GB', { timeZone: zone });
+    new Intl.DateTimeFormat('en-US', { timeZone: zone });
     return zone;
   } catch {
     return undefined;
@@ -28,11 +28,11 @@ function format(iso: string | null | undefined, options: Intl.DateTimeFormatOpti
   if (!iso) return '—';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '—';
-  return new Intl.DateTimeFormat('en-GB', { ...options, timeZone: displayTimeZone() }).format(date);
+  return new Intl.DateTimeFormat('en-US', { ...options, timeZone: displayTimeZone() }).format(date);
 }
 
 export function formatTime(iso: string | null | undefined): string {
-  return format(iso, { hour: '2-digit', minute: '2-digit', hour12: false });
+  return format(iso, { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
 export function formatDate(iso: string | null | undefined): string {
@@ -40,5 +40,21 @@ export function formatDate(iso: string | null | undefined): string {
 }
 
 export function formatDateTime(iso: string | null | undefined): string {
-  return format(iso, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+  return format(iso, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+/** "15:21" (or "2026-10-14 15:21") from the API's local time strings, shown as "03:21 PM". */
+export function to12Hour(local: string): string {
+  const match = /(\d{2}):(\d{2})\s*$/.exec(local);
+  if (!match) return local;
+  const hours = Number(match[1]);
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  return `${String(hours % 12 === 0 ? 12 : hours % 12).padStart(2, '0')}:${match[2]} ${suffix}`;
 }

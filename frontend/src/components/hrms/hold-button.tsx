@@ -14,7 +14,6 @@ export const HOLD_MS = 2500;
  */
 export function HoldButton({
   children,
-  holdingLabel = 'Keep holding…',
   busy = false,
   disabled = false,
   disabledReason,
@@ -23,7 +22,6 @@ export function HoldButton({
   className,
 }: {
   children: ReactNode;
-  holdingLabel?: string;
   busy?: boolean;
   disabled?: boolean;
   disabledReason?: string;
@@ -84,23 +82,39 @@ export function HoldButton({
       onBlur={cancel}
       onContextMenu={(event) => event.preventDefault()}
       className={cn(
-        'relative inline-flex shrink-0 touch-none select-none items-center justify-center overflow-hidden rounded-control border border-primary bg-primary font-medium text-primary-fg',
+        'relative inline-flex shrink-0 touch-none select-none items-center justify-center overflow-hidden rounded-control border border-primary bg-primary-soft font-medium text-fg',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50',
         size === 'sm' ? 'min-h-8 px-3 py-1 text-xs' : 'min-h-10 px-4 py-2 text-sm',
         className,
       )}
     >
+      {/* The fluid: rises from the bottom over HOLD_MS while pressed, drains at once when released early. */}
       <span
         aria-hidden
-        className="absolute inset-y-0 left-0 bg-primary-fg/30"
+        className="absolute inset-x-0 bottom-0"
         style={{
-          width: holding ? '100%' : '0%',
-          transition: holding ? `width ${HOLD_MS}ms linear` : 'width 150ms ease-out',
+          height: holding ? '100%' : '0%',
+          transition: holding ? `height ${HOLD_MS}ms linear` : 'height 250ms ease-out',
         }}
-      />
+      >
+        <span className="absolute inset-0 bg-primary/45" />
+        <svg
+          className="hold-wave absolute left-0 h-2.5 w-[200%] text-primary/45"
+          style={{ top: '-9px', opacity: holding ? 1 : 0 }}
+          viewBox="0 0 200 10"
+          preserveAspectRatio="none"
+        >
+          <path
+            d="M0 5 Q12.5 0 25 5 T50 5 T75 5 T100 5 T125 5 T150 5 T175 5 T200 5 V10 H0 Z"
+            fill="currentColor"
+          />
+        </svg>
+      </span>
       <span className="relative inline-flex items-center gap-2">
-        {busy ? <LoaderCircle aria-hidden className="size-4 animate-spin motion-reduce:animate-none" /> : null}
-        {holding ? holdingLabel : children}
+        {busy ? (
+          <LoaderCircle aria-hidden className="size-4 animate-spin motion-reduce:animate-none" />
+        ) : null}
+        {children}
       </span>
       <span className="sr-only" aria-live="polite">
         {holding ? 'Holding. Keep pressing for 2.5 seconds.' : ''}

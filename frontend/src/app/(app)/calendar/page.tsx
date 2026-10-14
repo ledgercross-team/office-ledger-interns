@@ -5,6 +5,7 @@ import { useState, type FormEvent } from 'react';
 import { MemberChips, MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { meetingProblem } from '@/lib/hrms/meeting';
+import { to12Hour } from '@/lib/hrms/time';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { CalendarFeed, CalendarItem, HrmsMeeting } from '@/lib/hrms/types';
 
@@ -44,7 +45,7 @@ function daysOf(item: CalendarItem): string[] {
 }
 
 function label(item: CalendarItem): string {
-  const t = item.allDay ? '' : `${item.startsAtLocal.slice(11)} `;
+  const t = item.allDay ? '' : `${to12Hour(item.startsAtLocal)} `;
   return `${t}${item.title}${item.member ? ` · ${item.member.fullName}` : ''}`;
 }
 
@@ -97,7 +98,8 @@ function MeetingDialog({
           <>
             <h2 className="font-medium text-charcoal">{m.title}</h2>
             <p className="text-sm text-charcoal">
-              {m.startsAtLocal} to {m.endsAtLocal.slice(11)} ({m.timezone})
+              {m.startsAtLocal.slice(0, 10)} {to12Hour(m.startsAtLocal)} to{' '}
+              {to12Hour(m.endsAtLocal)} ({m.timezone})
             </p>
             <p className="text-sm text-charcoal">
               {m.meetingLink ? (

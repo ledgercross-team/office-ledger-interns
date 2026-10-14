@@ -54,6 +54,8 @@ export interface HrmsMember {
   designation: string | null;
   department: string | null;
   employeeCode: string | null;
+  /** Only present for a CEO or COO looking at someone else's profile. */
+  mfaEnabled?: boolean;
   joinedAt: string;
   lastActiveAt: string | null;
   suspendedAt: string | null;

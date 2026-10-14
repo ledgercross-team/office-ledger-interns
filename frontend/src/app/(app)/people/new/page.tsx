@@ -33,7 +33,6 @@ function NewMemberForm() {
           role: String(form.get('role')),
           designation: optional('designation'),
           department: optional('department'),
-          employeeCode: optional('employeeCode'),
         },
       });
       void queryClient.invalidateQueries({ queryKey: ['hrms', 'members'] });
@@ -120,13 +119,14 @@ function NewMemberForm() {
       <label className="block space-y-1 text-sm font-medium text-charcoal">
         Employee code
         <input
-          name="employeeCode"
-          maxLength={50}
-          placeholder="Automatic (EMP-0001, EMP-0002…)"
-          className={input}
+          value="Assigned automatically"
+          readOnly
+          disabled
+          aria-describedby="new-employee-code-note"
+          className={`${input} cursor-not-allowed bg-charcoal/5 text-charcoal-soft`}
         />
-        <span className="block text-xs font-normal text-charcoal-soft">
-          Leave empty and a unique code is assigned.
+        <span id="new-employee-code-note" className="block text-xs font-normal text-charcoal-soft">
+          A unique code (EMP-0001, EMP-0002…) is given when they are added. It is permanent.
         </span>
       </label>
       {error && (
