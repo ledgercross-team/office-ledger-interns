@@ -1,0 +1,38 @@
+{
+  "scope": "direction",
+  "key": "fd747bad",
+  "reroll": 1,
+  "at": 1792026473618,
+  "worlds": [
+    {
+      "id": "operate-c-emission-line-rail",
+      "board": "https://impeccable.style/worlds/cards/operate-c-emission-line-rail.webp",
+      "hero": "https://impeccable.style/worlds/cards/operate-c-emission-line-rail-hero.webp"
+    },
+    {
+      "id": "aww2-zoo-gardens-guide-map",
+      "board": "https://impeccable.style/worlds/cards/aww2-zoo-gardens-guide-map.webp",
+      "hero": "https://impeccable.style/worlds/cards/aww2-zoo-gardens-guide-map-hero.webp"
+    },
+    {
+      "id": "digital-design-canon-monochrome-product-marketing",
+      "board": "https://impeccable.style/worlds/cards/digital-design-canon-monochrome-product-marketing.webp",
+      "hero": "https://impeccable.style/worlds/cards/digital-design-canon-monochrome-product-marketing-hero.webp"
+    },
+    {
+      "id": "notation-diagram-systems-star-atlas",
+      "board": "https://impeccable.style/worlds/cards/notation-diagram-systems-star-atlas.webp",
+      "hero": "https://impeccable.style/worlds/cards/notation-diagram-systems-star-atlas-hero.webp"
+    },
+    {
+      "id": "pop-culture-shelf-character-goods-catalog",
+      "board": "https://impeccable.style/worlds/cards/pop-culture-shelf-character-goods-catalog.webp",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-character-goods-catalog-hero.webp"
+    },
+    {
+      "id": "brand-identity-canon-saville-catalog-sleeve",
+      "board": "https://impeccable.style/worlds/cards/brand-identity-canon-saville-catalog-sleeve.webp",
+      "hero": "https://impeccable.style/worlds/cards/brand-identity-canon-saville-catalog-sleeve-hero.webp"
+    }
+  ]
+}

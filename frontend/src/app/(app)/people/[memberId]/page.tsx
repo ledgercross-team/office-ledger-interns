@@ -316,7 +316,7 @@ export default function MemberDetailPage() {
               >
                 <span
                   aria-hidden
-                  className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform ${
+                  className={`absolute left-0 top-0.5 size-5 rounded-full bg-white shadow transition-transform ${
                     m.mfaEnabled || m.mfaSetupRequired ? 'translate-x-6' : 'translate-x-0.5'
                   }`}
                 />

@@ -8,7 +8,7 @@ import { HRMS_ROLE_LABELS } from '@/lib/hrms/types';
 
 /**
  * User menu (UI-SPEC §5): name, email, role in the current org, org
- * switching, Profile, Security, Email preferences, Sign out.
+ * switching, Profile, Email preferences, Sign out.
  */
 export function UserMenu() {
   const { session, usableMemberships, switchOrg, logout } = useHrmsAuth();
@@ -54,7 +54,7 @@ export function UserMenu() {
               }))
           : []),
         { label: 'Profile', onSelect: () => router.push('/profile') },
-        { label: 'Security', onSelect: () => router.push('/profile#security') },
+        { label: 'Change password', onSelect: () => router.push('/change-password') },
         { label: 'Email preferences', onSelect: () => router.push('/notifications') },
         {
           label: 'Sign out',
