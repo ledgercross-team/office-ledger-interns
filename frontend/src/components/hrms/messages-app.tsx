@@ -584,7 +584,7 @@ function NewReport({ onDone, onCancel }: { onDone: (id: string) => void; onCance
             <span
               aria-hidden
               className={cn(
-                'absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform',
+                'absolute left-0 top-0.5 size-5 rounded-full bg-white shadow transition-transform duration-200 ease-out',
                 anonymous ? 'translate-x-6' : 'translate-x-0.5',
               )}
             />

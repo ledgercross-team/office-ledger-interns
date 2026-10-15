@@ -2,15 +2,22 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { Button } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { HrmsLeave, LeaveBalance, RequestStatus } from '@/lib/hrms/types';
 
 const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
-const primary =
-  'rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
-const secondary = 'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+  'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary';
+const STATUS_CHIP: Record<RequestStatus, string> = {
+  pending: 'bg-warning-soft text-warning-fg',
+  approved: 'bg-success-soft text-success-fg',
+  applied: 'bg-success-soft text-success-fg',
+  rejected: 'bg-danger-soft text-danger-fg',
+  cancelled: 'bg-surface-sunken text-fg-muted',
+  expired: 'bg-surface-sunken text-fg-muted',
+};
+const actionRow = 'flex flex-col gap-2 sm:flex-row sm:flex-wrap [&>*]:w-full sm:[&>*]:w-auto';
 
 const STATUS: Record<RequestStatus, string> = {
   pending: 'Waiting for a decision',
@@ -33,7 +40,15 @@ function span(l: HrmsLeave): string {
     : `${l.startDate}${half(l.startHalfDay)} to ${l.endDate}${half(l.endHalfDay)}`;
 }
 
-function LeaveItem({ leave, showPerson, onChanged }: { leave: HrmsLeave; showPerson: boolean; onChanged: () => void }) {
+function LeaveItem({
+  leave,
+  showPerson,
+  onChanged,
+}: {
+  leave: HrmsLeave;
+  showPerson: boolean;
+  onChanged: () => void;
+}) {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +65,10 @@ function LeaveItem({ leave, showPerson, onChanged }: { leave: HrmsLeave; showPer
   });
   const reject = useMutation({
     mutationFn: () =>
-      hrmsFetch(`/requests/${leave.requestId}/reject`, { method: 'POST', body: { reason: reason.trim() } }),
+      hrmsFetch(`/requests/${leave.requestId}/reject`, {
+        method: 'POST',
+        body: { reason: reason.trim() },
+      }),
     ...settle,
   });
   const cancel = useMutation({
@@ -59,38 +77,54 @@ function LeaveItem({ leave, showPerson, onChanged }: { leave: HrmsLeave; showPer
   });
 
   return (
-    <li className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-4">
-      <p className="text-sm text-charcoal">
-        {showPerson && <span className="font-medium">{leave.member.fullName} · </span>}
-        {leave.leaveType.name}, {span(leave)} · {leave.days} working {leave.days === 1 ? 'day' : 'days'}
-      </p>
-      <p className="text-xs text-charcoal-soft">
-        {STATUS[leave.status]}
-        {leave.decidedBy ? ` by ${leave.decidedBy}` : ''}
+    <li className="space-y-3 rounded-card border border-border bg-surface p-4">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+        <p className="min-w-0 text-sm font-medium text-fg">
+          {showPerson && <span>{leave.member.fullName} · </span>}
+          {leave.leaveType.name}
+        </p>
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CHIP[leave.status]}`}
+        >
+          {STATUS[leave.status]}
+        </span>
+      </div>
+      <p className="text-sm text-fg-muted">
+        {span(leave)} · {leave.days} working {leave.days === 1 ? 'day' : 'days'}
+        {leave.decidedBy ? ` · by ${leave.decidedBy}` : ''}
         {leave.overAllowance ? ' · over the allowance, the extra days are unpaid' : ''}
       </p>
-      <p className="text-sm text-charcoal">&ldquo;{leave.reason}&rdquo;</p>
-      {leave.decisionReason && <p className="text-sm text-charcoal">Answer: &ldquo;{leave.decisionReason}&rdquo;</p>}
-      {leave.status === 'pending' && leave.cannotDecideBecause && (
-        <p className="text-xs text-charcoal-soft">You cannot decide this: {leave.cannotDecideBecause}</p>
+      <p className="break-words text-sm text-fg">&ldquo;{leave.reason}&rdquo;</p>
+      {leave.decisionReason && (
+        <p className="break-words text-sm text-fg">Answer: &ldquo;{leave.decisionReason}&rdquo;</p>
       )}
-      <div className="flex flex-wrap gap-2">
-        {leave.canDecide && !rejecting && (
-          <>
-            <button type="button" disabled={approve.isPending} onClick={() => approve.mutate()} className={primary}>
-              Approve
-            </button>
-            <button type="button" onClick={() => setRejecting(true)} className={secondary}>
-              Reject
-            </button>
-          </>
-        )}
-        {leave.canCancel && (
-          <button type="button" disabled={cancel.isPending} onClick={() => cancel.mutate()} className={secondary}>
-            Cancel leave
-          </button>
-        )}
-      </div>
+      {leave.status === 'pending' && leave.cannotDecideBecause && (
+        <p className="text-xs text-fg-muted">You cannot decide this: {leave.cannotDecideBecause}</p>
+      )}
+      {((leave.canDecide && !rejecting) || leave.canCancel) && (
+        <div className={actionRow}>
+          {leave.canDecide && !rejecting && (
+            <>
+              <Button size="sm" loading={approve.isPending} onClick={() => approve.mutate()}>
+                Approve
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setRejecting(true)}>
+                Reject
+              </Button>
+            </>
+          )}
+          {leave.canCancel && (
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={cancel.isPending}
+              onClick={() => cancel.mutate()}
+            >
+              Cancel leave
+            </Button>
+          )}
+        </div>
+      )}
       {rejecting && (
         <div className="space-y-2">
           <textarea
@@ -100,23 +134,23 @@ function LeaveItem({ leave, showPerson, onChanged }: { leave: HrmsLeave; showPer
             placeholder="Reason for rejecting (required)"
             className={input}
           />
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={reason.trim().length === 0 || reject.isPending}
+          <div className={actionRow}>
+            <Button
+              size="sm"
+              disabled={reason.trim().length === 0}
+              loading={reject.isPending}
               onClick={() => reject.mutate()}
-              className={primary}
             >
               Reject leave
-            </button>
-            <button type="button" onClick={() => setRejecting(false)} className={secondary}>
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setRejecting(false)}>
               Back
-            </button>
+            </Button>
           </div>
         </div>
       )}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {error}
         </p>
       )}
@@ -128,7 +162,8 @@ export default function LeavePage() {
   const { session } = useHrmsAuth();
   const queryClient = useQueryClient();
   const enabled = Boolean(session?.activeMemberId);
-  const canDecide = session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
+  const canDecide =
+    session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -192,101 +227,123 @@ export default function LeavePage() {
 
   return (
     <>
-      <h1 className="text-xl font-semibold text-charcoal">Leave</h1>
+      <h1 className="text-2xl font-bold text-fg">Leave</h1>
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
         {balance.data?.items.map((b) => (
-          <div key={b.leaveTypeId} className="rounded-2xl border border-charcoal/10 bg-white p-4">
-            <p className="text-sm text-charcoal-soft">
+          <div
+            key={b.leaveTypeId}
+            className="min-w-0 rounded-card border border-border bg-surface p-4"
+          >
+            <p className="truncate text-sm text-fg-muted">
               {b.name} {b.year}
               {b.isPaid ? '' : ' (unpaid)'}
             </p>
-            <p className="text-2xl font-semibold text-charcoal">{b.remaining}</p>
-            <p className="text-xs text-charcoal-soft">
+            <p className="text-3xl font-bold tabular-nums text-fg">{b.remaining}</p>
+            <p className="text-xs text-fg-muted">
               of {b.allowance} days left · {b.used} used
             </p>
           </div>
         ))}
       </section>
 
-      <form onSubmit={onSubmit} className="max-w-lg space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4">
-        <h2 className="font-medium text-charcoal">Ask for leave</h2>
-        <select name="type" required className={input} aria-label="Leave type">
-          <option value="">Type…</option>
-          {balance.data?.items.map((b) => (
-            <option key={b.leaveTypeId} value={b.leaveTypeId}>
-              {b.name}
-            </option>
-          ))}
-        </select>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block space-y-1 text-sm text-charcoal">
-            From
-            <input name="start" type="date" required className={input} />
-          </label>
-          <label className="block space-y-1 text-sm text-charcoal">
-            To
-            <input name="end" type="date" required className={input} />
-          </label>
-        </div>
-        <div className="flex gap-4 text-sm text-charcoal">
-          <label className="flex items-center gap-2">
-            <input name="startHalf" type="checkbox" /> First day is a half day
-          </label>
-          <label className="flex items-center gap-2">
-            <input name="endHalf" type="checkbox" /> Last day is a half day
-          </label>
-        </div>
-        <textarea name="reason" required rows={2} maxLength={1000} placeholder="Reason" className={input} />
-        <p className="text-xs text-charcoal-soft">
-          Weekends and holidays are not counted. Your project lead or the COO decides.
-        </p>
-        {error && (
-          <p role="alert" className="text-sm text-alert-deep">
-            {error}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
+        <form
+          onSubmit={onSubmit}
+          className="space-y-3 rounded-card border border-border bg-surface p-4 lg:sticky lg:top-20"
+        >
+          <h2 className="font-bold text-fg">Ask for leave</h2>
+          <select name="type" required className={input} aria-label="Leave type">
+            <option value="">Type…</option>
+            {balance.data?.items.map((b) => (
+              <option key={b.leaveTypeId} value={b.leaveTypeId}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block min-w-0 space-y-1 text-sm text-fg">
+              From
+              <input name="start" type="date" required className={input} />
+            </label>
+            <label className="block min-w-0 space-y-1 text-sm text-fg">
+              To
+              <input name="end" type="date" required className={input} />
+            </label>
+          </div>
+          <div className="space-y-2 text-sm text-fg">
+            <label className="flex items-center gap-2">
+              <input name="startHalf" type="checkbox" /> First day is a half day
+            </label>
+            <label className="flex items-center gap-2">
+              <input name="endHalf" type="checkbox" /> Last day is a half day
+            </label>
+          </div>
+          <textarea
+            name="reason"
+            required
+            rows={3}
+            maxLength={1000}
+            placeholder="Reason"
+            className={input}
+          />
+          <p className="text-xs text-fg-muted">
+            Weekends and holidays are not counted. Your project lead or the COO decides.
           </p>
-        )}
-        <button type="submit" disabled={pending} className={primary}>
-          {pending ? 'Sending…' : 'Send request'}
-        </button>
-      </form>
-
-      {canDecide && (
-        <section className="space-y-2">
-          <h2 className="font-medium text-charcoal">To decide</h2>
-          {toDecide.data && toDecide.data.items.length === 0 && (
-            <p className="text-sm text-charcoal-soft">Nothing is waiting for you.</p>
+          {error && (
+            <p role="alert" className="text-sm text-danger-fg">
+              {error}
+            </p>
           )}
-          <ul className="space-y-3">
-            {toDecide.data?.items.map((l) => (
-              <LeaveItem key={l.requestId} leave={l} showPerson onChanged={changed} />
-            ))}
-          </ul>
-        </section>
-      )}
+          <Button
+            type="submit"
+            loading={pending}
+            loadingLabel="Sending…"
+            className="w-full sm:w-auto"
+          >
+            Send request
+          </Button>
+        </form>
 
-      <section className="space-y-2">
-        <h2 className="font-medium text-charcoal">My leave</h2>
-        {mine.data && mine.data.items.length === 0 && (
-          <p className="text-sm text-charcoal-soft">No leave requests yet.</p>
-        )}
-        <ul className="space-y-3">
-          {mine.data?.items.map((l) => (
-            <LeaveItem key={l.requestId} leave={l} showPerson={false} onChanged={changed} />
-          ))}
-        </ul>
-      </section>
+        <div className="min-w-0 space-y-6">
+          {canDecide && (
+            <section className="space-y-3">
+              <h2 className="font-bold text-fg">To decide</h2>
+              {toDecide.data && toDecide.data.items.length === 0 && (
+                <p className="text-sm text-fg-muted">Nothing is waiting for you.</p>
+              )}
+              <ul className="space-y-3">
+                {toDecide.data?.items.map((l) => (
+                  <LeaveItem key={l.requestId} leave={l} showPerson onChanged={changed} />
+                ))}
+              </ul>
+            </section>
+          )}
 
-      {canDecide && teamRest.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-medium text-charcoal">Team leave</h2>
-          <ul className="space-y-3">
-            {teamRest.map((l) => (
-              <LeaveItem key={l.requestId} leave={l} showPerson onChanged={changed} />
-            ))}
-          </ul>
-        </section>
-      )}
+          <section className="space-y-3">
+            <h2 className="font-bold text-fg">My leave</h2>
+            {mine.data && mine.data.items.length === 0 && (
+              <p className="text-sm text-fg-muted">No leave requests yet.</p>
+            )}
+            <ul className="space-y-3">
+              {mine.data?.items.map((l) => (
+                <LeaveItem key={l.requestId} leave={l} showPerson={false} onChanged={changed} />
+              ))}
+            </ul>
+          </section>
+
+          {canDecide && teamRest.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="font-bold text-fg">Team leave</h2>
+              <ul className="space-y-3">
+                {teamRest.map((l) => (
+                  <LeaveItem key={l.requestId} leave={l} showPerson onChanged={changed} />
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+      </div>
     </>
   );
 }

@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-15T01:14:34.948942Z",
+  "title": "Design System: LedgerCross",
+  "extensions": {
+    "colorMeta": {
+      "clay": {
+        "role": "primary",
+        "displayName": "Clay",
+        "canonical": "#b5532f"
+      },
+      "sage": {
+        "role": "secondary",
+        "displayName": "Sage Rail",
+        "canonical": "#8fa886"
+      },
+      "sage-mist": {
+        "role": "neutral",
+        "displayName": "Sage Mist",
+        "canonical": "#eef1ea"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#2a3027"
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Title",
+        "purpose": "Page headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Controls and table headers."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float",
+        "value": "0 12px 32px rgb(44 46 42 / 0.16)",
+        "purpose": "Menus, popovers, dialogs."
+      }
+    ],
+    "motion": [
+      {
+        "name": "fade",
+        "value": "200ms ease-out",
+        "purpose": "Overlay entry."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one action per area.",
+      "html": "<button class=\"ds-btn-primary\">Approve</button>",
+      "css": ".ds-btn-primary{background:#b5532f;color:#fff;border:1px solid #b5532f;border-radius:9999px;min-height:40px;padding:0 18px;font-weight:500;font-family:inherit}.ds-btn-primary:hover{background:#98421f}.ds-btn-primary:focus-visible{outline:2px solid #b5532f;outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Supporting actions.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary{background:#fbfcf9;color:#2a3027;border:1px solid #7b8571;border-radius:9999px;min-height:40px;padding:0 18px;font-weight:500;font-family:inherit}.ds-btn-secondary:hover{background:#e2e7dc}.ds-btn-secondary:focus-visible{outline:2px solid #b5532f;outline-offset:2px}"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "description": "State as a capsule.",
+      "html": "<span class=\"ds-badge\">Approved</span>",
+      "css": ".ds-badge{display:inline-flex;border:1px solid #2e7d1e;background:#ddf2c8;color:#1e5412;border-radius:9999px;padding:2px 10px;font-size:.75rem;font-weight:500}"
+    },
+    {
+      "name": "Rail Item",
+      "kind": "nav",
+      "description": "Navigation capsule on the green rail; active is cream.",
+      "html": "<div class=\"ds-rail\"><a class=\"ds-rail-item\">Tasks</a><a class=\"ds-rail-item ds-on\">Requests</a></div>",
+      "css": ".ds-rail{background:#8fa886;border-radius:20px;padding:12px;width:220px;display:grid;gap:4px;font-family:inherit}.ds-rail-item{display:block;padding:9px 14px;border-radius:9999px;color:#2a3027;font-size:.875rem;font-weight:500}.ds-rail-item:hover{background:rgba(255,253,246,.5)}.ds-on{background:#fbfcf9;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.08)}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "description": "Cream container with hairline.",
+      "html": "<div class=\"ds-card\"><b>Pending</b><p>7 requests wait on you</p></div>",
+      "css": ".ds-card{background:#fbfcf9;border:1px solid #d5dbcc;border-radius:20px;padding:20px;color:#2a3027;font-family:inherit}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "description": "Standard field.",
+      "html": "<input class=\"ds-input\" placeholder=\"Search people\">",
+      "css": ".ds-input{background:#fbfcf9;border:1px solid #d5dbcc;border-radius:12px;min-height:40px;padding:8px 12px;color:#2a3027;font-family:inherit}.ds-input:focus-visible{outline:2px solid #b5532f;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Guide Map",
+    "overview": "LedgerCross reads like a printed visitor's map: flat regions of colour do the dividing, and capsules do the acting.",
+    "keyCharacteristics": [
+      "Flat unmodulated colour; depth comes from tonal surface steps, not shadows.",
+      "One green rail owns navigation; one clay capsule per area owns the primary action.",
+      "Rounded forms throughout: capsules for actions and state, large radii for containers.",
+      "Tabular figures everywhere numbers are compared."
+    ],
+    "rules": [
+      {
+        "name": "The One Region Rule",
+        "body": "Sage Rail is the navigation rail and nothing else; it never fills content.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Action Rule",
+        "body": "Clay marks something that can be done; it is never decoration or a state.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Numbers use tabular figures globally so columns align.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do keep one clay capsule per work area for the primary action.",
+      "Do carry state in a label or shape as well as colour.",
+      "Do use tabular figures for all comparable numbers."
+    ],
+    "donts": [
+      "Don't use gradients, blur or glass on surfaces.",
+      "Don't fill content regions with Sage Rail or use clay as decoration.",
+      "Don't build dark-mode variants without revisiting contrast on the rail and clay."
+    ]
+  }
+}

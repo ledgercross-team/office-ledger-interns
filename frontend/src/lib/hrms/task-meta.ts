@@ -16,10 +16,10 @@ export const TASK_URGENCY_LABELS: Record<TaskUrgency, string> = {
 };
 
 export const TASK_STATUS_STYLE: Record<TaskStatus, string> = {
-  todo: 'bg-charcoal/10 text-charcoal',
-  in_progress: 'bg-mist text-forest',
-  in_review: 'bg-amber-tint text-amber-deep',
-  done: 'bg-evergreen text-white',
+  todo: 'bg-surface-sunken text-fg',
+  in_progress: 'bg-warning-soft text-warning-fg',
+  in_review: 'bg-info-soft text-info-fg',
+  done: 'bg-success-soft text-success-fg',
   blocked: 'bg-alert-tint text-alert-deep',
   cancelled: 'bg-charcoal/10 text-charcoal-soft line-through',
 };
