@@ -1,4 +1,8 @@
 import type { NextConfig } from 'next';
+import { existsSync } from 'node:fs';
+
+// Single env file lives at the repo root; Next only reads frontend/.env*.
+if (existsSync('../.env.local')) process.loadEnvFile('../.env.local');
 
 // Next's own scripts and styles are inline, so script/style allow 'unsafe-inline'; everything
 // else is locked to this site and the API. Dev adds 'unsafe-eval' for hot reload.

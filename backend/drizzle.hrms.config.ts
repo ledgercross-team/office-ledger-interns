@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import { defineConfig } from 'drizzle-kit';
 
-config({ path: '.env.local' });
+config({ path: '../.env.local' });
 
 // Used only for `drizzle-kit pull` of the HRMS database. Never run `generate` or `migrate`
 // with this config: changes to that database are numbered SQL files in docs/hrms/.
