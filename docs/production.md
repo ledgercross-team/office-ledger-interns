@@ -11,7 +11,6 @@ One document to deploy office-ledger safely. Work through it top to bottom, then
 | Backend API (NestJS) | `pnpm --filter backend start:prod` | 4000 |
 | Frontend (Next.js) | `pnpm --filter frontend start` | 3000 |
 | PostgreSQL 15 or newer | managed or self-hosted | 5432 |
-| Redis 7 | private network only | 6379 |
 
 Put both apps behind an HTTPS reverse proxy. The project itself ships no container setup.
 
@@ -20,7 +19,6 @@ Put both apps behind an HTTPS reverse proxy. The project itself ships no contain
 - Node from `.nvmrc` (24) and pnpm (`corepack enable`; the version is pinned in `package.json`).
 - A PostgreSQL database `office_ledger_hrms`, its owner login, and the app login `hrms_api`
   (created as in `docs/hrms/README.md`). The API must connect as `hrms_api`, never the owner.
-- A Redis instance reachable only from the API.
 - Two hostnames under one parent domain, for example `app.example.com` (frontend) and
   `api.example.com` (backend). Cookies are shared through `COOKIE_DOMAIN`.
 
@@ -33,7 +31,6 @@ Put both apps behind an HTTPS reverse proxy. The project itself ships no contain
 | `NODE_ENV` | `production` |
 | `PORT` | port the API listens on |
 | `DATABASE_URL` | `postgres://hrms_api:<secret>@host:5432/office_ledger_hrms` (the app role) |
-| `REDIS_URL` | `redis://:password@host:6379/0` |
 | `FRONTEND_URL` | the exact frontend origin, e.g. `https://app.example.com` (no trailing slash, never `*`) |
 | `JWT_ACCESS_SECRET` | unique, random, 32+ characters (see below) |
 | `JWT_ACCESS_TTL_SECONDS` | `900` |
@@ -87,8 +84,7 @@ NODE_ENV=production pnpm --filter frontend start
 ```
 
 Run both under a process manager (systemd, pm2, ...) so they restart on failure. Check the
-API with `GET /api/health`: `200` means Postgres and Redis both answered, `503` means one
-did not.
+API with `GET /api/health`: `200` means PostgreSQL answered, and `503` means it did not.
 
 ## 4. Database changes on deploy
 
@@ -149,8 +145,6 @@ Daily logical backup, kept for at least 14 days, stored off the database host:
 pg_dump --format=custom --file="office_ledger_hrms_$(date +%F).dump" "$HRMS_MIGRATE_DATABASE_URL"
 ```
 
-Redis holds only rate-limit counters. Flushing it is always safe, so it needs no backup.
-
 **Test the restore** before launch and after any major change, into a scratch database:
 
 ```bash
@@ -169,7 +163,7 @@ Use a throwaway database. This is also how to confirm the guide works:
 ```bash
 export NODE_ENV=production PORT=4100 \
   DATABASE_URL=postgres://hrms_api:pass@localhost:5432/office_ledger_prodtest \
-  REDIS_URL=redis://localhost:6379/1 FRONTEND_URL=http://localhost:3000 \
+  FRONTEND_URL=http://localhost:3000 \
   JWT_ACCESS_SECRET="$(node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))")" \
   MFA_ENCRYPTION_KEY="$(openssl rand -hex 32)" \
   COOKIE_SECURE=true TRUST_PROXY=false
@@ -205,8 +199,7 @@ Copy this into the release PR or ticket and tick every line.
 
 - [ ] `JWT_ACCESS_SECRET` is unique to production, random and at least 32 characters.
 - [ ] `MFA_ENCRYPTION_KEY` is set and backed up separately.
-- [ ] Database and Redis passwords are unique and strong.
-- [ ] Redis is not reachable from the public internet (private network or firewall).
+- [ ] Database password is unique and strong.
 - [ ] PostgreSQL is not reachable from the public internet.
 - [ ] HTTPS only: HTTP redirects to HTTPS and certificates renew automatically.
 - [ ] No `.env*` file other than `.env.example` is committed.

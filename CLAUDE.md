@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-office-ledger is a multi-organisation HRMS: projects, tasks, requests and approvals, attendance, leave, calendar, ratings and performance, with five roles (gameMaster, CEO, COO, manager, employee). One login can belong to several organisations. pnpm workspace with two packages: `backend/` (NestJS 12, Drizzle ORM, PostgreSQL, Redis; port 4000) and `frontend/` (Next.js 16, React 19, TanStack Query, Tailwind 4; port 3000). Node version in `.nvmrc`. No Docker.
+office-ledger is a multi-organisation HRMS: projects, tasks, requests and approvals, attendance, leave, calendar, ratings and performance, with five roles (gameMaster, CEO, COO, manager, employee). One login can belong to several organisations. pnpm workspace with two packages: `backend/` (NestJS 12, Drizzle ORM, PostgreSQL; port 4000) and `frontend/` (Next.js 16, React 19, TanStack Query, Tailwind 4; port 3000). Node version in `.nvmrc`. No Docker.
 
 ## Commands
 
@@ -12,7 +12,7 @@ Run from the repo root:
 
 ```bash
 pnpm install
-pnpm dev:backend              # needs PostgreSQL and Redis running; API fails startup without Redis
+pnpm dev:backend              # needs PostgreSQL running
 pnpm dev:frontend
 pnpm lint                     # backend: oxlint --type-aware; frontend: eslint
 pnpm typecheck
@@ -34,10 +34,10 @@ Env files: copy `backend/.env.example` to `backend/.env.local` and `frontend/.en
 - The API connects as the `hrms_api` role (`DATABASE_URL`), never the owner. Every request runs in one transaction that first sets `app.org_id`, `app.member_id`, `app.user_id` and `app.client_ip` (`hrms/db/hrms-context*.ts`).
 
 ### Backend (`backend/src`)
-- `app.module.ts`: config validation, the Redis-backed throttler, the origin check, and `HrmsModule`. All routes are under `/api` (each controller declares `api/...` through `@HrmsController`).
+- `app.module.ts`: config validation, the in-memory throttler, the origin check, and `HrmsModule`. All routes are under `/api` (each controller declares `api/...` through `@HrmsController`).
 - `hrms/` holds every feature: `auth/` (JWT cookies `hrms_access`/`hrms_refresh`, refresh rotation, MFA, deny-by-default guard with `@Public`, `@HrmsSession`, `@HrmsRoles`), `org/`, `members/`, `projects/`, `tasks/`, `requests/` (one inbox, apply step per type), `attendance/`, `leave/`, `calendar/`, `ratings/`, `notifications/`, `jobs/` (scheduler with advisory lock; `HRMS_JOBS_ENABLED=false` turns it off), `audit/`, `platform/` (gameMaster console), `mail/`.
 - Services are thin: SQL through drizzle's `sql` with `current_org_id()`; role scoping per route is documented next to the route.
-- Redis (`modules/redis`) backs the throttler. Only credential endpoints use the strict `auth` policy (`STRICT_AUTH_PATHS` in `app.module.ts`).
+- The throttler stores counters in API process memory. Only credential endpoints use the strict `auth` policy (`STRICT_AUTH_PATHS` in `app.module.ts`).
 - Env is validated in `config/env.validation.ts`. `MFA_ENCRYPTION_KEY` is required.
 
 ### Frontend (`frontend/src`)

@@ -45,7 +45,7 @@ describe('AppThrottlerGuard', () => {
 });
 
 describe('registerLoginAttempt', () => {
-  function fakeRedis() {
+  function fakeCounter() {
     const store = new Map<string, number>();
     const ttls = new Map<string, number>();
     return {
@@ -66,20 +66,20 @@ describe('registerLoginAttempt', () => {
   }
 
   it('lets 70 attempts through and blocks the pair for 12 hours on the 71st', async () => {
-    const redis = fakeRedis();
+    const counter = fakeCounter();
     for (let i = 0; i < LOGIN_ABUSE_ATTEMPTS; i += 1) {
-      expect(await registerLoginAttempt(redis, '1.2.3.4:a@b.io')).toBe(0);
+      expect(await registerLoginAttempt(counter, '1.2.3.4:a@b.io')).toBe(0);
     }
-    expect(await registerLoginAttempt(redis, '1.2.3.4:a@b.io')).toBe(LOGIN_ABUSE_BLOCK_SECONDS);
+    expect(await registerLoginAttempt(counter, '1.2.3.4:a@b.io')).toBe(LOGIN_ABUSE_BLOCK_SECONDS);
     // still blocked afterwards, with the remaining time
-    expect(await registerLoginAttempt(redis, '1.2.3.4:a@b.io')).toBe(LOGIN_ABUSE_BLOCK_SECONDS);
+    expect(await registerLoginAttempt(counter, '1.2.3.4:a@b.io')).toBe(LOGIN_ABUSE_BLOCK_SECONDS);
   });
 
   it('keeps each IP and email pair separate', async () => {
-    const redis = fakeRedis();
+    const counter = fakeCounter();
     for (let i = 0; i <= LOGIN_ABUSE_ATTEMPTS; i += 1)
-      await registerLoginAttempt(redis, '1.2.3.4:a@b.io');
-    expect(await registerLoginAttempt(redis, '1.2.3.4:other@b.io')).toBe(0);
-    expect(await registerLoginAttempt(redis, '9.9.9.9:a@b.io')).toBe(0);
+      await registerLoginAttempt(counter, '1.2.3.4:a@b.io');
+    expect(await registerLoginAttempt(counter, '1.2.3.4:other@b.io')).toBe(0);
+    expect(await registerLoginAttempt(counter, '9.9.9.9:a@b.io')).toBe(0);
   });
 });

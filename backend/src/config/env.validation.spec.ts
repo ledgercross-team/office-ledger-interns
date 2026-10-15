@@ -4,7 +4,6 @@ const validEnvironment = {
   NODE_ENV: 'test',
   PORT: '4000',
   DATABASE_URL: 'postgres://user:password@localhost:5432/database',
-  REDIS_URL: 'redis://localhost:6379/0',
   FRONTEND_URL: 'http://localhost:3000',
   JWT_ACCESS_SECRET: 'test-secret-that-is-at-least-32-chars-long',
   JWT_ACCESS_TTL_SECONDS: '900',
@@ -28,7 +27,9 @@ describe('validateEnvironment', () => {
     const { MFA_ENCRYPTION_KEY: _unused, ...withoutKey } = validEnvironment;
 
     expect(() => validateEnvironment(withoutKey)).toThrow('MFA_ENCRYPTION_KEY');
-    expect(() => validateEnvironment({ ...validEnvironment, MFA_ENCRYPTION_KEY: 'short' })).toThrow('32 bytes');
+    expect(() => validateEnvironment({ ...validEnvironment, MFA_ENCRYPTION_KEY: 'short' })).toThrow(
+      '32 bytes',
+    );
   });
 
   it('parses valid environment values', () => {

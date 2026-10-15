@@ -2,7 +2,7 @@
 
 A multi-organisation HRMS: projects, tasks, requests and approvals, attendance, leave, calendar,
 ratings and performance, with five roles (gameMaster, CEO, COO, manager, employee). Next.js
-frontend, NestJS backend, PostgreSQL (rules enforced in the database) and Redis for rate limits.
+frontend, NestJS backend, and PostgreSQL (rules enforced in the database).
 Built with pnpm, no Docker.
 
 The plan is `docs/hrms/plan-v3.md`; the database is `docs/hrms/hrms_schema.sql`.
@@ -49,24 +49,13 @@ are immutable: changes after launch are new numbered files in `docs/hrms/`, appl
 For integration tests create a throwaway database (name ending `_throwaway`), load the SQL
 files, and set `HRMS_TEST_APP_URL` and `HRMS_TEST_OWNER_URL`.
 
-## Redis, hardening and rate limits
+## Hardening and rate limits
 
-Redis is required by the API for distributed throttling. Start Redis locally, then set
-`REDIS_URL` in `backend/.env.local`:
-
-```bash
-redis-server
-```
-
-The API connects with bounded command timeouts, disables the offline command queue, retries
-briefly, and fails startup if Redis cannot be reached. Rate-limit counters use an atomic Redis
-Lua script so concurrent API instances share the same fixed-window counters. The default policy
-is `RATE_LIMIT_GLOBAL_PER_MIN` requests per minute; the stricter `auth` policy covers the
-credential routes (login, refresh, switch-org, MFA, change-password, accept-invite).
-
-`@nest-lab/throttler-storage-redis@1.2.0` is not used because its Nest peer range stops at
-Nest 11. The project uses a small local adapter against the Nest 12 `ThrottlerStorage`
-interface and the existing `ioredis` dependency instead.
+Rate-limit counters are kept in the API process memory, so the API does not require an external cache.
+Counters reset when the process restarts and are not shared between multiple API replicas. For
+multi-replica deployments, put rate limiting at the reverse proxy or add a shared store later.
+The default policy is `RATE_LIMIT_GLOBAL_PER_MIN` requests per minute; the stricter `auth`
+policy covers credential routes (login, refresh, switch-org, MFA, change-password, accept-invite).
 
 The HTTP bootstrap also enables Helmet, an explicit credentialed CORS allowlist from
 `FRONTEND_URL`, bounded JSON/form bodies, strict validation-pipe behavior, cookie parsing, and

@@ -26,7 +26,7 @@ How to move the project from the current app to the HRMS v3 design in small, saf
 | Complaints and admin to gameMaster messages | Stay in v1 only. Not ported. | Neither is in plan v3. The messages thread also conflicts with "the gameMaster never sees org data". Decide at cleanup. |
 | Task comments | Not ported. Status changes keep their comment in the status history. | Not in plan v3. |
 | Task categories | Not ported. | Not in plan v3. Old tasks keep theirs in the old database. |
-| Session storage | The `refresh_tokens` table from `0002_auth_sessions.sql`. Redis stays for rate limiting only. | Same rotation and reuse detection as today. |
+| Session storage | The `refresh_tokens` table from `0002_auth_sessions.sql`. Rate limits are process-local. | Same rotation and reuse detection as today. |
 | Scheduler and email | `@nestjs/schedule` inside the API with a Postgres advisory lock so two copies never double-run. `nodemailer` over SMTP, with `MAIL_TRANSPORT=log` in development. | Nothing exists today. This is the smallest option and any provider can replace it later. This one is your call. |
 | Existing data | Start fresh with a seed script. An import script is optional (last section). | Your audit says the data is probably demo data. |
 

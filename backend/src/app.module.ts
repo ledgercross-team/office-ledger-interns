@@ -5,9 +5,6 @@ import { seconds, ThrottlerModule } from '@nestjs/throttler';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { OriginCheckMiddleware } from './common/middleware/origin-check.middleware';
 import { validateEnvironment } from './config/env.validation';
-import { RedisModule } from './modules/redis/redis.module';
-import { RedisService } from './modules/redis/redis.service';
-import { RedisThrottlerStorage } from './modules/redis/redis-throttler.storage';
 import { HrmsModule } from './hrms/hrms.module';
 
 // Only credential endpoints count against the strict auth limit. /auth/me runs on every
@@ -42,12 +39,11 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
       envFilePath: ['../.env', '.env.local', '.env'],
       validate: validateEnvironment,
     }),
-    RedisModule,
     HrmsModule,
     ThrottlerModule.forRootAsync({
-      imports: [ConfigModule, RedisModule],
-      inject: [ConfigService, RedisService],
-      useFactory: (config: ConfigService, redis: RedisService) => {
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
         const globalLimit = positiveInteger(config, 'RATE_LIMIT_GLOBAL_PER_MIN', 100);
         const authLimit = positiveInteger(config, 'RATE_LIMIT_AUTH_PER_MIN', 10);
         const globalBlockSeconds = positiveInteger(config, 'RATE_LIMIT_GLOBAL_BLOCK_SECONDS', 60);
@@ -72,7 +68,6 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
               blockDuration: seconds(authBlockSeconds),
             },
           ],
-          storage: new RedisThrottlerStorage(redis.client),
           setHeaders: true,
         };
       },

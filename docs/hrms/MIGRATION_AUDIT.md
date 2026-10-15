@@ -26,13 +26,13 @@ Read-only audit of branch `mah1uz` (HEAD `0307f47`), answering `requirements.md`
 | Passwords | argon2 hash in `users.password_hash`. **No MFA anywhere** (no secret column, no code) | `backend/src/common/utils/passwords.ts`, `backend/src/db/schema/users.ts` |
 | Refresh tokens | SHA-256 hashes in table `refresh_tokens` | `backend/src/db/schema/refresh-tokens.ts` |
 | Queue / scheduler | **None.** No cron, no queue, no background jobs | not found |
-| Redis | `ioredis ^6`; used **only** for the throttler storage; API refuses to start without it | `backend/src/modules/redis/*`, `app.module.ts` |
+| Rate limiting | Nest throttler with process-local in-memory storage; counters reset on restart and are not shared between replicas | `backend/src/common/guards/app-throttler.guard.ts`, `app.module.ts` |
 | Email | **None** | not found |
 | File storage | **None** | not found |
 | Hosting / deploy | No Docker. Docs only: `docs/production.md`. CI = lint, typecheck, test, build (GitHub Actions) | `.github/workflows/ci.yml` |
 | Security middleware | helmet, CORS allow-list from `FRONTEND_URL`, `OriginCheckMiddleware` (CSRF-ish, Origin header), global ValidationPipe `whitelist + forbidNonWhitelisted` | `backend/src/main.ts`, `common/middleware/origin-check.middleware.ts` |
 
-**Env variable names** (values not printed): backend `NODE_ENV, PORT, DATABASE_URL, REDIS_URL, FRONTEND_URL, JWT_ACCESS_SECRET, JWT_ACCESS_TTL_SECONDS, REFRESH_TOKEN_TTL_DAYS, COOKIE_SECURE, COOKIE_DOMAIN, TRUST_PROXY, RATE_LIMIT_GLOBAL_PER_MIN, RATE_LIMIT_GLOBAL_BLOCK_SECONDS, RATE_LIMIT_AUTH_PER_MIN, RATE_LIMIT_AUTH_BLOCK_SECONDS, SEED_DEMO_PASSWORD`. Frontend `NEXT_PUBLIC_API_URL`. Validation in `backend/src/config/env.validation.ts`.
+**Env variable names** (values not printed): backend `NODE_ENV, PORT, DATABASE_URL, FRONTEND_URL, JWT_ACCESS_SECRET, JWT_ACCESS_TTL_SECONDS, REFRESH_TOKEN_TTL_DAYS, COOKIE_SECURE, COOKIE_DOMAIN, TRUST_PROXY, RATE_LIMIT_GLOBAL_PER_MIN, RATE_LIMIT_GLOBAL_BLOCK_SECONDS, RATE_LIMIT_AUTH_PER_MIN, RATE_LIMIT_AUTH_BLOCK_SECONDS, SEED_DEMO_PASSWORD`. Frontend `NEXT_PUBLIC_API_URL`. Validation in `backend/src/config/env.validation.ts`.
 
 **Note:** `RATE_LIMIT_GLOBAL_BLOCK_SECONDS`, `RATE_LIMIT_AUTH_PER_MIN` and `RATE_LIMIT_AUTH_BLOCK_SECONDS` are read in `app.module.ts` but are not in `EnvironmentVariables` (only `RATE_LIMIT_GLOBAL_PER_MIN` is validated).
 
@@ -54,7 +54,7 @@ Read-only audit of branch `mah1uz` (HEAD `0307f47`), answering `requirements.md`
 | `leave_requests` | `employee_id, leave_type (free text), start_on, end_on, reason, status, reviewed_by_id` | `leave_requests` + `leave_types` + `requests` | `leave_type` free text → FK to `leave_types`. Half-days not modelled |
 | `complaints` | `employee_id, category, subject, details, status (open/in_review/resolved), response` | **no equivalent** | Drop, or keep out of scope |
 | `messages` | `company_id, sender_id, body, read_at` (admin ⇄ game master thread per company) | **no equivalent** (closest: `notifications`, `platform_requests`) | The new design says gameMaster can never see org data; this thread is the only channel. Decide: drop or keep as a separate non-RLS table |
-| `refresh_tokens` | `user_id, token_hash, expires_at, revoked_at, replaced_by_id, ip_address, user_agent` | **no equivalent** | Session storage is not in `hrms_schema.sql`. Keep this table (re-pointed at new `users.id`) or move to Redis |
+| `refresh_tokens` | `user_id, token_hash, expires_at, revoked_at, replaced_by_id, ip_address, user_agent` | **no equivalent** | Session storage is not in `hrms_schema.sql`. Keep this table (re-pointed at new `users.id`) |
 
 New tables with **no current source** (will start empty): `plans`, `org_settings` (partly), `org_office_networks`, `org_holidays`, `projects`, `project_members`, `project_completion_ticks`, `project_invites`, `meetings`, `meeting_invitees`, `project_ratings`, `performance_scores`, `platform_requests`, `audit_log`, `audit_notes`, `notifications`, `notification_email_prefs`.
 
@@ -165,7 +165,7 @@ Whether the data is real or test: **not checked** (I did not connect to a databa
 ## 6. Reuse, risks and gaps
 
 ### Reuse unchanged
-- **Backend infra:** `main.ts` hardening, `config/env.validation.ts` (add new vars), `AppThrottlerGuard`, `RedisThrottlerStorage`, `OriginCheckMiddleware`, `common/utils/{passwords,dates,company-time,pagination,env}.ts` and their specs, `health` module, `@Public`/`@Roles`/`@CurrentUser` decorators, jest/oxlint/CI config.
+- **Backend infra:** `main.ts` hardening, `config/env.validation.ts` (add new vars), `AppThrottlerGuard` with in-memory storage, `OriginCheckMiddleware`, `common/utils/{passwords,dates,company-time,pagination,env}.ts` and their specs, `health` module, `@Public`/`@Roles`/`@CurrentUser` decorators, jest/oxlint/CI config.
 - **Auth plumbing:** `token.service.ts` rotation + reuse-detection pattern (adapt claims).
 - **Frontend:** `api-client.ts`, `query-provider.tsx`, `format.ts`, `date-input`, `date-time-picker`, `timezone-select`, `hold-button`, `pagination`, `stat-tile`, `status-badge`, `reveal`, layout/Tailwind setup, attendance chart components.
 - **Tests:** specs for passwords, dates, company-time, throttler, origin check, env validation. `task-rules.spec.ts` / `attendance.rules.spec.ts` only as templates.
@@ -239,6 +239,6 @@ Each step ends with something you can run or test.
 2. **Complaints** and **GM⇄admin messages**: drop, or keep as extra tables outside the schema?
 3. **Task comments**: new schema has `task_status_history` only; add a comments table?
 4. **Task categories** (9 HR tags): keep as a column, or drop?
-5. **Session storage:** keep `refresh_tokens` table or move to Redis (the schema has none)?
+5. **Session storage:** keep the `refresh_tokens` table (the schema has none)?
 6. **Scheduler and email provider** choice.
 7. **Existing data:** migrate it (script: `companies→orgs`, `users→users+org_members`, `admin→ceo`) or start fresh since it is probably demo data.

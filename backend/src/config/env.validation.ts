@@ -43,10 +43,6 @@ class EnvironmentVariables {
   @IsNotEmpty()
   DATABASE_URL: string;
 
-  @IsString()
-  @IsNotEmpty()
-  REDIS_URL: string;
-
   @IsUrl({ require_tld: false })
   FRONTEND_URL: string;
 
