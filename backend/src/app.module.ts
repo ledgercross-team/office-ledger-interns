@@ -39,7 +39,7 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['../.env.local', '.env.local', '.env'],
+      envFilePath: ['../.env', '.env.local', '.env'],
       validate: validateEnvironment,
     }),
     RedisModule,
