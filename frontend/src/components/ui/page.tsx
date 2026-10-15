@@ -165,7 +165,9 @@ export function CommandPalette({ items, trigger }: { items: CommandItem[]; trigg
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search pages, people, projects and tasks"
-              className="min-h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-fg-subtle"
+              // Inline: the global :focus-visible ring is unlayered and outranks utility classes.
+              style={{ outline: 'none' }}
+              className="min-h-12 flex-1 bg-transparent text-sm placeholder:text-fg-subtle"
             />
           </div>
           <div className="max-h-80 overflow-y-auto py-2">

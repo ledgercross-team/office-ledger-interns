@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'next/navigation';
-import { Search } from 'lucide-react';
+import { ArrowLeft, Search } from 'lucide-react';
 import { Breadcrumbs, Button, CommandPalette, type CommandItem } from '@/components/ui';
 import { ROUTE_LABELS, navItemsFor } from './app-nav';
 import { NotificationBell } from './notification-bell';
@@ -94,12 +94,32 @@ function usePaletteItems(role: HrmsRole | null): CommandItem[] {
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
   const pathname = usePathname();
   const { session } = useHrmsAuth();
+  const router = useRouter();
   const paletteItems = usePaletteItems(session?.role ?? null);
+  const trail = crumbs(pathname);
+  const parent = trail.length > 1 ? trail[trail.length - 2].href : '/';
+
+  function goBack() {
+    // A page opened directly (no history) falls back to its parent so Back never dead-ends.
+    if (window.history.length > 1) router.back();
+    else router.push(parent ?? '/');
+  }
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-surface">
       <div className="mx-auto flex min-h-14 w-full max-w-[1280px] items-center gap-2 px-3 sm:px-6">
         <NavDrawerTrigger onOpen={onOpenNav} />
+        {pathname !== '/' && (
+          <Button
+            variant="ghost"
+            iconOnly
+            aria-label="Go back"
+            onClick={goBack}
+            className="lg:hidden"
+          >
+            <ArrowLeft aria-hidden className="size-5" />
+          </Button>
+        )}
         <div className="hidden min-w-0 flex-1 md:block">
           <Breadcrumbs items={crumbs(pathname)} />
         </div>

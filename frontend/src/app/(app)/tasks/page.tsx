@@ -1,17 +1,18 @@
 'use client';
 
-import { Pagination } from '@/components/ui';
+import { Plus } from 'lucide-react';
+import { Button, Pagination } from '@/components/ui';
+import { StatusChips, TaskRow } from '@/components/hrms/project-card';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { TaskFlags, TaskStatusBadge, UrgencyBadge } from '@/components/hrms/task-badges';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
-import { TASK_STATUS_LABELS } from '@/lib/hrms/task-meta';
 import type { HrmsProject, HrmsTask, Paginated } from '@/lib/hrms/types';
 
-const select = 'rounded-xl border border-charcoal/15 px-3 py-2 text-sm';
+const select =
+  'min-h-10 w-full min-w-0 rounded-control border border-border bg-surface px-3 py-2 text-sm';
 
 function TasksList() {
   const { session } = useHrmsAuth();
@@ -43,7 +44,8 @@ function TasksList() {
     queryFn: () => hrmsFetch<Paginated<HrmsProject>>('/projects?pageSize=100'),
     enabled,
   });
-  const canCreate = session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
+  const canCreate =
+    session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
   const reset = (fn: () => void) => {
     fn();
     setPage(1);
@@ -51,20 +53,25 @@ function TasksList() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-charcoal">Tasks</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Tasks</h1>
         {canCreate && (
-          <Link
-            href={`/tasks/new${projectId ? `?projectId=${projectId}` : ''}`}
-            className="rounded-xl bg-evergreen px-3 py-2 text-sm font-medium text-white hover:bg-evergreen-dark"
-          >
-            New task
-          </Link>
+          <Button asChild>
+            <Link href={`/tasks/new${projectId ? `?projectId=${projectId}` : ''}`}>
+              <Plus aria-hidden className="size-4" />
+              New task
+            </Link>
+          </Button>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <select aria-label="Project" value={projectId} onChange={(e) => reset(() => setProjectId(e.target.value))} className={select}>
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        <select
+          aria-label="Project"
+          value={projectId}
+          onChange={(e) => reset(() => setProjectId(e.target.value))}
+          className={select}
+        >
           <option value="">All projects</option>
           {projects.data?.items.map((p) => (
             <option key={p.id} value={p.id}>
@@ -72,71 +79,80 @@ function TasksList() {
             </option>
           ))}
         </select>
-        <select aria-label="Status" value={status} onChange={(e) => reset(() => setStatus(e.target.value))} className={select}>
-          <option value="">Any status</option>
-          {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <select aria-label="Urgency" value={urgency} onChange={(e) => reset(() => setUrgency(e.target.value))} className={select}>
+
+        <select
+          aria-label="Urgency"
+          value={urgency}
+          onChange={(e) => reset(() => setUrgency(e.target.value))}
+          className={select}
+        >
           <option value="">Any urgency</option>
           <option value="high">High</option>
           <option value="medium">Medium</option>
           <option value="low">Low</option>
         </select>
-        <select aria-label="Flag" value={flag} onChange={(e) => reset(() => setFlag(e.target.value))} className={select}>
+        <select
+          aria-label="Flag"
+          value={flag}
+          onChange={(e) => reset(() => setFlag(e.target.value))}
+          className={select}
+        >
           <option value="">No flag filter</option>
           <option value="overdue">Overdue</option>
           <option value="no_assignee">No assignee</option>
           <option value="no_manager">No manager</option>
           <option value="no_employee">No employee</option>
         </select>
-        <label className="flex items-center gap-1 text-sm text-charcoal">
-          <input type="checkbox" checked={mine} onChange={(e) => reset(() => setMine(e.target.checked))} />
-          Mine
-        </label>
-        <label className="flex items-center gap-1 text-sm text-charcoal">
-          <input type="checkbox" checked={open} onChange={(e) => reset(() => setOpen(e.target.checked))} />
-          Open only
-        </label>
+        <div className="col-span-2 flex flex-wrap items-center gap-x-5 gap-y-2 md:col-span-4">
+          <label className="flex items-center gap-2 text-sm text-fg">
+            <input
+              type="checkbox"
+              checked={mine}
+              onChange={(e) => reset(() => setMine(e.target.checked))}
+            />
+            Mine
+          </label>
+          <label className="flex items-center gap-2 text-sm text-fg">
+            <input
+              type="checkbox"
+              checked={open}
+              onChange={(e) => reset(() => setOpen(e.target.checked))}
+            />
+            Open only
+          </label>
+        </div>
       </div>
 
-      {tasks.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
+      <StatusChips
+        value={status}
+        onChange={(v) => reset(() => setStatus(v))}
+        anyLabel="Any status"
+        statuses={['todo', 'in_progress', 'in_review', 'done', 'blocked', 'cancelled']}
+      />
+
+      {tasks.isLoading && <p className="text-sm text-fg-muted">Loading…</p>}
       {tasks.error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {(tasks.error as Error).message}
         </p>
       )}
 
-      <ul className="space-y-2">
-        {tasks.data?.items.map((t) => (
-          <li key={t.id} className="space-y-1 rounded-2xl border border-charcoal/10 bg-white p-3">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <Link href={`/tasks/${t.id}`} className="font-medium text-forest hover:underline">
-                {t.title}
-              </Link>
-              <span className="flex flex-wrap gap-1">
-                <UrgencyBadge urgency={t.urgency} />
-                <TaskStatusBadge status={t.status} />
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-charcoal-soft">
-              <span>{t.projectName}</span>
-              <span>Due {t.dueAt.slice(0, 10)}</span>
-              <span>
-                {t.assignees.length === 0 ? 'Nobody assigned' : t.assignees.map((a) => a.fullName).join(', ')}
-              </span>
-              <TaskFlags flags={t.flags} />
-            </div>
-          </li>
-        ))}
-      </ul>
-      {tasks.data?.items.length === 0 && <p className="text-sm text-charcoal-soft">No tasks match.</p>}
+      {tasks.data && tasks.data.items.length > 0 && (
+        <ul className="space-y-0.5 rounded-card bg-surface-raised p-2">
+          {tasks.data.items.map((t) => (
+            <TaskRow key={t.id} task={t} showProject />
+          ))}
+        </ul>
+      )}
+      {tasks.data?.items.length === 0 && <p className="text-sm text-fg-muted">No tasks match.</p>}
 
       {tasks.data && (
-        <Pagination page={page} pageSize={tasks.data.pageSize} total={tasks.data.total} onPage={setPage} />
+        <Pagination
+          page={page}
+          pageSize={tasks.data.pageSize}
+          total={tasks.data.total}
+          onPage={setPage}
+        />
       )}
     </>
   );

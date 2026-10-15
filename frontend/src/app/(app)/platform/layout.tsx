@@ -71,8 +71,8 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
         </a>
         <div className="flex min-h-screen">
           <aside className="sticky top-0 hidden h-screen w-60 shrink-0 border-r border-border bg-surface p-3 md:block">
-            <nav aria-label="Platform">
-              <p className="px-2 pb-3 text-sm font-semibold text-fg">Platform console</p>
+            <nav aria-label="Platform" className="h-full rounded-card bg-rail p-3 text-rail-fg">
+              <p className="px-2 pb-3 text-sm font-bold text-rail-fg">Platform console</p>
               <ul className="space-y-1">
                 {ITEMS.map((item) => {
                   const active =
@@ -86,10 +86,10 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
                         href={item.href}
                         aria-current={active ? 'page' : undefined}
                         className={cn(
-                          'flex min-h-10 items-center gap-3 rounded-control px-3 py-2 text-sm font-medium',
+                          'flex min-h-10 items-center gap-3 rounded-full px-3 py-2 text-sm font-medium',
                           active
-                            ? 'bg-primary-soft text-primary'
-                            : 'text-fg-muted hover:bg-surface-sunken hover:text-fg',
+                            ? 'bg-surface font-bold text-fg shadow-sm'
+                            : 'text-rail-fg hover:bg-surface/50',
                         )}
                       >
                         <Icon aria-hidden className="size-5 shrink-0" />

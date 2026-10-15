@@ -10,7 +10,7 @@ import { formatDateTime } from '@/lib/hrms/time';
 import type { EmailPref, NotificationsPage } from '@/lib/hrms/types';
 
 const secondary =
-  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+  'rounded-full border border-border-strong bg-surface px-4 py-1.5 text-sm font-medium transition-[background-color,transform] hover:bg-surface-sunken active:scale-95 disabled:opacity-60';
 
 const LINKS: Record<string, string> = {
   requests: '/requests',
@@ -33,13 +33,13 @@ function EmailPrefs() {
     onError: (e) => setError(e instanceof HrmsApiError ? e.message : 'Something went wrong.'),
   });
   return (
-    <section className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-4">
-      <h2 className="font-medium text-charcoal">Email</h2>
-      <p className="text-xs text-charcoal-soft">
+    <section className="space-y-2 rounded-card border border-border bg-surface p-4">
+      <h2 className="font-medium text-fg">Email</h2>
+      <p className="text-xs text-fg-muted">
         Requests waiting for your decision are always emailed. Everything else you can mute.
       </p>
       {prefs.data?.items.map((p) => (
-        <label key={p.kind} className="flex items-center gap-2 text-sm text-charcoal">
+        <label key={p.kind} className="flex items-center gap-2 text-sm text-fg">
           <input
             type="checkbox"
             checked={!p.muted}
@@ -50,7 +50,7 @@ function EmailPrefs() {
         </label>
       ))}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {error}
         </p>
       )}
@@ -80,7 +80,7 @@ export default function NotificationsPage() {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold text-charcoal">Notifications</h1>
+        <h1 className="text-2xl font-bold text-fg">Notifications</h1>
         <button
           type="button"
           disabled={readAll.isPending || !list.data?.unread}
@@ -91,7 +91,7 @@ export default function NotificationsPage() {
         </button>
       </div>
       {list.data && list.data.items.length === 0 && (
-        <p className="text-sm text-charcoal-soft">Nothing yet.</p>
+        <p className="text-sm text-fg-muted">Nothing yet.</p>
       )}
       <ul className="space-y-2">
         {list.data?.items.map((n) => {
@@ -99,16 +99,16 @@ export default function NotificationsPage() {
           return (
             <li
               key={n.id}
-              className={`space-y-1 rounded-2xl border p-3 ${
-                n.readAt ? 'border-charcoal/10 bg-white' : 'border-evergreen/30 bg-mist'
+              className={`space-y-1 rounded-card border p-4 ${
+                n.readAt ? 'border-border bg-surface' : 'border-primary/30 bg-primary-soft/50'
               }`}
             >
-              <p className="text-sm font-medium text-charcoal">{n.title}</p>
-              {n.body && <p className="text-sm text-charcoal">{n.body}</p>}
-              <div className="flex flex-wrap items-center gap-3 text-xs text-charcoal-soft">
+              <p className="text-sm font-medium text-fg">{n.title}</p>
+              {n.body && <p className="text-sm text-fg">{n.body}</p>}
+              <div className="flex flex-wrap items-center gap-3 text-xs text-fg-muted">
                 <span>{formatDateTime(n.createdAt)}</span>
                 {href && (
-                  <Link href={href} className="text-forest hover:underline">
+                  <Link href={href} className="text-primary hover:underline">
                     Open
                   </Link>
                 )}
@@ -116,7 +116,7 @@ export default function NotificationsPage() {
                   <button
                     type="button"
                     onClick={() => read.mutate(n.id)}
-                    className="text-forest hover:underline"
+                    className="text-primary hover:underline"
                   >
                     Mark read
                   </button>
