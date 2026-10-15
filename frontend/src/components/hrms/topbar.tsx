@@ -107,7 +107,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-surface">
-      <div className="mx-auto flex min-h-14 w-full max-w-[1280px] items-center gap-2 px-3 sm:px-6">
+      <div className="flex min-h-14 w-full items-center gap-2 px-3 sm:px-6">
         <NavDrawerTrigger onOpen={onOpenNav} />
         {pathname !== '/' && (
           <Button
