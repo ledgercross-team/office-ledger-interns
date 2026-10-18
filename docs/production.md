@@ -94,13 +94,12 @@ Run before starting the new backend, from the checkout you are deploying, as the
 HRMS_MIGRATE_DATABASE_URL=postgres://<owner>@host/office_ledger_hrms pnpm db:migrate
 ```
 
-- It applies `docs/hrms/hrms_schema.sql`, then the numbered files in order, each once,
-  recorded in `public.hrms_migration_log` with a checksum.
-- It stops if an applied file changed on disk. Never edit an applied file; add a new
-  numbered one.
-- Take a `pg_dump` first when the release contains a new file (see [Backups](#backups)).
-- Prefer changes that are compatible with the previous release, so a rollback of the app
-  does not need a database rollback.
+- It applies the consolidated `docs/hrms/hrms_schema.sql` once and records it in
+  `public.hrms_migration_log` with a checksum.
+- The current workflow treats the consolidated file as a fresh-database bootstrap. Back up
+  the database before replacing it, and test the schema on a throwaway database first.
+- Rebuild the database when the schema changes; the application must not connect during the
+  reset.
 - Never run `docs/hrms/hrms_rule_tests.sql` on this database. It adds sample data and
   changes plan limits.
 

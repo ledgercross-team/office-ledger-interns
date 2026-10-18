@@ -42,9 +42,10 @@ pnpm db:migrate               # owner login: HRMS_MIGRATE_DATABASE_URL
 pnpm db:seed                  # development only; uses SEED_DEMO_PASSWORD
 ```
 
-The API itself connects as `hrms_api` (`DATABASE_URL`), never as the owner. Applied SQL files
-are immutable: changes after launch are new numbered files in `docs/hrms/`, applied by
-`pnpm db:migrate`. Never run `docs/hrms/hrms_rule_tests.sql` on a real database.
+The API itself connects as `hrms_api` (`DATABASE_URL`), never as the owner. The current HRMS
+database is defined by the single consolidated `docs/hrms/hrms_schema.sql` file and applied by
+`pnpm db:migrate`. Rebuild the database from that file when the schema changes. Never run
+`docs/hrms/hrms_rule_tests.sql` on a real database.
 
 For integration tests create a throwaway database (name ending `_throwaway`), load the SQL
 files, and set `HRMS_TEST_APP_URL` and `HRMS_TEST_OWNER_URL`.

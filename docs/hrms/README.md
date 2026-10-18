@@ -2,8 +2,8 @@
 
 | File | What it is |
 |---|---|
-| `hrms_schema.sql` | The schema: 30 tables, 11 views, triggers, functions and row-level security. Needs PostgreSQL 15 or newer. |
-| `0002_auth_sessions.sql` | Login sessions and one-time email links (2 more tables). Run it after the first file. |
+| `hrms_schema.sql` | The complete consolidated schema: tables, views, triggers, functions, migrations and row-level security. Needs PostgreSQL 15 or newer. |
+| `migrations-archive/` | Historical numbered migration files retained for reference; they are not applied by the current runner. |
 | `hrms_rule_tests.sql` | 116 checks. **Run only on a throwaway database.** It adds sample data and changes plan limits. |
 | `RUNBOOK.md` | The migration plan: 16 phases, gates and a prompt for Claude Code at each one. |
 | `er-diagram.md` | The entity-relationship diagrams as Mermaid, generated from the live database. |
@@ -12,7 +12,6 @@
 ```
 createdb office_ledger_hrms
 psql -d office_ledger_hrms -v ON_ERROR_STOP=1 -f hrms_schema.sql
-psql -d office_ledger_hrms -v ON_ERROR_STOP=1 -f 0002_auth_sessions.sql
 ```
 Then create the login role the app uses:
 ```

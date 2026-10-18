@@ -1,3 +1,5 @@
+
+-- ===== BEGIN docs/hrms/hrms_schema.sql =====
 -- =====================================================================
 -- Office Ledger HRMS: PostgreSQL schema (implements plan-v3.md)
 -- Target: PostgreSQL 15+
@@ -2228,4 +2230,984 @@ GRANT SELECT ON v_rating_summary TO hrms_app;
 GRANT EXECUTE ON FUNCTION list_active_org_ids, my_memberships, gm_list_orgs, gm_create_org, gm_set_org_blocked,
     gm_list_platform_requests, gm_verify_platform_request, gm_complete_remove_last_ceo, gm_set_org_plan TO hrms_app;
 
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0002_auth_sessions.sql =====
+-- =====================================================================
+-- 0002: login sessions (refresh tokens) and one-time email links for the new backend.
+-- Run after hrms_schema.sql. The first schema file has no session table,
+-- and the old app's refresh_tokens table lives in the old database.
+-- Same design as the old one: only a hash of the token is stored; each
+-- refresh replaces the token and a reused token revokes the whole chain.
+-- No row-level security: a session belongs to a user, not to one org.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+CREATE TABLE refresh_tokens (
+    id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       uuid        NOT NULL REFERENCES users(id),
+    token_hash    text        NOT NULL UNIQUE,         -- SHA-256 of the opaque token
+    member_id     uuid,                                -- the org membership active in this session
+    expires_at    timestamptz NOT NULL,
+    revoked_at    timestamptz,
+    replaced_by   uuid REFERENCES refresh_tokens(id),
+    ip_address    inet,
+    user_agent    text,
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    CHECK (expires_at > created_at)
+);
+CREATE INDEX refresh_tokens_user_idx ON refresh_tokens (user_id) WHERE revoked_at IS NULL;
+
+-- One-time links by email: a new person's first password, or a password reset.
+CREATE TABLE password_resets (
+    id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     uuid        NOT NULL REFERENCES users(id),
+    purpose     text        NOT NULL CHECK (purpose IN ('invite', 'reset', 'ceo_recovery')),
+    token_hash  text        NOT NULL UNIQUE,         -- SHA-256 of the token that is in the email link
+    expires_at  timestamptz NOT NULL,
+    used_at     timestamptz,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    CHECK (expires_at > created_at)
+);
+CREATE INDEX password_resets_user_idx ON password_resets (user_id) WHERE used_at IS NULL;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON refresh_tokens TO hrms_app;
+GRANT SELECT, INSERT, UPDATE ON password_resets TO hrms_app;
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0003_ratings_given.sql =====
+-- =====================================================================
+-- 0003: which people the signed-in member has already rated on a project.
+-- The app role cannot read project_ratings (ratings are anonymous), so the
+-- "ratings due" screen needs this. It returns only the caller's OWN given
+-- ratings: who they rated, never what anyone else rated.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+CREATE FUNCTION my_given_ratings(p_project uuid)
+RETURNS TABLE (ratee_member_id uuid)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = hrms, public AS $$
+    SELECT r.ratee_member_id
+      FROM project_ratings r
+     WHERE r.project_id = p_project
+       AND r.org_id = current_org_id()
+       AND r.rater_member_id = current_member_id()
+$$;
+
+GRANT EXECUTE ON FUNCTION my_given_ratings(uuid) TO hrms_app;
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0004_job_runs.sql =====
+-- =====================================================================
+-- 0004: when each scheduled job last ran.
+-- Every API instance wakes up on its own timer. A job runs only when its
+-- interval has passed here, and only under an advisory lock, so two copies
+-- of the API run each job once. No row-level security: a job belongs to the
+-- platform, not to one org.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+CREATE TABLE job_runs (
+    job          text        PRIMARY KEY,
+    last_run_at  timestamptz NOT NULL DEFAULT 'epoch',
+    last_result  jsonb
+);
+
+GRANT SELECT, INSERT, UPDATE ON job_runs TO hrms_app;
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0005_gm_creator_may_confirm.sql =====
+-- =====================================================================
+-- 0005: the gameMaster who added a new gameMaster may also confirm them.
+-- Still refused: the person confirming themselves, and a confirmer who is
+-- not an active gameMaster (trg_gm_confirmer_active).
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+ALTER TABLE game_masters DROP CONSTRAINT game_masters_check;
+
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0006_checkin_ip_optional.sql =====
+-- =====================================================================
+-- 0006: office IP check-in is only enforced when the CEO or COO has set
+-- office networks. An org with none accepts check-in from anywhere.
+--   * trg_attendance_guard skips the network test when the org has no
+--     org_office_networks rows.
+--   * a present/late day no longer needs a recorded address (the API still
+--     records it whenever it can read one).
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+ALTER TABLE attendance_days DROP CONSTRAINT attendance_days_check;
+ALTER TABLE attendance_days ADD CONSTRAINT attendance_days_present_has_checkin
+    CHECK (status NOT IN ('present', 'late') OR check_in_at IS NOT NULL);
+
+CREATE OR REPLACE FUNCTION trg_attendance_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    v_s       org_settings%ROWTYPE;
+    v_local   time;
+    v_correct boolean := NEW.corrected_by_request IS NOT NULL
+                         AND (TG_OP = 'INSERT' OR NEW.corrected_by_request IS DISTINCT FROM OLD.corrected_by_request);
+BEGIN
+    SELECT * INTO v_s FROM org_settings WHERE org_id = NEW.org_id;
+
+    -- check-in must come from an office network, but only when the org has set any
+    IF NEW.check_in_at IS NOT NULL AND (TG_OP = 'INSERT' OR NEW.check_in_at IS DISTINCT FROM OLD.check_in_at) THEN
+        IF v_correct THEN
+            IF NOT EXISTS (SELECT 1 FROM requests r WHERE r.id = NEW.corrected_by_request
+                              AND r.type = 'attendance_correction' AND r.status IN ('approved', 'applied')) THEN
+                RAISE EXCEPTION 'Corrections need an approved attendance_correction request';
+            END IF;
+        ELSIF EXISTS (SELECT 1 FROM org_office_networks n WHERE n.org_id = NEW.org_id)
+              AND NOT EXISTS (SELECT 1 FROM org_office_networks n
+                               WHERE n.org_id = NEW.org_id AND NEW.check_in_ip <<= n.network) THEN
+            RAISE EXCEPTION 'Check-in is only allowed from the office network';
+        END IF;
+        IF NOT is_system() AND NOT v_correct AND NEW.member_id <> current_member_id() THEN
+            RAISE EXCEPTION 'People check in for themselves only';
+        END IF;
+        -- on time or late
+        v_local := (NEW.check_in_at AT TIME ZONE v_s.timezone)::time;
+        NEW.status := CASE WHEN v_local > v_s.work_start_time + make_interval(mins => v_s.late_grace_minutes)
+                           THEN 'late' ELSE 'present' END::attendance_status;
+    END IF;
+    IF TG_OP = 'UPDATE' AND NOT is_system() AND NOT v_correct
+       AND NEW.member_id <> current_member_id() THEN
+        RAISE EXCEPTION 'Attendance is changed only by its owner (check-out) or through a correction';
+    END IF;
+    IF v_correct THEN NEW.auto_checked_out := false; END IF;
+    RETURN NEW;
+END $$;
+
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0007_mfa_backup_codes.sql =====
+-- =====================================================================
+-- 0007: authenticator sign-in is opt-in per person (Profile → Security).
+-- Backup codes are single-use stand-ins for the 6-digit code, kept as
+-- hashes only. Not audited: the codes are credentials.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+CREATE TABLE user_mfa_backup_codes (
+    user_id    uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    code_hash  text        NOT NULL,
+    used_at    timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, code_hash)
+);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON user_mfa_backup_codes TO hrms_app;
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0008_must_change_password.sql =====
+-- =====================================================================
+-- 0008: a person given a temporary password (a new gameMaster) must
+-- choose their own before doing anything else.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+ALTER TABLE users ADD COLUMN must_change_password boolean NOT NULL DEFAULT false;
+
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0009_gm_manage_people.sql =====
+-- =====================================================================
+-- 0009: a gameMaster manages gameMasters and an org's CEOs.
+-- CEOs are reached only through these functions (identity and status,
+-- never org data): the gameMaster's session has no org, so row-level
+-- security hides everything else.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+CREATE FUNCTION gm_list_org_ceos(p_org uuid)
+RETURNS TABLE (member_id uuid, user_id uuid, full_name text, email text, status text)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = hrms, public AS $$
+BEGIN
+    PERFORM gm_assert();
+    RETURN QUERY
+    SELECT m.id, m.user_id, u.full_name, u.email::text, m.status::text
+      FROM org_members m JOIN users u ON u.id = m.user_id
+     WHERE m.org_id = p_org AND m.role = 'ceo'
+     ORDER BY u.full_name;
+END $$;
+
+-- The user behind a CEO membership. Anything that is not a CEO is refused.
+CREATE FUNCTION gm_ceo_user(p_member uuid) RETURNS uuid
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE v_user uuid;
+BEGIN
+    PERFORM gm_assert();
+    SELECT user_id INTO v_user FROM org_members WHERE id = p_member AND role = 'ceo';
+    IF v_user IS NULL THEN RAISE EXCEPTION 'That person is not a CEO.'; END IF;
+    RETURN v_user;
+END $$;
+
+-- Deactivates a CEO. The database still refuses the org's last active CEO.
+CREATE FUNCTION gm_deactivate_ceo(p_member uuid) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE v_org uuid;
+BEGIN
+    PERFORM gm_assert();
+    SELECT org_id INTO v_org FROM org_members WHERE id = p_member AND role = 'ceo' AND status <> 'deactivated';
+    IF v_org IS NULL THEN RAISE EXCEPTION 'That CEO is not active.'; END IF;
+    PERFORM set_config('app.org_id', v_org::text, true);
+    UPDATE org_members SET status = 'deactivated', deactivated_at = now() WHERE id = p_member;
+END $$;
+
+GRANT EXECUTE ON FUNCTION gm_list_org_ceos, gm_ceo_user, gm_deactivate_ceo TO hrms_app;
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0010_gm_deactivate_ceo_keeps_last.sql =====
+-- =====================================================================
+-- 0010: gm_deactivate_ceo must never remove an org's last active CEO.
+-- The row trigger skips system callers, so the function checks itself.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+CREATE OR REPLACE FUNCTION gm_deactivate_ceo(p_member uuid) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE v_org uuid;
+BEGIN
+    PERFORM gm_assert();
+    SELECT org_id INTO v_org FROM org_members WHERE id = p_member AND role = 'ceo' AND status <> 'deactivated';
+    IF v_org IS NULL THEN RAISE EXCEPTION 'That CEO is not active.'; END IF;
+    IF NOT EXISTS (SELECT 1 FROM org_members
+                    WHERE org_id = v_org AND role = 'ceo' AND status = 'active' AND id <> p_member) THEN
+        RAISE EXCEPTION 'An org must always have at least one active CEO. Removing the last CEO goes through a platform request.';
+    END IF;
+    PERFORM set_config('app.org_id', v_org::text, true);
+    UPDATE org_members SET status = 'deactivated', deactivated_at = now() WHERE id = p_member;
+END $$;
+
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0011_employee_code_permanent.sql =====
+-- =====================================================================
+-- 0011: every member gets a unique employee code that never changes.
+--   * a new member without a code takes the org's next one (EMP-0001, ...)
+--   * people who have none yet are numbered by join date
+--   * a code that is set cannot be changed or cleared
+-- Numbers are never reused: deactivated members keep their row and code.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+CREATE FUNCTION next_employee_code(p_org uuid) RETURNS text
+LANGUAGE plpgsql AS $$
+DECLARE v_n integer;
+BEGIN
+    PERFORM pg_advisory_xact_lock(hashtext('employee_code'), hashtext(p_org::text));
+    SELECT coalesce(max(substring(employee_code from '^EMP-([0-9]+)$')::int), 0) + 1
+      INTO v_n FROM org_members WHERE org_id = p_org;
+    RETURN 'EMP-' || lpad(v_n::text, 4, '0');
+END $$;
+
+CREATE FUNCTION trg_member_code_assign() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.employee_code IS NULL OR btrim(NEW.employee_code) = '' THEN
+        NEW.employee_code := next_employee_code(NEW.org_id);
+    END IF;
+    RETURN NEW;
+END $$;
+CREATE TRIGGER member_code_assign BEFORE INSERT ON org_members
+    FOR EACH ROW EXECUTE FUNCTION trg_member_code_assign();
+
+CREATE FUNCTION trg_member_code_permanent() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.employee_code IS NOT NULL AND NEW.employee_code IS DISTINCT FROM OLD.employee_code THEN
+        RAISE EXCEPTION 'The employee code is permanent and cannot be changed.';
+    END IF;
+    RETURN NEW;
+END $$;
+CREATE TRIGGER member_code_permanent BEFORE UPDATE OF employee_code ON org_members
+    FOR EACH ROW EXECUTE FUNCTION trg_member_code_permanent();
+
+-- Number the people who have no code yet, oldest first.
+DO $$
+DECLARE r record;
+BEGIN
+    FOR r IN SELECT id, org_id FROM org_members WHERE employee_code IS NULL ORDER BY joined_at, id LOOP
+        UPDATE org_members SET employee_code = next_employee_code(r.org_id) WHERE id = r.id;
+    END LOOP;
+END $$;
+
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0012_mfa_setup_required.sql =====
+-- =====================================================================
+-- 0012: a CEO or COO can require someone to set up the authenticator.
+-- The person signs in with their password, is sent to Profile → Security,
+-- and cannot use anything else until they have scanned and confirmed a
+-- code. The admin never sees the secret.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+ALTER TABLE users ADD COLUMN mfa_setup_required boolean NOT NULL DEFAULT false;
+
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0013_rating_summary_ceo_coo_only.sql =====
+-- =====================================================================
+-- 0013: the rating-average view answers only CEOs and COOs (and the
+-- system jobs). It runs with the owner's rights on purpose, so without
+-- this a person could read their own average if any query ever touched it.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+CREATE OR REPLACE VIEW v_rating_summary AS
+SELECT r.org_id, r.ratee_member_id AS member_id,
+       count(*) AS rating_count, round(avg(r.stars), 2) AS rating_avg
+  FROM project_ratings r JOIN org_settings s ON s.org_id = r.org_id
+ WHERE r.org_id = current_org_id()
+   AND (is_system() OR is_ceo_or_coo(current_member_id()))
+   AND r.created_at >= now() - interval '12 months'
+ GROUP BY r.org_id, r.ratee_member_id, s.rating_min_count
+HAVING count(*) >= s.rating_min_count;
+
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0014_early_task_bonus.sql =====
+-- =====================================================================
+-- 0014: early-finish bonus. A task finished strictly before its deadline
+-- earns +1 point on the 0-100 performance score for every manager and
+-- employee assigned to it, over the same rolling 30 days, capped at 100.
+-- The band is decided after the bonus. early_tasks keeps the count so the
+-- CEO and COO can see where the points came from.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+ALTER TABLE performance_scores ADD COLUMN early_tasks integer NOT NULL DEFAULT 0;
+
+CREATE OR REPLACE FUNCTION job_compute_performance(p_org uuid, p_as_of date) RETURNS integer
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE
+    s        org_settings%ROWTYPE;
+    m        record;
+    v_start  date := p_as_of - 29;
+    d        date;
+    v_w      numeric; v_pts numeric;
+    v_att    numeric; v_rat numeric; v_ont numeric;
+    v_cnt    integer; v_sum numeric; v_orgavg numeric; v_avg numeric;
+    v_tot    integer; v_ok integer; v_early integer;
+    v_wsum   numeric; v_final numeric; v_band performance_band;
+    v_day    attendance_days%ROWTYPE;
+    v_leave  record;
+    n        integer := 0;
+BEGIN
+    IF p_org IS DISTINCT FROM current_org_id() THEN
+        RAISE EXCEPTION 'Run the job with app.org_id set to the org being scored';
+    END IF;
+    SELECT * INTO s FROM org_settings WHERE org_id = p_org;
+    SELECT coalesce(avg(stars), 3) INTO v_orgavg FROM project_ratings
+     WHERE org_id = p_org AND created_at >= p_as_of - interval '12 months';
+
+    FOR m IN SELECT * FROM org_members WHERE org_id = p_org AND status = 'active' AND role IN ('manager', 'employee') LOOP
+        -- A. attendance
+        v_w := 0; v_pts := 0;
+        d := greatest(v_start, (m.joined_at AT TIME ZONE s.timezone)::date);
+        WHILE d <= p_as_of LOOP
+            IF NOT is_weekend_or_holiday(p_org, d) THEN
+                SELECT l.is_paid, l.over_allowance INTO v_leave FROM v_approved_leave l
+                 WHERE l.member_id = m.id AND d BETWEEN l.start_date AND l.end_date LIMIT 1;
+                IF FOUND AND v_leave.is_paid AND NOT v_leave.over_allowance THEN
+                    NULL;                                   -- paid leave: neutral, not a working day
+                ELSIF FOUND THEN
+                    v_w := v_w + 1; v_pts := v_pts + s.points_unpaid_leave;
+                ELSE
+                    v_w := v_w + 1;
+                    SELECT * INTO v_day FROM attendance_days WHERE member_id = m.id AND work_date = d;
+                    IF FOUND AND v_day.status IN ('present', 'late') THEN
+                        v_pts := v_pts + least(
+                            CASE WHEN v_day.status = 'late' THEN s.points_late ELSE 1 END,
+                            CASE WHEN v_day.auto_checked_out THEN s.points_missing_checkout ELSE 1 END);
+                    END IF;                                 -- absent / no row: 0
+                END IF;
+            END IF;
+            d := d + 1;
+        END LOOP;
+        v_att := CASE WHEN v_w > 0 THEN round(100 * v_pts / v_w, 2) END;
+
+        -- B. ratings (last 12 months, smoothed toward the org average)
+        SELECT count(*), coalesce(sum(stars), 0) INTO v_cnt, v_sum FROM project_ratings
+         WHERE ratee_member_id = m.id AND created_at >= p_as_of - interval '12 months';
+        IF v_cnt >= s.rating_min_count THEN
+            v_avg := (s.rating_prior_weight * v_orgavg + v_sum) / (s.rating_prior_weight + v_cnt);
+            v_rat := round((v_avg - 1) / 4 * 100, 2);
+        ELSE
+            v_avg := NULL; v_rat := NULL;
+        END IF;
+
+        -- C. on-time tasks: done in window + still open past due
+        SELECT count(*) FILTER (WHERE t.status = 'done' AND t.completed_at::date BETWEEN v_start AND p_as_of)
+             + count(*) FILTER (WHERE t.status NOT IN ('done', 'cancelled') AND t.due_at::date <= p_as_of),
+               count(*) FILTER (WHERE t.status = 'done' AND t.completed_at::date BETWEEN v_start AND p_as_of
+                                  AND t.completed_at <= t.due_at)
+          INTO v_tot, v_ok
+          FROM task_assignees ta JOIN tasks t ON t.id = ta.task_id
+         WHERE ta.member_id = m.id AND ta.removed_at IS NULL;
+        v_ont := CASE WHEN v_tot > 0 THEN round(100.0 * v_ok / v_tot, 2) END;
+
+        -- D. early bonus: +1 for every task finished strictly before its deadline (window as above),
+        --    for each manager and employee assigned to it
+        SELECT count(*) INTO v_early
+          FROM task_assignees ta JOIN tasks t ON t.id = ta.task_id
+         WHERE ta.member_id = m.id AND ta.removed_at IS NULL
+           AND t.status = 'done' AND t.completed_at::date BETWEEN v_start AND p_as_of
+           AND t.completed_at < t.due_at;
+
+        -- final: weights re-shared across the inputs that exist
+        v_wsum := (CASE WHEN v_att IS NOT NULL THEN s.weight_attendance ELSE 0 END)
+                + (CASE WHEN v_rat IS NOT NULL THEN s.weight_rating ELSE 0 END)
+                + (CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END);
+        IF v_wsum > 0 THEN
+            v_final := round(( coalesce(v_att, 0) * CASE WHEN v_att IS NOT NULL THEN s.weight_attendance ELSE 0 END
+                             + coalesce(v_rat, 0) * CASE WHEN v_rat IS NOT NULL THEN s.weight_rating ELSE 0 END
+                             + coalesce(v_ont, 0) * CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END) / v_wsum, 2);
+            v_final := least(100, v_final + v_early);        -- the early bonus, capped at 100
+            v_band := CASE WHEN v_final >= 85 THEN 'excellent' WHEN v_final >= 70 THEN 'good'
+                           WHEN v_final >= 50 THEN 'needs_attention' ELSE 'poor' END;
+        ELSE
+            v_final := NULL; v_band := NULL;
+        END IF;
+
+        INSERT INTO performance_scores (org_id, member_id, computed_on, window_start, working_days, attendance_points,
+                                        attendance_score, rating_count, rating_avg, rating_score,
+                                        ontime_total, ontime_on_time, ontime_score, final_score, band, is_new, has_ratings, early_tasks)
+        VALUES (p_org, m.id, p_as_of, v_start, v_w, v_pts, v_att, v_cnt, v_avg, v_rat,
+                v_tot, v_ok, v_ont, v_final, v_band,
+                m.joined_at > (p_as_of - 30)::timestamptz, v_cnt >= s.rating_min_count, v_early)
+        ON CONFLICT (member_id, computed_on) DO UPDATE SET
+            working_days = EXCLUDED.working_days, attendance_points = EXCLUDED.attendance_points,
+            attendance_score = EXCLUDED.attendance_score, rating_count = EXCLUDED.rating_count,
+            rating_avg = EXCLUDED.rating_avg, rating_score = EXCLUDED.rating_score,
+            ontime_total = EXCLUDED.ontime_total, ontime_on_time = EXCLUDED.ontime_on_time,
+            ontime_score = EXCLUDED.ontime_score, final_score = EXCLUDED.final_score,
+            band = EXCLUDED.band, is_new = EXCLUDED.is_new, has_ratings = EXCLUDED.has_ratings,
+            early_tasks = EXCLUDED.early_tasks;
+        n := n + 1;
+    END LOOP;
+    RETURN n;
+END $$;
+
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0015_messaging.sql =====
+-- =====================================================================
+-- 0015: internal messaging and anonymous reports.
+--
+-- Who may message whom (two-way, one person to one person):
+--   gameMaster <-> CEO, gameMaster <-> COO, CEO <-> COO,
+--   CEO <-> manager, COO <-> manager, COO <-> employee.
+-- Reports go from a COO, manager or employee to a CEO and may be
+-- anonymous: the sender is stored apart and is only readable by the
+-- sender through my_reports(). Nothing else ever returns it.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+-- ---- the hierarchy, in one place --------------------------------------
+CREATE FUNCTION messaging_pair_allowed(a text, b text) RETURNS boolean
+LANGUAGE sql IMMUTABLE AS $$
+    SELECT (least(a COLLATE "C", b COLLATE "C"), greatest(a COLLATE "C", b COLLATE "C")) IN (
+        ('ceo', 'gameMaster'), ('coo', 'gameMaster'), ('ceo', 'coo'),
+        ('ceo', 'manager'), ('coo', 'manager'), ('coo', 'employee'))
+$$;
+
+-- A person's messaging role: gameMaster, or their active role in the org. NULL when inactive.
+CREATE FUNCTION message_role_of(p_user uuid, p_org uuid) RETURNS text
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = hrms, public AS $$
+    SELECT CASE
+        WHEN EXISTS (SELECT 1 FROM game_masters WHERE user_id = p_user AND status = 'active') THEN 'gameMaster'
+        ELSE (SELECT m.role::text FROM org_members m
+               WHERE m.user_id = p_user AND m.org_id = p_org AND m.status = 'active')
+    END
+$$;
+
+-- ---- conversations and messages ---------------------------------------
+CREATE TABLE conversations (
+    id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id          uuid NOT NULL REFERENCES orgs(id),
+    user_lo         uuid NOT NULL REFERENCES users(id),
+    user_hi         uuid NOT NULL REFERENCES users(id),
+    created_by      uuid NOT NULL REFERENCES users(id),
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    last_message_at timestamptz NOT NULL DEFAULT now(),
+    CHECK (user_lo < user_hi),
+    CHECK (created_by IN (user_lo, user_hi)),
+    UNIQUE (org_id, user_lo, user_hi)
+);
+CREATE INDEX conversations_lo_idx ON conversations (user_lo, last_message_at DESC);
+CREATE INDEX conversations_hi_idx ON conversations (user_hi, last_message_at DESC);
+
+CREATE TABLE messages (
+    id              bigserial PRIMARY KEY,
+    conversation_id uuid NOT NULL REFERENCES conversations(id),
+    org_id          uuid NOT NULL,
+    sender_user     uuid NOT NULL REFERENCES users(id),
+    body            text NOT NULL CHECK (length(btrim(body)) BETWEEN 1 AND 4000),
+    sent_at         timestamptz NOT NULL DEFAULT now(),
+    read_at         timestamptz
+);
+CREATE INDEX messages_conversation_idx ON messages (conversation_id, id);
+
+-- "Delete for me": hides a message from one person only.
+CREATE TABLE message_hidden (
+    message_id bigint NOT NULL REFERENCES messages(id),
+    user_id    uuid   NOT NULL REFERENCES users(id),
+    PRIMARY KEY (message_id, user_id)
+);
+
+CREATE FUNCTION trg_conversation_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE v_lo text; v_hi text;
+BEGIN
+    v_lo := message_role_of(NEW.user_lo, NEW.org_id);
+    v_hi := message_role_of(NEW.user_hi, NEW.org_id);
+    IF v_lo IS NULL OR v_hi IS NULL OR NOT messaging_pair_allowed(v_lo, v_hi) THEN
+        RAISE EXCEPTION 'You cannot message this person.';
+    END IF;
+    IF NEW.created_by IS DISTINCT FROM current_user_id() THEN
+        RAISE EXCEPTION 'A conversation is started by one of its two people.';
+    END IF;
+    RETURN NEW;
+END $$;
+CREATE TRIGGER conversation_guard BEFORE INSERT ON conversations
+    FOR EACH ROW EXECUTE FUNCTION trg_conversation_guard();
+
+CREATE FUNCTION trg_message_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE c conversations%ROWTYPE; v_lo text; v_hi text; v_status org_status;
+BEGIN
+    IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'Messages cannot be deleted'; END IF;
+    IF TG_OP = 'UPDATE' THEN
+        -- only read_at moves, and only by the person who received it
+        IF NEW.body IS DISTINCT FROM OLD.body OR NEW.sender_user IS DISTINCT FROM OLD.sender_user
+           OR NEW.conversation_id IS DISTINCT FROM OLD.conversation_id OR NEW.sent_at IS DISTINCT FROM OLD.sent_at THEN
+            RAISE EXCEPTION 'Messages cannot be edited';
+        END IF;
+        IF current_user_id() IS NOT NULL AND current_user_id() = OLD.sender_user THEN
+            RAISE EXCEPTION 'Only the person who received a message marks it read';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    SELECT * INTO c FROM conversations WHERE id = NEW.conversation_id;
+    IF NOT FOUND OR c.org_id <> NEW.org_id THEN RAISE EXCEPTION 'Conversation not found'; END IF;
+    IF NEW.sender_user NOT IN (c.user_lo, c.user_hi) THEN
+        RAISE EXCEPTION 'You are not part of this conversation';
+    END IF;
+    IF NEW.sender_user IS DISTINCT FROM current_user_id() THEN
+        RAISE EXCEPTION 'You can only send your own messages';
+    END IF;
+    v_lo := message_role_of(c.user_lo, c.org_id);
+    v_hi := message_role_of(c.user_hi, c.org_id);
+    IF v_lo IS NULL OR v_hi IS NULL THEN
+        RAISE EXCEPTION 'This conversation is closed because one person is no longer active.';
+    END IF;
+    IF NOT messaging_pair_allowed(v_lo, v_hi) THEN RAISE EXCEPTION 'You cannot message this person.'; END IF;
+    SELECT status INTO v_status FROM orgs WHERE id = c.org_id;
+    IF v_status = 'read_only' AND v_lo <> 'gameMaster' AND v_hi <> 'gameMaster' THEN
+        RAISE EXCEPTION 'This organisation is read-only until the subscription is renewed.';
+    END IF;
+    RETURN NEW;
+END $$;
+CREATE TRIGGER message_guard BEFORE INSERT OR UPDATE OR DELETE ON messages
+    FOR EACH ROW EXECUTE FUNCTION trg_message_guard();
+
+CREATE FUNCTION trg_message_touch() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    UPDATE conversations SET last_message_at = NEW.sent_at WHERE id = NEW.conversation_id;
+    RETURN NEW;
+END $$;
+CREATE TRIGGER message_touch AFTER INSERT ON messages
+    FOR EACH ROW EXECUTE FUNCTION trg_message_touch();
+
+-- ---- reports -----------------------------------------------------------
+CREATE TABLE reports (
+    id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id          uuid NOT NULL REFERENCES orgs(id),
+    ceo_user        uuid NOT NULL REFERENCES users(id),
+    subject         text NOT NULL CHECK (length(btrim(subject)) BETWEEN 1 AND 200),
+    is_anonymous    boolean NOT NULL,
+    reporter_name   text,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    last_message_at timestamptz NOT NULL DEFAULT now(),
+    CHECK (is_anonymous = (reporter_name IS NULL))
+);
+CREATE INDEX reports_ceo_idx ON reports (ceo_user, last_message_at DESC);
+
+CREATE TABLE report_messages (
+    id            bigserial PRIMARY KEY,
+    report_id     uuid NOT NULL REFERENCES reports(id),
+    org_id        uuid NOT NULL,
+    from_reporter boolean NOT NULL,
+    body          text NOT NULL CHECK (length(btrim(body)) BETWEEN 1 AND 4000),
+    sent_at       timestamptz NOT NULL DEFAULT now(),
+    read_at       timestamptz
+);
+CREATE INDEX report_messages_report_idx ON report_messages (report_id, id);
+
+-- The sender, kept apart. The app role has no access to this table.
+CREATE TABLE report_senders (
+    report_id   uuid PRIMARY KEY REFERENCES reports(id),
+    org_id      uuid NOT NULL,
+    sender_user uuid NOT NULL REFERENCES users(id)
+);
+
+-- ---- row-level security -------------------------------------------------
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY participants ON conversations
+    USING (org_id = current_org_id() AND current_user_id() IN (user_lo, user_hi))
+    WITH CHECK (org_id = current_org_id() AND current_user_id() IN (user_lo, user_hi));
+
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY participants ON messages
+    USING (org_id = current_org_id() AND EXISTS (
+        SELECT 1 FROM conversations c WHERE c.id = conversation_id AND current_user_id() IN (c.user_lo, c.user_hi)))
+    WITH CHECK (org_id = current_org_id() AND EXISTS (
+        SELECT 1 FROM conversations c WHERE c.id = conversation_id AND current_user_id() IN (c.user_lo, c.user_hi)));
+
+ALTER TABLE message_hidden ENABLE ROW LEVEL SECURITY;
+CREATE POLICY own ON message_hidden USING (user_id = current_user_id()) WITH CHECK (user_id = current_user_id());
+
+ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
+CREATE POLICY recipient_ceo ON reports FOR SELECT
+    USING (org_id = current_org_id() AND ceo_user = current_user_id());
+ALTER TABLE report_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY recipient_ceo ON report_messages FOR SELECT
+    USING (org_id = current_org_id() AND EXISTS (
+        SELECT 1 FROM reports r WHERE r.id = report_id AND r.ceo_user = current_user_id()));
+ALTER TABLE report_senders ENABLE ROW LEVEL SECURITY;   -- no policy: nobody but the owner
+
+GRANT SELECT, INSERT, UPDATE ON conversations, messages TO hrms_app;
+GRANT USAGE ON SEQUENCE messages_id_seq TO hrms_app;
+GRANT SELECT, INSERT ON message_hidden TO hrms_app;
+GRANT SELECT ON reports, report_messages TO hrms_app;
+-- report_senders: no grant to the app role at all
+
+-- ---- reports: every write goes through a function ------------------------
+CREATE FUNCTION file_report(p_ceo_user uuid, p_subject text, p_body text, p_anonymous boolean) RETURNS uuid
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE v_org uuid := current_org_id(); v_me uuid := current_user_id(); v_role text; v_id uuid; v_status org_status;
+BEGIN
+    IF v_org IS NULL OR v_me IS NULL THEN RAISE EXCEPTION 'Sign in to an organisation first.'; END IF;
+    v_role := message_role_of(v_me, v_org);
+    IF v_role IS NULL OR v_role NOT IN ('coo', 'manager', 'employee') THEN
+        RAISE EXCEPTION 'Only a COO, manager or employee can send a report to the CEO.';
+    END IF;
+    IF message_role_of(p_ceo_user, v_org) IS DISTINCT FROM 'ceo' THEN
+        RAISE EXCEPTION 'Reports go to a CEO of your organisation.';
+    END IF;
+    SELECT status INTO v_status FROM orgs WHERE id = v_org;
+    IF v_status = 'read_only' THEN
+        RAISE EXCEPTION 'This organisation is read-only until the subscription is renewed.';
+    END IF;
+    v_id := gen_random_uuid();
+    INSERT INTO reports (id, org_id, ceo_user, subject, is_anonymous, reporter_name)
+    VALUES (v_id, v_org, p_ceo_user, p_subject, p_anonymous,
+            CASE WHEN p_anonymous THEN NULL ELSE (SELECT full_name FROM users WHERE id = v_me) END);
+    INSERT INTO report_senders (report_id, org_id, sender_user) VALUES (v_id, v_org, v_me);
+    INSERT INTO report_messages (report_id, org_id, from_reporter, body) VALUES (v_id, v_org, true, p_body);
+    RETURN v_id;
+END $$;
+
+CREATE FUNCTION report_reply_as_reporter(p_report uuid, p_body text) RETURNS bigint
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE s report_senders%ROWTYPE; v_id bigint; v_status org_status;
+BEGIN
+    SELECT * INTO s FROM report_senders WHERE report_id = p_report AND sender_user = current_user_id();
+    IF NOT FOUND THEN RAISE EXCEPTION 'Report not found.'; END IF;
+    IF s.org_id IS DISTINCT FROM current_org_id() THEN RAISE EXCEPTION 'Report not found.'; END IF;
+    SELECT status INTO v_status FROM orgs WHERE id = s.org_id;
+    IF v_status = 'read_only' THEN
+        RAISE EXCEPTION 'This organisation is read-only until the subscription is renewed.';
+    END IF;
+    INSERT INTO report_messages (report_id, org_id, from_reporter, body)
+    VALUES (p_report, s.org_id, true, p_body) RETURNING id INTO v_id;
+    UPDATE reports SET last_message_at = now() WHERE id = p_report;
+    RETURN v_id;
+END $$;
+
+CREATE FUNCTION report_reply_as_ceo(p_report uuid, p_body text) RETURNS bigint
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE r reports%ROWTYPE; v_id bigint; v_status org_status;
+BEGIN
+    SELECT * INTO r FROM reports WHERE id = p_report AND ceo_user = current_user_id() AND org_id = current_org_id();
+    IF NOT FOUND THEN RAISE EXCEPTION 'Report not found.'; END IF;
+    IF message_role_of(current_user_id(), r.org_id) IS DISTINCT FROM 'ceo' THEN
+        RAISE EXCEPTION 'Only a CEO can answer a report.';
+    END IF;
+    SELECT status INTO v_status FROM orgs WHERE id = r.org_id;
+    IF v_status = 'read_only' THEN
+        RAISE EXCEPTION 'This organisation is read-only until the subscription is renewed.';
+    END IF;
+    INSERT INTO report_messages (report_id, org_id, from_reporter, body)
+    VALUES (p_report, r.org_id, false, p_body) RETURNING id INTO v_id;
+    UPDATE reports SET last_message_at = now() WHERE id = p_report;
+    RETURN v_id;
+END $$;
+
+-- The sender's own reports (and only theirs).
+CREATE FUNCTION my_reports()
+RETURNS TABLE (report_id uuid, subject text, is_anonymous boolean, created_at timestamptz,
+               last_message_at timestamptz, unread integer)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = hrms, public AS $$
+    SELECT r.id, r.subject, r.is_anonymous, r.created_at, r.last_message_at,
+           (SELECT count(*)::int FROM report_messages m
+             WHERE m.report_id = r.id AND NOT m.from_reporter AND m.read_at IS NULL)
+      FROM report_senders s JOIN reports r ON r.id = s.report_id
+     WHERE s.sender_user = current_user_id() AND s.org_id = current_org_id()
+     ORDER BY r.last_message_at DESC
+$$;
+
+CREATE FUNCTION my_report_thread(p_report uuid)
+RETURNS TABLE (id bigint, from_reporter boolean, body text, sent_at timestamptz, read_at timestamptz)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = hrms, public AS $$
+    SELECT m.id, m.from_reporter, m.body, m.sent_at, m.read_at
+      FROM report_senders s JOIN report_messages m ON m.report_id = s.report_id
+     WHERE s.report_id = p_report AND s.sender_user = current_user_id() AND s.org_id = current_org_id()
+     ORDER BY m.id
+$$;
+
+-- Marks the other side's messages read. The CEO marks the reporter's; the reporter, the CEO's.
+CREATE FUNCTION report_mark_read(p_report uuid) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM reports WHERE id = p_report AND ceo_user = current_user_id() AND org_id = current_org_id()) THEN
+        UPDATE report_messages SET read_at = now() WHERE report_id = p_report AND from_reporter AND read_at IS NULL;
+    ELSIF EXISTS (SELECT 1 FROM report_senders WHERE report_id = p_report AND sender_user = current_user_id()
+                    AND org_id = current_org_id()) THEN
+        UPDATE report_messages SET read_at = now() WHERE report_id = p_report AND NOT from_reporter AND read_at IS NULL;
+    END IF;
+END $$;
+
+-- ---- gameMasters: they have no organisation, so everything is a function --
+CREATE FUNCTION list_game_masters() RETURNS TABLE (user_id uuid, full_name text)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = hrms, public AS $$
+BEGIN
+    IF message_role_of(current_user_id(), current_org_id()) NOT IN ('ceo', 'coo') THEN
+        RAISE EXCEPTION 'Only a CEO or COO can contact the platform team.';
+    END IF;
+    RETURN QUERY SELECT g.user_id, u.full_name FROM game_masters g JOIN users u ON u.id = g.user_id
+                  WHERE g.status = 'active' ORDER BY u.full_name;
+END $$;
+
+CREATE FUNCTION gm_message_threads()
+RETURNS TABLE (conversation_id uuid, org_id uuid, org_name text, other_user uuid, other_name text,
+               other_role text, last_message_at timestamptz, last_body text, unread integer)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = hrms, public AS $$
+BEGIN
+    PERFORM gm_assert();
+    RETURN QUERY
+    SELECT c.id, c.org_id, o.name,
+           CASE WHEN c.user_lo = current_user_id() THEN c.user_hi ELSE c.user_lo END,
+           u.full_name, message_role_of(u.id, c.org_id), c.last_message_at,
+           (SELECT m.body FROM messages m WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1),
+           (SELECT count(*)::int FROM messages m WHERE m.conversation_id = c.id
+               AND m.sender_user <> current_user_id() AND m.read_at IS NULL)
+      FROM conversations c JOIN orgs o ON o.id = c.org_id
+      JOIN users u ON u.id = CASE WHEN c.user_lo = current_user_id() THEN c.user_hi ELSE c.user_lo END
+     WHERE current_user_id() IN (c.user_lo, c.user_hi)
+     ORDER BY c.last_message_at DESC;
+END $$;
+
+CREATE FUNCTION gm_message_thread(p_conversation uuid)
+RETURNS TABLE (id bigint, sender_user uuid, body text, sent_at timestamptz, read_at timestamptz, mine boolean)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = hrms, public AS $$
+BEGIN
+    PERFORM gm_assert();
+    RETURN QUERY
+    SELECT m.id, m.sender_user, m.body, m.sent_at, m.read_at, m.sender_user = current_user_id()
+      FROM messages m JOIN conversations c ON c.id = m.conversation_id
+     WHERE c.id = p_conversation AND current_user_id() IN (c.user_lo, c.user_hi)
+       AND NOT EXISTS (SELECT 1 FROM message_hidden h WHERE h.message_id = m.id AND h.user_id = current_user_id())
+     ORDER BY m.id;
+END $$;
+
+CREATE FUNCTION gm_message_send(p_conversation uuid, p_body text) RETURNS bigint
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE c conversations%ROWTYPE; v_id bigint;
+BEGIN
+    PERFORM gm_assert();
+    SELECT * INTO c FROM conversations WHERE id = p_conversation AND current_user_id() IN (user_lo, user_hi);
+    IF NOT FOUND THEN RAISE EXCEPTION 'Conversation not found.'; END IF;
+    INSERT INTO messages (conversation_id, org_id, sender_user, body)
+    VALUES (c.id, c.org_id, current_user_id(), p_body) RETURNING id INTO v_id;
+    RETURN v_id;
+END $$;
+
+-- A gameMaster starts (or continues) a conversation with a CEO or COO of an organisation.
+CREATE FUNCTION gm_message_start(p_org uuid, p_user uuid, p_body text) RETURNS uuid
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE v_lo uuid; v_hi uuid; v_conv uuid;
+BEGIN
+    PERFORM gm_assert();
+    IF message_role_of(p_user, p_org) NOT IN ('ceo', 'coo') THEN
+        RAISE EXCEPTION 'A gameMaster can message a CEO or COO of an organisation.';
+    END IF;
+    v_lo := least(current_user_id(), p_user); v_hi := greatest(current_user_id(), p_user);
+    SELECT id INTO v_conv FROM conversations WHERE org_id = p_org AND user_lo = v_lo AND user_hi = v_hi;
+    IF v_conv IS NULL THEN
+        INSERT INTO conversations (org_id, user_lo, user_hi, created_by)
+        VALUES (p_org, v_lo, v_hi, current_user_id()) RETURNING id INTO v_conv;
+    END IF;
+    INSERT INTO messages (conversation_id, org_id, sender_user, body) VALUES (v_conv, p_org, current_user_id(), p_body);
+    RETURN v_conv;
+END $$;
+
+CREATE FUNCTION gm_message_mark_read(p_conversation uuid) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+BEGIN
+    PERFORM gm_assert();
+    UPDATE messages m SET read_at = now()
+      FROM conversations c
+     WHERE m.conversation_id = c.id AND c.id = p_conversation AND current_user_id() IN (c.user_lo, c.user_hi)
+       AND m.sender_user <> current_user_id() AND m.read_at IS NULL;
+END $$;
+
+-- Organisations a gameMaster may start a conversation in, with their CEOs and COOs.
+CREATE FUNCTION gm_message_contacts(p_query text DEFAULT NULL)
+RETURNS TABLE (org_id uuid, org_name text, user_id uuid, full_name text, role text)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = hrms, public AS $$
+BEGIN
+    PERFORM gm_assert();
+    RETURN QUERY
+    SELECT o.id, o.name, u.id, u.full_name, m.role::text
+      FROM org_members m JOIN orgs o ON o.id = m.org_id JOIN users u ON u.id = m.user_id
+     WHERE m.status = 'active' AND m.role IN ('ceo', 'coo')
+       AND (p_query IS NULL OR u.full_name ILIKE '%' || p_query || '%' OR o.name ILIKE '%' || p_query || '%')
+     ORDER BY u.full_name LIMIT 4;
+END $$;
+
+GRANT EXECUTE ON FUNCTION file_report, report_reply_as_reporter, report_reply_as_ceo, my_reports,
+    my_report_thread, report_mark_read, list_game_masters, gm_message_threads, gm_message_thread,
+    gm_message_send, gm_message_start, gm_message_mark_read, gm_message_contacts,
+    message_role_of, messaging_pair_allowed TO hrms_app;
+
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0016_report_reply_returns_reporter.sql =====
+-- =====================================================================
+-- 0016: the CEO's report reply tells the server which user to push the
+-- real-time event to. The id stays on the server: it is never put in
+-- an API response.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+DROP FUNCTION report_reply_as_ceo(uuid, text);
+CREATE FUNCTION report_reply_as_ceo(p_report uuid, p_body text)
+RETURNS TABLE (message_id bigint, reporter_user uuid)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE r reports%ROWTYPE; v_id bigint; v_status org_status; v_reporter uuid;
+BEGIN
+    SELECT * INTO r FROM reports WHERE id = p_report AND ceo_user = current_user_id() AND org_id = current_org_id();
+    IF NOT FOUND THEN RAISE EXCEPTION 'Report not found.'; END IF;
+    IF message_role_of(current_user_id(), r.org_id) IS DISTINCT FROM 'ceo' THEN
+        RAISE EXCEPTION 'Only a CEO can answer a report.';
+    END IF;
+    SELECT status INTO v_status FROM orgs WHERE id = r.org_id;
+    IF v_status = 'read_only' THEN
+        RAISE EXCEPTION 'This organisation is read-only until the subscription is renewed.';
+    END IF;
+    INSERT INTO report_messages (report_id, org_id, from_reporter, body)
+    VALUES (p_report, r.org_id, false, p_body) RETURNING id INTO v_id;
+    UPDATE reports SET last_message_at = now() WHERE id = p_report;
+    SELECT sender_user INTO v_reporter FROM report_senders WHERE report_id = p_report;
+    RETURN QUERY SELECT v_id, v_reporter;
+END $$;
+
+GRANT EXECUTE ON FUNCTION report_reply_as_ceo TO hrms_app;
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0017_report_reply_returns_ceo.sql =====
+-- =====================================================================
+-- 0017: a reporter's reply also returns the CEO's user id, so the server
+-- can push the real-time event. The reporter cannot read the report row.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+DROP FUNCTION report_reply_as_reporter(uuid, text);
+CREATE FUNCTION report_reply_as_reporter(p_report uuid, p_body text)
+RETURNS TABLE (message_id bigint, ceo_user uuid)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE s report_senders%ROWTYPE; v_id bigint; v_status org_status; v_ceo uuid;
+BEGIN
+    SELECT * INTO s FROM report_senders WHERE report_id = p_report AND sender_user = current_user_id();
+    IF NOT FOUND THEN RAISE EXCEPTION 'Report not found.'; END IF;
+    IF s.org_id IS DISTINCT FROM current_org_id() THEN RAISE EXCEPTION 'Report not found.'; END IF;
+    SELECT status INTO v_status FROM orgs WHERE id = s.org_id;
+    IF v_status = 'read_only' THEN
+        RAISE EXCEPTION 'This organisation is read-only until the subscription is renewed.';
+    END IF;
+    INSERT INTO report_messages (report_id, org_id, from_reporter, body)
+    VALUES (p_report, s.org_id, true, p_body) RETURNING id INTO v_id;
+    UPDATE reports SET last_message_at = now() WHERE id = p_report RETURNING reports.ceo_user INTO v_ceo;
+    RETURN QUERY SELECT v_id, v_ceo;
+END $$;
+
+GRANT EXECUTE ON FUNCTION report_reply_as_reporter TO hrms_app;
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0018_report_replies_return_id_only.sql =====
+-- =====================================================================
+-- 0018: messaging no longer pushes events, so a report reply returns
+-- only its own id again. The sender's id stays inside the database.
+-- (Undoes the return values added in 0016 and 0017.)
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+DROP FUNCTION report_reply_as_ceo(uuid, text);
+CREATE FUNCTION report_reply_as_ceo(p_report uuid, p_body text) RETURNS bigint
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE r reports%ROWTYPE; v_id bigint; v_status org_status;
+BEGIN
+    SELECT * INTO r FROM reports WHERE id = p_report AND ceo_user = current_user_id() AND org_id = current_org_id();
+    IF NOT FOUND THEN RAISE EXCEPTION 'Report not found.'; END IF;
+    IF message_role_of(current_user_id(), r.org_id) IS DISTINCT FROM 'ceo' THEN
+        RAISE EXCEPTION 'Only a CEO can answer a report.';
+    END IF;
+    SELECT status INTO v_status FROM orgs WHERE id = r.org_id;
+    IF v_status = 'read_only' THEN
+        RAISE EXCEPTION 'This organisation is read-only until the subscription is renewed.';
+    END IF;
+    INSERT INTO report_messages (report_id, org_id, from_reporter, body)
+    VALUES (p_report, r.org_id, false, p_body) RETURNING id INTO v_id;
+    UPDATE reports SET last_message_at = now() WHERE id = p_report;
+    RETURN v_id;
+END $$;
+
+DROP FUNCTION report_reply_as_reporter(uuid, text);
+CREATE FUNCTION report_reply_as_reporter(p_report uuid, p_body text) RETURNS bigint
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = hrms, public AS $$
+DECLARE s report_senders%ROWTYPE; v_id bigint; v_status org_status;
+BEGIN
+    SELECT * INTO s FROM report_senders WHERE report_id = p_report AND sender_user = current_user_id();
+    IF NOT FOUND THEN RAISE EXCEPTION 'Report not found.'; END IF;
+    IF s.org_id IS DISTINCT FROM current_org_id() THEN RAISE EXCEPTION 'Report not found.'; END IF;
+    SELECT status INTO v_status FROM orgs WHERE id = s.org_id;
+    IF v_status = 'read_only' THEN
+        RAISE EXCEPTION 'This organisation is read-only until the subscription is renewed.';
+    END IF;
+    INSERT INTO report_messages (report_id, org_id, from_reporter, body)
+    VALUES (p_report, s.org_id, true, p_body) RETURNING id INTO v_id;
+    UPDATE reports SET last_message_at = now() WHERE id = p_report;
+    RETURN v_id;
+END $$;
+
+GRANT EXECUTE ON FUNCTION report_reply_as_ceo, report_reply_as_reporter TO hrms_app;
 COMMIT;
