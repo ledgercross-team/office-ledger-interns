@@ -44,6 +44,7 @@ export class UpdateOrgSettingsDto {
   @IsOptional() @IsInt() @Min(0) @Max(100) weightAttendance?: number;
   @IsOptional() @IsInt() @Min(0) @Max(100) weightRating?: number;
   @IsOptional() @IsInt() @Min(0) @Max(100) weightOntime?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(100) weightLeave?: number;
 
   @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(1) pointsLate?: number;
   @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(1) pointsMissingCheckout?: number;
@@ -58,7 +59,9 @@ export class UpdateOrgSettingsDto {
 export class CreateOfficeNetworkDto {
   // An IPv4/IPv6 address or CIDR range. Postgres does the final validation (cidr).
   @IsString()
-  @Matches(/^[0-9a-fA-F:.]+(\/\d{1,3})?$/, { message: 'network must be an IP address or CIDR range' })
+  @Matches(/^[0-9a-fA-F:.]+(\/\d{1,3})?$/, {
+    message: 'network must be an IP address or CIDR range',
+  })
   @MaxLength(60)
   network!: string;
 
@@ -79,7 +82,11 @@ export class CreateLeaveTypeDto {
 
   @IsString() @MinLength(1) @MaxLength(60) name!: string;
 
-  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 1 }) @Min(0) @Max(366) yearlyAllowanceDays!: number;
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(0)
+  @Max(366)
+  yearlyAllowanceDays!: number;
 
   @IsBoolean() isPaid!: boolean;
 }

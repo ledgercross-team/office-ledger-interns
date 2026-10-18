@@ -8,13 +8,7 @@ import { TimezoneSelect } from '@/components/ui';
 import { MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
-import type {
-  Holiday,
-  HrmsOrg,
-  LeaveType,
-  OfficeNetwork,
-  OrgSettings,
-} from '@/lib/hrms/types';
+import type { Holiday, HrmsOrg, LeaveType, OfficeNetwork, OrgSettings } from '@/lib/hrms/types';
 
 const DAYS = [
   [1, 'Mon'],
@@ -100,6 +94,7 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
       weightAttendance: n('weightAttendance'),
       weightRating: n('weightRating'),
       weightOntime: n('weightOntime'),
+      weightLeave: n('weightLeave'),
     });
   }
 
@@ -128,7 +123,12 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
             className={input}
           />
         </label>
-        <Num name="lateGraceMinutes" label="Late after (minutes)" value={settings.lateGraceMinutes} disabled={disabled} />
+        <Num
+          name="lateGraceMinutes"
+          label="Late after (minutes)"
+          value={settings.lateGraceMinutes}
+          disabled={disabled}
+        />
       </div>
       <fieldset className="space-y-1">
         <legend className="text-sm text-charcoal">Weekend days</legend>
@@ -149,17 +149,55 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
 
       <h2 className="pt-2 font-medium text-charcoal">Workload colours</h2>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Num name="workloadAmberTasks" label="Amber: open tasks from" value={settings.workloadAmberTasks} disabled={disabled} />
-        <Num name="workloadAmberProjects" label="Amber: projects from" value={settings.workloadAmberProjects} disabled={disabled} />
-        <Num name="workloadRedTasks" label="Red: open tasks from" value={settings.workloadRedTasks} disabled={disabled} />
-        <Num name="workloadRedProjects" label="Red: projects from" value={settings.workloadRedProjects} disabled={disabled} />
+        <Num
+          name="workloadAmberTasks"
+          label="Amber: open tasks from"
+          value={settings.workloadAmberTasks}
+          disabled={disabled}
+        />
+        <Num
+          name="workloadAmberProjects"
+          label="Amber: projects from"
+          value={settings.workloadAmberProjects}
+          disabled={disabled}
+        />
+        <Num
+          name="workloadRedTasks"
+          label="Red: open tasks from"
+          value={settings.workloadRedTasks}
+          disabled={disabled}
+        />
+        <Num
+          name="workloadRedProjects"
+          label="Red: projects from"
+          value={settings.workloadRedProjects}
+          disabled={disabled}
+        />
       </div>
 
-      <h2 className="pt-2 font-medium text-charcoal">Performance score weights (must add up to 100)</h2>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Num name="weightAttendance" label="Attendance" value={settings.weightAttendance} disabled={disabled} />
-        <Num name="weightRating" label="Ratings" value={settings.weightRating} disabled={disabled} />
-        <Num name="weightOntime" label="On-time tasks" value={settings.weightOntime} disabled={disabled} />
+      <h2 className="pt-2 font-medium text-charcoal">
+        Performance score weights (must add up to 100)
+      </h2>
+      <div className="grid gap-3 sm:grid-cols-4">
+        <Num
+          name="weightAttendance"
+          label="Attendance"
+          value={settings.weightAttendance}
+          disabled={disabled}
+        />
+        <Num
+          name="weightRating"
+          label="Ratings"
+          value={settings.weightRating}
+          disabled={disabled}
+        />
+        <Num
+          name="weightOntime"
+          label="On-time tasks"
+          value={settings.weightOntime}
+          disabled={disabled}
+        />
+        <Num name="weightLeave" label="Leave" value={settings.weightLeave} disabled={disabled} />
       </div>
 
       {error && (
@@ -172,7 +210,11 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
           <button type="submit" disabled={save.isPending} className={button}>
             Save settings
           </button>
-          {saved && <span role="status" className="text-sm text-evergreen">Saved</span>}
+          {saved && (
+            <span role="status" className="text-sm text-evergreen">
+              Saved
+            </span>
+          )}
         </div>
       )}
     </form>
@@ -207,7 +249,7 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
     <section className={card}>
       <h2 className="font-medium text-charcoal">Office IP addresses</h2>
       <p className="text-sm text-charcoal-soft">
-        Check-in only works from these addresses. If none are added, people can check in from anywhere.
+        Check-in is accepted only from these addresses. Add at least one before anyone can check in.
       </p>
       <ul className="space-y-1 text-sm">
         {list.data?.items.map((n) => (
@@ -217,13 +259,19 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
               {n.label && <span className="ml-2 text-charcoal-soft">{n.label}</span>}
             </span>
             {canEdit && (
-              <button type="button" onClick={() => remove.mutate(n.id)} className="text-alert-deep hover:underline">
+              <button
+                type="button"
+                onClick={() => remove.mutate(n.id)}
+                className="text-alert-deep hover:underline"
+              >
                 Remove
               </button>
             )}
           </li>
         ))}
-        {list.data?.items.length === 0 && <li className="text-charcoal-soft">None set: check-in works from anywhere.</li>}
+        {list.data?.items.length === 0 && (
+          <li className="text-charcoal-soft">None set: check-in is currently disabled.</li>
+        )}
       </ul>
       {canEdit && (
         <form
@@ -238,7 +286,12 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
             event.currentTarget.reset();
           }}
         >
-          <input name="network" required placeholder="203.0.113.0/24" className={`${input} max-w-48`} />
+          <input
+            name="network"
+            required
+            placeholder="203.0.113.0/24"
+            className={`${input} max-w-48`}
+          />
           <input name="label" placeholder="Label (optional)" className={`${input} max-w-48`} />
           <button type="submit" className={button}>
             Add
@@ -287,7 +340,11 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
               {h.date} <span className="ml-2 text-charcoal-soft">{h.name}</span>
             </span>
             {canEdit && (
-              <button type="button" onClick={() => remove.mutate(h.date)} className="text-alert-deep hover:underline">
+              <button
+                type="button"
+                onClick={() => remove.mutate(h.date)}
+                className="text-alert-deep hover:underline"
+              >
                 Remove
               </button>
             )}
@@ -355,7 +412,9 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
       <ul className="space-y-2 text-sm">
         {list.data?.items.map((t) => (
           <li key={t.id} className="flex flex-wrap items-center gap-3">
-            <span className={`min-w-24 font-medium ${t.isActive ? '' : 'text-charcoal-soft line-through'}`}>
+            <span
+              className={`min-w-24 font-medium ${t.isActive ? '' : 'text-charcoal-soft line-through'}`}
+            >
               {t.name}
             </span>
             <span className="text-charcoal-soft">{t.isPaid ? 'paid' : 'unpaid'}</span>
@@ -404,9 +463,22 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
             event.currentTarget.reset();
           }}
         >
-          <input name="code" required placeholder="code (e.g. study)" className={`${input} max-w-40`} />
+          <input
+            name="code"
+            required
+            placeholder="code (e.g. study)"
+            className={`${input} max-w-40`}
+          />
           <input name="name" required placeholder="Name" className={`${input} max-w-40`} />
-          <input name="days" type="number" min={0} step="0.5" required placeholder="Days" className={`${input} w-24`} />
+          <input
+            name="days"
+            type="number"
+            min={0}
+            step="0.5"
+            required
+            placeholder="Days"
+            className={`${input} w-24`}
+          />
           <label className="flex items-center gap-1 text-sm">
             <input type="checkbox" name="paid" defaultChecked /> Paid
           </label>
@@ -438,7 +510,10 @@ function RecoveryCard({ role }: { role: 'ceo' | 'coo' }) {
       if (role === 'coo') {
         await hrmsFetch('/org/recovery-requests', {
           method: 'POST',
-          body: { targetMemberId: String(f.get('member')), newEmail: String(f.get('email')).trim() },
+          body: {
+            targetMemberId: String(f.get('member')),
+            newEmail: String(f.get('email')).trim(),
+          },
         });
       } else {
         await hrmsFetch('/org/last-ceo-removal', {
@@ -455,7 +530,7 @@ function RecoveryCard({ role }: { role: 'ceo' | 'coo' }) {
   return (
     <form onSubmit={onSubmit} className={card}>
       <h2 className="font-medium text-charcoal">
-        {role === 'coo' ? 'Recover a CEO\'s access' : 'Hand over as CEO'}
+        {role === 'coo' ? "Recover a CEO's access" : 'Hand over as CEO'}
       </h2>
       <p className="text-sm text-charcoal-soft">
         {role === 'coo'
@@ -471,7 +546,15 @@ function RecoveryCard({ role }: { role: 'ceo' | 'coo' }) {
         onSelect={setPerson}
         onClear={() => setPerson(null)}
       />
-      {role === 'coo' && <input name="email" type="email" required placeholder="New verified email" className={input} />}
+      {role === 'coo' && (
+        <input
+          name="email"
+          type="email"
+          required
+          placeholder="New verified email"
+          className={input}
+        />
+      )}
       {error && (
         <p role="alert" className="text-sm text-alert-deep">
           {error}
@@ -494,7 +577,9 @@ function ExportCard() {
     setPending(true);
     try {
       const data = await hrmsFetch<unknown>('/org/export', { method: 'POST' });
-      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+      );
       const a = document.createElement('a');
       a.href = url;
       a.download = 'organisation-export.json';
@@ -511,7 +596,8 @@ function ExportCard() {
     <section className={card}>
       <h2 className="font-medium text-charcoal">Export all data</h2>
       <p className="text-sm text-charcoal-soft">
-        Downloads everything the organisation holds. It stays available for 15 days after a suspension.
+        Downloads everything the organisation holds. It stays available for 15 days after a
+        suspension.
       </p>
       <button type="button" disabled={pending} onClick={() => void download()} className={button}>
         {pending ? 'Preparing…' : 'Download export'}
@@ -545,7 +631,13 @@ function SettingsContent() {
           <p className="text-sm text-charcoal-soft">Plan: {org.data.seats.planCode}</p>
         </section>
       )}
-      {org.data && <SettingsForm key={JSON.stringify(org.data.settings)} settings={org.data.settings} canEdit={canEdit} />}
+      {org.data && (
+        <SettingsForm
+          key={JSON.stringify(org.data.settings)}
+          settings={org.data.settings}
+          canEdit={canEdit}
+        />
+      )}
       <NetworksCard canEdit={session?.role === 'ceo' || session?.role === 'coo'} />
       <HolidaysCard canEdit={canEdit} />
       <LeaveTypesCard canEdit={canEdit} />

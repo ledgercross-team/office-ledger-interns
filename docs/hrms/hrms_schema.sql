@@ -162,8 +162,9 @@ CREATE TABLE org_settings (
     workload_red_projects        integer  NOT NULL DEFAULT 5,
     -- performance score (§13)
     weight_attendance            integer  NOT NULL DEFAULT 30,
-    weight_rating                integer  NOT NULL DEFAULT 50,
-    weight_ontime                integer  NOT NULL DEFAULT 20,
+    weight_rating                integer  NOT NULL DEFAULT 10,
+    weight_ontime                integer  NOT NULL DEFAULT 50,
+    weight_leave                 integer  NOT NULL DEFAULT 10,
     points_late                  numeric(3,2) NOT NULL DEFAULT 0.50 CHECK (points_late BETWEEN 0 AND 1),
     points_missing_checkout      numeric(3,2) NOT NULL DEFAULT 0.75 CHECK (points_missing_checkout BETWEEN 0 AND 1),
     points_unpaid_leave          numeric(3,2) NOT NULL DEFAULT 0.50 CHECK (points_unpaid_leave BETWEEN 0 AND 1),
@@ -173,11 +174,13 @@ CREATE TABLE org_settings (
     high_urgency_reminder_hours  integer  NOT NULL DEFAULT 24,
     updated_at                   timestamptz NOT NULL DEFAULT now(),
     CHECK (workload_red_tasks > workload_amber_tasks AND workload_red_projects > workload_amber_projects),
-    CHECK (weight_attendance >= 0 AND weight_rating >= 0 AND weight_ontime >= 0
-           AND weight_attendance + weight_rating + weight_ontime = 100)
+    CONSTRAINT org_settings_weights_check CHECK (
+        weight_attendance >= 0 AND weight_rating >= 0 AND weight_ontime >= 0 AND weight_leave >= 0
+        AND weight_attendance + weight_rating + weight_ontime + weight_leave = 100
+    )
 );
 
--- Office networks: check-in only works from these (§12).
+-- Office networks: check-in only works from these (§12). At least one must be configured.
 CREATE TABLE org_office_networks (
     id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id      uuid NOT NULL REFERENCES orgs(id),
@@ -584,7 +587,7 @@ CREATE TABLE project_ratings (
 );
 CREATE INDEX project_ratings_ratee_idx ON project_ratings (ratee_member_id, created_at);
 
--- Nightly snapshot, visible to CEO/COO only.
+-- Nightly snapshot, visible to CEO/COO for the org and to each manager/employee for themselves.
 CREATE TABLE performance_scores (
     org_id             uuid NOT NULL,
     member_id          uuid NOT NULL,
@@ -593,6 +596,8 @@ CREATE TABLE performance_scores (
     working_days       numeric(6,1) NOT NULL,
     attendance_points  numeric(6,2) NOT NULL,
     attendance_score   numeric(5,2),
+    leave_days         numeric(6,1) NOT NULL DEFAULT 0,
+    leave_score        numeric(5,2),
     rating_count       integer NOT NULL,
     rating_avg         numeric(4,3),
     rating_score       numeric(5,2),
@@ -1626,7 +1631,7 @@ DECLARE
 BEGIN
     SELECT * INTO v_s FROM org_settings WHERE org_id = NEW.org_id;
 
-    -- check-in only from office networks, unless applied from an approved correction
+    -- Check-in only from office networks, unless applied from an approved correction.
     IF NEW.check_in_at IS NOT NULL AND (TG_OP = 'INSERT' OR NEW.check_in_at IS DISTINCT FROM OLD.check_in_at) THEN
         IF v_correct THEN
             IF NOT EXISTS (SELECT 1 FROM requests r WHERE r.id = NEW.corrected_by_request
@@ -1908,10 +1913,10 @@ SELECT r.org_id, r.ratee_member_id AS member_id,
  GROUP BY r.org_id, r.ratee_member_id, s.rating_min_count
 HAVING count(*) >= s.rating_min_count;
 
--- Latest performance score with trend vs. 30 days earlier (CEO/COO dashboard).
+-- Latest performance score with trend vs. 30 days earlier.
 CREATE VIEW v_performance_dashboard WITH (security_invoker = true) AS
 SELECT cur.org_id, cur.member_id, cur.computed_on, cur.final_score, cur.band, cur.is_new, cur.has_ratings,
-       cur.attendance_score, cur.rating_score, cur.ontime_score,
+       cur.attendance_score, cur.leave_score, cur.rating_score, cur.ontime_score,
        cur.final_score - prev.final_score AS change_vs_prev_30d
   FROM (SELECT DISTINCT ON (member_id) * FROM performance_scores ORDER BY member_id, computed_on DESC) cur
   LEFT JOIN performance_scores prev
@@ -1957,9 +1962,10 @@ DECLARE
     v_start  date := p_as_of - 29;
     d        date;
     v_w      numeric; v_pts numeric;
-    v_att    numeric; v_rat numeric; v_ont numeric;
+    v_att    numeric; v_rat numeric; v_ont numeric; v_leave_score numeric;
     v_cnt    integer; v_sum numeric; v_orgavg numeric; v_avg numeric;
     v_tot    integer; v_ok integer;
+    v_leave_total numeric; v_leave_penalty numeric;
     v_wsum   numeric; v_final numeric; v_band performance_band;
     v_day    attendance_days%ROWTYPE;
     v_leave  record;
@@ -1974,16 +1980,17 @@ BEGIN
 
     FOR m IN SELECT * FROM org_members WHERE org_id = p_org AND status = 'active' AND role IN ('manager', 'employee') LOOP
         -- A. attendance
-        v_w := 0; v_pts := 0;
+        v_w := 0; v_pts := 0; v_leave_total := 0; v_leave_penalty := 0;
         d := greatest(v_start, (m.joined_at AT TIME ZONE s.timezone)::date);
         WHILE d <= p_as_of LOOP
             IF NOT is_weekend_or_holiday(p_org, d) THEN
+                v_leave_total := v_leave_total + 1;
                 SELECT l.is_paid, l.over_allowance INTO v_leave FROM v_approved_leave l
                  WHERE l.member_id = m.id AND d BETWEEN l.start_date AND l.end_date LIMIT 1;
                 IF FOUND AND v_leave.is_paid AND NOT v_leave.over_allowance THEN
                     NULL;                                   -- paid leave: neutral, not a working day
                 ELSIF FOUND THEN
-                    v_w := v_w + 1; v_pts := v_pts + s.points_unpaid_leave;
+                    v_w := v_w + 1; v_pts := v_pts + s.points_unpaid_leave; v_leave_penalty := v_leave_penalty + 1;
                 ELSE
                     v_w := v_w + 1;
                     SELECT * INTO v_day FROM attendance_days WHERE member_id = m.id AND work_date = d;
@@ -1997,6 +2004,9 @@ BEGIN
             d := d + 1;
         END LOOP;
         v_att := CASE WHEN v_w > 0 THEN round(100 * v_pts / v_w, 2) END;
+        v_leave_score := CASE WHEN v_leave_total > 0
+                              THEN round(100 * (v_leave_total - v_leave_penalty) / v_leave_total, 2)
+                         END;
 
         -- B. ratings (last 12 months, smoothed toward the org average)
         SELECT count(*), coalesce(sum(stars), 0) INTO v_cnt, v_sum FROM project_ratings
@@ -2021,11 +2031,13 @@ BEGIN
         -- final: weights re-shared across the inputs that exist
         v_wsum := (CASE WHEN v_att IS NOT NULL THEN s.weight_attendance ELSE 0 END)
                 + (CASE WHEN v_rat IS NOT NULL THEN s.weight_rating ELSE 0 END)
-                + (CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END);
+                + (CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END)
+                + (CASE WHEN v_leave_score IS NOT NULL THEN s.weight_leave ELSE 0 END);
         IF v_wsum > 0 THEN
             v_final := round(( coalesce(v_att, 0) * CASE WHEN v_att IS NOT NULL THEN s.weight_attendance ELSE 0 END
                              + coalesce(v_rat, 0) * CASE WHEN v_rat IS NOT NULL THEN s.weight_rating ELSE 0 END
-                             + coalesce(v_ont, 0) * CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END) / v_wsum, 2);
+                             + coalesce(v_ont, 0) * CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END
+                             + coalesce(v_leave_score, 0) * CASE WHEN v_leave_score IS NOT NULL THEN s.weight_leave ELSE 0 END) / v_wsum, 2);
             v_band := CASE WHEN v_final >= 85 THEN 'excellent' WHEN v_final >= 70 THEN 'good'
                            WHEN v_final >= 50 THEN 'needs_attention' ELSE 'poor' END;
         ELSE
@@ -2033,14 +2045,15 @@ BEGIN
         END IF;
 
         INSERT INTO performance_scores (org_id, member_id, computed_on, window_start, working_days, attendance_points,
-                                        attendance_score, rating_count, rating_avg, rating_score,
+                                        attendance_score, leave_days, leave_score, rating_count, rating_avg, rating_score,
                                         ontime_total, ontime_on_time, ontime_score, final_score, band, is_new, has_ratings)
-        VALUES (p_org, m.id, p_as_of, v_start, v_w, v_pts, v_att, v_cnt, v_avg, v_rat,
+        VALUES (p_org, m.id, p_as_of, v_start, v_w, v_pts, v_att, v_leave_penalty, v_leave_score, v_cnt, v_avg, v_rat,
                 v_tot, v_ok, v_ont, v_final, v_band,
                 m.joined_at > (p_as_of - 30)::timestamptz, v_cnt >= s.rating_min_count)
         ON CONFLICT (member_id, computed_on) DO UPDATE SET
             working_days = EXCLUDED.working_days, attendance_points = EXCLUDED.attendance_points,
-            attendance_score = EXCLUDED.attendance_score, rating_count = EXCLUDED.rating_count,
+            attendance_score = EXCLUDED.attendance_score, leave_days = EXCLUDED.leave_days,
+            leave_score = EXCLUDED.leave_score, rating_count = EXCLUDED.rating_count,
             rating_avg = EXCLUDED.rating_avg, rating_score = EXCLUDED.rating_score,
             ontime_total = EXCLUDED.ontime_total, ontime_on_time = EXCLUDED.ontime_on_time,
             ontime_score = EXCLUDED.ontime_score, final_score = EXCLUDED.final_score,
@@ -2203,10 +2216,11 @@ BEGIN
         EXECUTE format('CREATE POLICY org_isolation ON %I USING (org_id = current_org_id()) WITH CHECK (org_id = current_org_id())', t);
     END LOOP;
 END $$;
--- Performance scores (§13): only a CEO or COO can read them; the app role cannot write them.
+-- Performance scores (§13): CEOs/COOs can read the org; managers/employees can read their own.
 DROP POLICY org_isolation ON performance_scores;
-CREATE POLICY ceo_coo_read ON performance_scores FOR SELECT
-    USING (org_id = current_org_id() AND is_ceo_or_coo(current_member_id()));
+CREATE POLICY performance_read ON performance_scores FOR SELECT
+    USING (org_id = current_org_id()
+           AND (is_ceo_or_coo(current_member_id()) OR member_id = current_member_id()));
 
 ALTER TABLE orgs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY org_isolation ON orgs USING (id = current_org_id());
@@ -2332,14 +2346,12 @@ ALTER TABLE game_masters DROP CONSTRAINT game_masters_check;
 
 COMMIT;
 
--- ===== BEGIN docs/hrms/0006_checkin_ip_optional.sql =====
+-- ===== BEGIN docs/hrms/0006_checkin_ip_required.sql =====
 -- =====================================================================
--- 0006: office IP check-in is only enforced when the CEO or COO has set
--- office networks. An org with none accepts check-in from anywhere.
---   * trg_attendance_guard skips the network test when the org has no
---     org_office_networks rows.
---   * a present/late day no longer needs a recorded address (the API still
---     records it whenever it can read one).
+-- 0006: office IP check-in is required for every organisation member.
+-- A CEO or COO must configure at least one office network before anyone
+-- can check in. Approved attendance corrections remain exempt from the
+-- live-IP check and preserve the correction workflow.
 -- =====================================================================
 BEGIN;
 SET search_path = hrms, public;
@@ -2347,6 +2359,31 @@ SET search_path = hrms, public;
 ALTER TABLE attendance_days DROP CONSTRAINT attendance_days_check;
 ALTER TABLE attendance_days ADD CONSTRAINT attendance_days_present_has_checkin
     CHECK (status NOT IN ('present', 'late') OR check_in_at IS NOT NULL);
+
+CREATE OR REPLACE FUNCTION trg_office_network_guard() RETURNS trigger
+LANGUAGE plpgsql SET search_path = hrms, public AS $$
+DECLARE
+    v_org_id uuid := CASE WHEN TG_OP = 'DELETE' THEN OLD.org_id ELSE NEW.org_id END;
+BEGIN
+    IF NOT is_system() AND NOT EXISTS (
+        SELECT 1
+          FROM org_members m
+         WHERE m.id = current_member_id()
+           AND m.org_id = v_org_id
+           AND m.status = 'active'
+           AND m.role IN ('ceo', 'coo')
+    ) THEN
+        RAISE EXCEPTION 'Only a CEO or COO can change office networks';
+    END IF;
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END $$;
+
+CREATE TRIGGER office_network_guard
+    BEFORE INSERT OR UPDATE OR DELETE ON org_office_networks
+    FOR EACH ROW EXECUTE FUNCTION trg_office_network_guard();
 
 CREATE OR REPLACE FUNCTION trg_attendance_guard() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
@@ -2357,17 +2394,18 @@ DECLARE
 BEGIN
     SELECT * INTO v_s FROM org_settings WHERE org_id = NEW.org_id;
 
-    -- check-in must come from an office network, but only when the org has set any
+    -- Check-in must come from one of the configured office networks.
     IF NEW.check_in_at IS NOT NULL AND (TG_OP = 'INSERT' OR NEW.check_in_at IS DISTINCT FROM OLD.check_in_at) THEN
         IF v_correct THEN
             IF NOT EXISTS (SELECT 1 FROM requests r WHERE r.id = NEW.corrected_by_request
                               AND r.type = 'attendance_correction' AND r.status IN ('approved', 'applied')) THEN
                 RAISE EXCEPTION 'Corrections need an approved attendance_correction request';
             END IF;
-        ELSIF EXISTS (SELECT 1 FROM org_office_networks n WHERE n.org_id = NEW.org_id)
-              AND NOT EXISTS (SELECT 1 FROM org_office_networks n
-                               WHERE n.org_id = NEW.org_id AND NEW.check_in_ip <<= n.network) THEN
-            RAISE EXCEPTION 'Check-in is only allowed from the office network';
+        ELSIF NOT EXISTS (SELECT 1 FROM org_office_networks n WHERE n.org_id = NEW.org_id) THEN
+            RAISE EXCEPTION 'Office IP address is not configured. Ask a CEO or COO to add it.';
+        ELSIF NOT EXISTS (SELECT 1 FROM org_office_networks n
+                          WHERE n.org_id = NEW.org_id AND NEW.check_in_ip <<= n.network) THEN
+            RAISE EXCEPTION 'Your IP address does not match the office network.';
         END IF;
         IF NOT is_system() AND NOT v_correct AND NEW.member_id <> current_member_id() THEN
             RAISE EXCEPTION 'People check in for themselves only';
@@ -2581,11 +2619,9 @@ COMMIT;
 
 -- ===== BEGIN docs/hrms/0014_early_task_bonus.sql =====
 -- =====================================================================
--- 0014: early-finish bonus. A task finished strictly before its deadline
--- earns +1 point on the 0-100 performance score for every manager and
--- employee assigned to it, over the same rolling 30 days, capped at 100.
--- The band is decided after the bonus. early_tasks keeps the count so the
--- CEO and COO can see where the points came from.
+-- 0014: preserve the early-finish count for historical detail. It is no
+-- longer an additional score component; the score uses four weighted
+-- matrices: attendance, ratings, on-time tasks and leave.
 -- =====================================================================
 BEGIN;
 SET search_path = hrms, public;
@@ -2600,9 +2636,10 @@ DECLARE
     v_start  date := p_as_of - 29;
     d        date;
     v_w      numeric; v_pts numeric;
-    v_att    numeric; v_rat numeric; v_ont numeric;
+    v_att    numeric; v_rat numeric; v_ont numeric; v_leave_score numeric;
     v_cnt    integer; v_sum numeric; v_orgavg numeric; v_avg numeric;
     v_tot    integer; v_ok integer; v_early integer;
+    v_leave_total numeric; v_leave_penalty numeric;
     v_wsum   numeric; v_final numeric; v_band performance_band;
     v_day    attendance_days%ROWTYPE;
     v_leave  record;
@@ -2617,16 +2654,17 @@ BEGIN
 
     FOR m IN SELECT * FROM org_members WHERE org_id = p_org AND status = 'active' AND role IN ('manager', 'employee') LOOP
         -- A. attendance
-        v_w := 0; v_pts := 0;
+        v_w := 0; v_pts := 0; v_leave_total := 0; v_leave_penalty := 0;
         d := greatest(v_start, (m.joined_at AT TIME ZONE s.timezone)::date);
         WHILE d <= p_as_of LOOP
             IF NOT is_weekend_or_holiday(p_org, d) THEN
+                v_leave_total := v_leave_total + 1;
                 SELECT l.is_paid, l.over_allowance INTO v_leave FROM v_approved_leave l
                  WHERE l.member_id = m.id AND d BETWEEN l.start_date AND l.end_date LIMIT 1;
                 IF FOUND AND v_leave.is_paid AND NOT v_leave.over_allowance THEN
                     NULL;                                   -- paid leave: neutral, not a working day
                 ELSIF FOUND THEN
-                    v_w := v_w + 1; v_pts := v_pts + s.points_unpaid_leave;
+                    v_w := v_w + 1; v_pts := v_pts + s.points_unpaid_leave; v_leave_penalty := v_leave_penalty + 1;
                 ELSE
                     v_w := v_w + 1;
                     SELECT * INTO v_day FROM attendance_days WHERE member_id = m.id AND work_date = d;
@@ -2640,6 +2678,9 @@ BEGIN
             d := d + 1;
         END LOOP;
         v_att := CASE WHEN v_w > 0 THEN round(100 * v_pts / v_w, 2) END;
+        v_leave_score := CASE WHEN v_leave_total > 0
+                              THEN round(100 * (v_leave_total - v_leave_penalty) / v_leave_total, 2)
+                         END;
 
         -- B. ratings (last 12 months, smoothed toward the org average)
         SELECT count(*), coalesce(sum(stars), 0) INTO v_cnt, v_sum FROM project_ratings
@@ -2672,12 +2713,13 @@ BEGIN
         -- final: weights re-shared across the inputs that exist
         v_wsum := (CASE WHEN v_att IS NOT NULL THEN s.weight_attendance ELSE 0 END)
                 + (CASE WHEN v_rat IS NOT NULL THEN s.weight_rating ELSE 0 END)
-                + (CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END);
+                + (CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END)
+                + (CASE WHEN v_leave_score IS NOT NULL THEN s.weight_leave ELSE 0 END);
         IF v_wsum > 0 THEN
             v_final := round(( coalesce(v_att, 0) * CASE WHEN v_att IS NOT NULL THEN s.weight_attendance ELSE 0 END
                              + coalesce(v_rat, 0) * CASE WHEN v_rat IS NOT NULL THEN s.weight_rating ELSE 0 END
-                             + coalesce(v_ont, 0) * CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END) / v_wsum, 2);
-            v_final := least(100, v_final + v_early);        -- the early bonus, capped at 100
+                             + coalesce(v_ont, 0) * CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END
+                             + coalesce(v_leave_score, 0) * CASE WHEN v_leave_score IS NOT NULL THEN s.weight_leave ELSE 0 END) / v_wsum, 2);
             v_band := CASE WHEN v_final >= 85 THEN 'excellent' WHEN v_final >= 70 THEN 'good'
                            WHEN v_final >= 50 THEN 'needs_attention' ELSE 'poor' END;
         ELSE
@@ -2685,14 +2727,15 @@ BEGIN
         END IF;
 
         INSERT INTO performance_scores (org_id, member_id, computed_on, window_start, working_days, attendance_points,
-                                        attendance_score, rating_count, rating_avg, rating_score,
+                                        attendance_score, leave_days, leave_score, rating_count, rating_avg, rating_score,
                                         ontime_total, ontime_on_time, ontime_score, final_score, band, is_new, has_ratings, early_tasks)
-        VALUES (p_org, m.id, p_as_of, v_start, v_w, v_pts, v_att, v_cnt, v_avg, v_rat,
+        VALUES (p_org, m.id, p_as_of, v_start, v_w, v_pts, v_att, v_leave_penalty, v_leave_score, v_cnt, v_avg, v_rat,
                 v_tot, v_ok, v_ont, v_final, v_band,
                 m.joined_at > (p_as_of - 30)::timestamptz, v_cnt >= s.rating_min_count, v_early)
         ON CONFLICT (member_id, computed_on) DO UPDATE SET
             working_days = EXCLUDED.working_days, attendance_points = EXCLUDED.attendance_points,
-            attendance_score = EXCLUDED.attendance_score, rating_count = EXCLUDED.rating_count,
+            attendance_score = EXCLUDED.attendance_score, leave_days = EXCLUDED.leave_days,
+            leave_score = EXCLUDED.leave_score, rating_count = EXCLUDED.rating_count,
             rating_avg = EXCLUDED.rating_avg, rating_score = EXCLUDED.rating_score,
             ontime_total = EXCLUDED.ontime_total, ontime_on_time = EXCLUDED.ontime_on_time,
             ontime_score = EXCLUDED.ontime_score, final_score = EXCLUDED.final_score,
@@ -3210,4 +3253,64 @@ BEGIN
 END $$;
 
 GRANT EXECUTE ON FUNCTION report_reply_as_ceo, report_reply_as_reporter TO hrms_app;
+COMMIT;
+
+-- ===== BEGIN docs/hrms/0019_performance_matrices.sql =====
+-- =====================================================================
+-- 0019: four performance matrices and self-service visibility.
+-- Attendance 30%, ratings 10%, on-time tasks 50%, leave 10%.
+-- Paid approved leave is neutral; unpaid or over-allowance leave lowers
+-- the leave score. Managers and employees may read their own score.
+-- =====================================================================
+BEGIN;
+SET search_path = hrms, public;
+
+ALTER TABLE org_settings ADD COLUMN IF NOT EXISTS weight_leave integer NOT NULL DEFAULT 10;
+ALTER TABLE performance_scores ADD COLUMN IF NOT EXISTS leave_days numeric(6,1) NOT NULL DEFAULT 0;
+ALTER TABLE performance_scores ADD COLUMN IF NOT EXISTS leave_score numeric(5,2);
+
+DO $$
+DECLARE r record;
+BEGIN
+    FOR r IN
+        SELECT c.conname
+          FROM pg_constraint c
+          JOIN pg_class t ON t.oid = c.conrelid
+          JOIN pg_namespace n ON n.oid = t.relnamespace
+         WHERE n.nspname = 'hrms' AND t.relname = 'org_settings'
+           AND c.contype = 'c'
+           AND pg_get_constraintdef(c.oid) LIKE '%weight_attendance%'
+    LOOP
+        EXECUTE format('ALTER TABLE org_settings DROP CONSTRAINT %I', r.conname);
+    END LOOP;
+END $$;
+
+ALTER TABLE org_settings ADD CONSTRAINT org_settings_weights_check CHECK (
+    weight_attendance >= 0 AND weight_rating >= 0 AND weight_ontime >= 0 AND weight_leave >= 0
+    AND weight_attendance + weight_rating + weight_ontime + weight_leave = 100
+);
+
+UPDATE org_settings
+   SET weight_attendance = 30,
+       weight_rating = 10,
+       weight_ontime = 50,
+       weight_leave = 10;
+
+DROP POLICY IF EXISTS org_isolation ON performance_scores;
+DROP POLICY IF EXISTS ceo_coo_read ON performance_scores;
+DROP POLICY IF EXISTS performance_read ON performance_scores;
+CREATE POLICY performance_read ON performance_scores FOR SELECT
+    USING (org_id = current_org_id()
+           AND (is_ceo_or_coo(current_member_id()) OR member_id = current_member_id()));
+
+DO $$
+DECLARE r record;
+BEGIN
+    FOR r IN SELECT id FROM orgs LOOP
+        PERFORM set_config('app.org_id', r.id::text, true);
+        PERFORM set_config('app.member_id', '', true);
+        PERFORM job_compute_performance(r.id, current_date);
+    END LOOP;
+END $$;
+
 COMMIT;

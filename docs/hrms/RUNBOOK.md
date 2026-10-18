@@ -39,7 +39,7 @@ How to move the project from the current app to the HRMS v3 design in small, saf
 5. **Rule errors carry readable messages.** A broken rule raises SQLSTATE `P0001` with a sentence written for people. Show it. Other codes: `23514` check, `23505` duplicate, `23503` missing reference, `42501` not allowed.
 6. **Some checks run at COMMIT, not at the statement.** Seat limit, "an org keeps a CEO" and "a meeting has an invitee". Map errors thrown at commit the same way. Create a meeting and its invitees in the same transaction.
 7. **Approving a request does not perform it.** After approval, someone performs the action in one transaction and marks the request applied. Who: `create_user` and `create_project` by the approver, `add_to_project` by the requesting manager sending the invite, `create_task` and `assign_task` by the requesting manager passing the request id. The database checks the approval exists.
-8. **Inside an org, row-level security only separates orgs.** Who may read whose attendance, tasks, calendar and workload is the API's job. The database enforces two reads itself: performance scores (CEO and COO only) and raw ratings (nobody; use `v_rating_summary`).
+8. **Inside an org, row-level security only separates orgs.** Who may read whose attendance, tasks, calendar and workload is the API's job. The database enforces performance visibility (CEO/COO for the organisation, managers/employees for themselves) and raw ratings (nobody; use `v_rating_summary`).
 9. **`users` is shared by all orgs and has no row-level security.** List columns explicitly. Never return `password_hash` or `mfa_secret_enc`.
 10. **Scheduled jobs run per org.** `list_active_org_ids()` gives the orgs. For each, set `app.org_id` and leave `app.member_id` empty (system context), then call `job_expire_pending()`, `job_auto_checkout(org, day)` or `job_compute_performance(org, date)`.
 11. **Nothing is deleted.** No delete routes for members, projects, tasks, requests, attendance or ratings. Use status changes. The database refuses deletes anyway.
@@ -468,17 +468,17 @@ await db.transaction(async (tx) => {
 
 ### Phase 11: Ratings and performance
 
-**Goal.** Anonymous ratings after a project completes, and the performance score for CEO and COO.
+**Goal.** Anonymous ratings after a project completes, and the performance score for managers and employees.
 
 **Backend.**
 
 - Ratings due: for a completed project inside the 7-day window, everyone rates the other side (employees rate managers, managers rate employees). One batch submit per project.
 - The app role cannot read `project_ratings`. Use `v_rating_summary` for averages. Never expose who rated whom.
-- Scores: read `v_performance_dashboard` and the breakdown columns of `performance_scores`. Only CEO and COO can read them (the database enforces it). Display as a number out of 100 with the band colours and a trend arrow.
+- Scores: read `v_performance_dashboard` and the breakdown columns of `performance_scores`. CEO/COO can read the organisation; managers/employees can read themselves (the database enforces it). Display as a number out of 100 with the band colours and a trend arrow.
 
 **Frontend.**
 
-- Ratings dialog when a project completes. A performance column in the people table and a breakdown drawer, shown to CEO and COO only.
+- Ratings dialog when a project completes. A performance column in the people table and a breakdown drawer, shown to CEO/COO for the organisation and to managers/employees for themselves.
 
 **Routes added.**
 
@@ -486,15 +486,15 @@ await db.transaction(async (tx) => {
 |---|---|---|---|
 | GET | `/api/me/ratings-due` | MGR EMP |  |
 | POST | `/api/projects/:id/ratings` | MGR EMP | Batch; 1 or 2 stars need a comment |
-| GET | `/api/performance` | CEO COO |  |
-| GET | `/api/performance/:memberId` | CEO COO | Breakdown |
+| GET | `/api/performance` | CEO COO MGR EMP |  |
+| GET | `/api/performance/:memberId` | CEO COO MGR EMP | Breakdown; MGR/EMP self only |
 
 **Replaces in v1.** The old attendance-only score formula (dropped).
 
 **Gate (do not continue until all are true).**
 
 - Ratings after the window closes are refused.
-- An employee gets nothing from the performance routes.
+- Managers and employees get their own performance row and breakdown only.
 - After running `job_compute_performance` for the org, the CEO sees scores and the COO does too.
 
 **Rollback.** Flag off.

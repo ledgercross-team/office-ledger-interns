@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -118,7 +119,8 @@ export class RatingsService {
     return { submitted: dto.ratings.length };
   }
 
-  async list(_p: HrmsPrincipal) {
+  async list(p: HrmsPrincipal) {
+    const canSeeEveryone = p.role === 'ceo' || p.role === 'coo';
     const rows = await this.context.tx.execute<ScoreRow>(sql`
       select d.member_id, u.full_name, m.role::text as role, d.computed_on::text as computed_on,
              d.final_score::text as final_score, d.band::text as band, d.is_new, d.has_ratings,
@@ -127,6 +129,7 @@ export class RatingsService {
         join org_members m on m.id = d.member_id
         join users u on u.id = m.user_id
        where d.org_id = current_org_id() and m.status = 'active'
+         and (${canSeeEveryone} or d.member_id = ${p.memberId})
        order by d.final_score desc nulls last, u.full_name`);
     return {
       items: rows.rows.map((r) => ({
@@ -144,17 +147,22 @@ export class RatingsService {
     };
   }
 
-  async breakdown(memberId: string) {
+  async breakdown(p: HrmsPrincipal, memberId: string) {
+    const canSeeEveryone = p.role === 'ceo' || p.role === 'coo';
+    if (!canSeeEveryone && p.memberId !== memberId) {
+      throw new ForbiddenException('You can only view your own performance.');
+    }
     const tx = this.context.tx;
     const latest = await tx.execute<Record<string, string | boolean | number | null>>(sql`
       select s.computed_on::text as computed_on, s.window_start::text as window_start,
              s.working_days::text as working_days, s.attendance_points::text as attendance_points,
              s.attendance_score::text as attendance_score, s.rating_count, s.rating_avg::text as rating_avg,
+             s.leave_days::text as leave_days, s.leave_score::text as leave_score,
              s.rating_score::text as rating_score, s.ontime_total, s.ontime_on_time,
              s.ontime_score::text as ontime_score, s.final_score::text as final_score, s.band::text as band,
-             s.is_new, s.has_ratings, s.early_tasks, u.full_name, m.role::text as role,
+             s.is_new, s.has_ratings, u.full_name, m.role::text as role,
              st.weight_attendance::text as weight_attendance, st.weight_rating::text as weight_rating,
-             st.weight_ontime::text as weight_ontime
+             st.weight_ontime::text as weight_ontime, st.weight_leave::text as weight_leave
         from performance_scores s
         join org_members m on m.id = s.member_id
         join users u on u.id = m.user_id
@@ -191,6 +199,11 @@ export class RatingsService {
         workingDays: num(row.working_days as string | null),
         weight: num(row.weight_attendance as string | null),
       },
+      leave: {
+        days: num(row.leave_days as string | null),
+        score: num(row.leave_score as string | null),
+        weight: num(row.weight_leave as string | null),
+      },
       ratings: {
         score: num(row.rating_score as string | null),
         average: num(row.rating_avg as string | null),
@@ -210,8 +223,6 @@ export class RatingsService {
         total: row.ontime_total,
         weight: num(row.weight_ontime as string | null),
       },
-      // +1 point each for tasks finished before their deadline (already in the score, capped at 100).
-      earlyBonus: { tasks: row.early_tasks as number },
       history: history.rows.map((h) => ({
         computedOn: h.computed_on,
         score: num(h.final_score),

@@ -26,7 +26,10 @@ suite('HRMS attendance (integration)', () => {
     const c = await owner.connect();
     try {
       await c.query('begin');
-      await c.query("select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)", [ids.org]);
+      await c.query(
+        "select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)",
+        [ids.org],
+      );
       const r = await fn(c);
       await c.query('commit');
       return r;
@@ -62,11 +65,13 @@ suite('HRMS attendance (integration)', () => {
     }).compile();
     app = moduleRef.createNestApplication();
     app.use(cookieParser());
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+    );
     await app.init();
 
     const hash = await hashPassword(PASSWORD);
-    const names = ['ceo', 'lead', 'mgrB', 'emp'];
+    const names = ['ceo', 'coo', 'lead', 'mgrB', 'emp'];
     for (const n of names) {
       const { rows } = await owner.query(
         `insert into hrms.users (email, password_hash, full_name) values ($1, $2, $3) returning id`,
@@ -78,10 +83,22 @@ suite('HRMS attendance (integration)', () => {
     try {
       await c.query('begin');
       ids.org = (
-        await c.query(`insert into hrms.orgs (name, plan_code) values ($1, 'premium') returning id`, [`req-${suffix}`])
+        await c.query(
+          `insert into hrms.orgs (name, plan_code) values ($1, 'premium') returning id`,
+          [`req-${suffix}`],
+        )
       ).rows[0].id;
       ids.m_ceo = (
-        await c.query(`insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'ceo') returning id`, [ids.org, ids.ceo])
+        await c.query(
+          `insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'ceo') returning id`,
+          [ids.org, ids.ceo],
+        )
+      ).rows[0].id;
+      ids.m_coo = (
+        await c.query(
+          `insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'coo') returning id`,
+          [ids.org, ids.coo],
+        )
       ).rows[0].id;
       await c.query('commit');
     } finally {
@@ -89,7 +106,9 @@ suite('HRMS attendance (integration)', () => {
     }
     await orgTx(async (cl) => {
       const roles: Array<[string, string]> = [
-        ['lead', 'manager'], ['mgrB', 'manager'], ['emp', 'employee'],
+        ['lead', 'manager'],
+        ['mgrB', 'manager'],
+        ['emp', 'employee'],
       ];
       for (const [n, role] of roles) {
         ids[`m_${n}`] = (
@@ -103,7 +122,9 @@ suite('HRMS attendance (integration)', () => {
 
     for (const n of names) {
       const agent = request.agent(app.getHttpServer());
-      expect((await agent.post('/api/auth/login').send({ email: email(n), password: PASSWORD })).status).toBe(200);
+      expect(
+        (await agent.post('/api/auth/login').send({ email: email(n), password: PASSWORD })).status,
+      ).toBe(200);
       agents[n] = agent;
     }
 
@@ -143,10 +164,31 @@ suite('HRMS attendance (integration)', () => {
     expect(res.body.message).toMatch(/office network/);
   });
 
+  it('refuses check-in until a CEO or COO configures an office network', async () => {
+    await orgTx(async (cl) => {
+      await cl.query(`delete from hrms.org_office_networks where org_id = $1`, [ids.org]);
+    });
+    const res = await agents.emp.post('/api/attendance/check-in').send({});
+    expect(res.status).toBe(409);
+    expect(res.body.message).toMatch(/not configured/);
+    await orgTx((cl) =>
+      cl.query(
+        `insert into hrms.org_office_networks (org_id, network, label) values ($1, '10.9.9.0/24', 'HQ')`,
+        [ids.org],
+      ),
+    );
+  });
+
   it('shows late after work start plus grace', async () => {
     await orgTx(async (cl) => {
-      await cl.query(`insert into hrms.org_office_networks (org_id, network, label) values ($1, '127.0.0.0/8', 'Local')`, [ids.org]);
-      await cl.query(`update hrms.org_settings set work_start_time = '00:00', late_grace_minutes = 0 where org_id = $1`, [ids.org]);
+      await cl.query(
+        `insert into hrms.org_office_networks (org_id, network, label) values ($1, '127.0.0.0/8', 'Local')`,
+        [ids.org],
+      );
+      await cl.query(
+        `update hrms.org_settings set work_start_time = '00:00', late_grace_minutes = 0 where org_id = $1`,
+        [ids.org],
+      );
     });
     const res = await agents.emp.post('/api/attendance/check-in').send({});
     expect(res.status).toBe(200);
@@ -157,13 +199,33 @@ suite('HRMS attendance (integration)', () => {
     expect(out.body.checkOutAt).not.toBeNull();
   });
 
+  it('allows every organisation role to check in from a matching office IP', async () => {
+    for (const role of ['ceo', 'coo', 'lead'] as const) {
+      const res = await agents[role].post('/api/attendance/check-in').send({});
+      expect(res.status).toBe(200);
+      expect(res.body.checkInAt).not.toBeNull();
+    }
+
+    const employee = await agents.emp.get(`/api/attendance/me?month=${month}`);
+    expect(employee.status).toBe(200);
+    expect(employee.body.today.checkInAt).not.toBeNull();
+  });
+
   it('changes the day after an approved correction and keeps the original', async () => {
     await orgTx((cl) =>
-      cl.query(`update hrms.org_settings set work_start_time = '09:00', late_grace_minutes = 15 where org_id = $1`, [ids.org]),
+      cl.query(
+        `update hrms.org_settings set work_start_time = '09:00', late_grace_minutes = 15 where org_id = $1`,
+        [ids.org],
+      ),
     );
     const filed = await agents.emp
       .post('/api/attendance/corrections')
-      .send({ workDate: today, checkInAt: `${today}T00:05:00Z`, checkOutAt: `${today}T00:06:00Z`, reason: 'Forgot to tap' });
+      .send({
+        workDate: today,
+        checkInAt: `${today}T00:05:00Z`,
+        checkOutAt: `${today}T00:06:00Z`,
+        reason: 'Forgot to tap',
+      });
     expect(filed.status).toBe(201);
     const id = filed.body.requestId as string;
 
@@ -193,5 +255,7 @@ suite('HRMS attendance (integration)', () => {
     expect(csv.status).toBe(200);
     expect(csv.headers['content-type']).toMatch(/text\/csv/);
     expect(csv.text).toContain('Name,Email,Role');
+    expect(csv.text).toContain('Test ceo');
+    expect(csv.text).toContain('Test coo');
   });
 });

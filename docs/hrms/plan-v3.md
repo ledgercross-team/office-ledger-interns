@@ -207,29 +207,29 @@ CEOs and COOs aren't scored. Each score runs from 0 to 100 and appears next to t
 - **On-time score** = 100 × tasks finished on or before the due date ÷ that total.
 - With no tasks in the window, this input is left out and its weight is shared out to the others.
 
-**D. Early-finish bonus (rolling last 30 days)**
-- A task that reaches **Done strictly before its deadline** earns **+1 point** for **every manager and employee assigned to it**.
-- The points are added to the final score (below) and the total is capped at 100. The band is decided after the bonus.
-- The CEO and COO see how many early finishes a person has in the score breakdown.
+**D. Leave adherence (rolling last 30 days)**
+- Approved paid leave within the allowance is neutral.
+- Unpaid leave or leave over the allowance counts as a leave-penalty day.
+- **Leave score** = 100 × (scheduled working days − leave-penalty days) ÷ scheduled working days.
 
 ### Final score
 ```
-Performance = 30% × Attendance + 50% × Rating + 20% × On-time + 1 per early-finished task (D), max 100
+Performance = 30% × Attendance + 10% × Rating + 50% × On-time + 10% × Leave
 ```
 - **Fewer than 3 ratings:** the rating input is left out and its weight is shared out to the others. The score is labelled "No ratings yet".
-- **Only CEOs and COOs see scores.** Managers and employees can't see their own score or anyone else's. They can still see their own attendance records (§12).
+- **CEOs and COOs see the organisation's scores.** Managers and employees see their own score and breakdown only.
 - **Under 30 days in the org:** the score is labelled "New" and not judged.
 - **Display:** the score is always shown as a number out of 100, for example **81 / 100**, colored by band.
 - **Bands:** 85+ Excellent (green), 70–84 Good, 50–69 Needs attention (amber), under 50 Poor (red).
 - A **trend arrow** compares the score with the previous 30 days.
-- Clicking the score shows the breakdown: days on time, late and absent, leave taken, and the rating average with its count.
-- The CEO can change the 30/50/20 weights and the late, missing and unpaid points in org settings.
+- Clicking the score shows the breakdown: days on time, late and absent, leave-penalty days, and the rating average with its count.
+- The CEO can change the four weights and the late, missing and unpaid points in org settings.
 
 ### Worked example
 22 working days: 18 on time, 3 late, 1 absent → (18 + 1.5 + 0) ÷ 22 = **88.6** attendance.
 Five ratings averaging 4.2, with an org average of 3.8 → smoothed (11.4 + 21) ÷ 8 = 4.05 → **76.3** rating.
 8 tasks done in the window, 7 by the due date, and none open past due → **87.5** on-time.
-Performance = 0.3 × 88.6 + 0.5 × 76.3 + 0.2 × 87.5 = **82 / 100 (Good)**.
+With a leave score of 100, Performance = 0.3 × 88.6 + 0.1 × 76.3 + 0.5 × 87.5 + 0.1 × 100 = **88 / 100 (Excellent)**.
 
 ## 14. Messages and reports
 

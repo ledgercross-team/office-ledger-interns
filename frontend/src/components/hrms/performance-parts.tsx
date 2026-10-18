@@ -63,7 +63,7 @@ function Part({
   );
 }
 
-/** Breakdown drawer. CEO and COO only: the API refuses everyone else. */
+/** Breakdown drawer. CEOs/COOs can inspect the org; managers/employees can inspect themselves. */
 export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClose: () => void }) {
   const data = useQuery({
     queryKey: ['hrms', 'performance', memberId],
@@ -116,19 +116,17 @@ export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClo
             weight={d.ratings.weight}
           />
           <Part
+            label="Leave"
+            score={d.leave.score}
+            detail={`${d.leave.days ?? 0} unpaid or over-allowance day${d.leave.days === 1 ? '' : 's'}`}
+            weight={d.leave.weight}
+          />
+          <Part
             label="Tasks on time"
             score={d.onTime.score}
             detail={`${d.onTime.done} of ${d.onTime.total} on time`}
             weight={d.onTime.weight}
           />
-          <div>
-            <p className="text-sm font-medium text-charcoal">Early finishes</p>
-            <p className="text-sm text-charcoal-soft">
-              {d.earlyBonus.tasks === 0
-                ? 'No tasks finished before their deadline in the last 30 days.'
-                : `+${d.earlyBonus.tasks} point${d.earlyBonus.tasks === 1 ? '' : 's'} (${d.earlyBonus.tasks} task${d.earlyBonus.tasks === 1 ? '' : 's'} finished before the deadline), already included in the score.`}
-            </p>
-          </div>
           <div>
             <p className="text-sm font-medium text-charcoal">Recent</p>
             <ul className="text-sm text-charcoal-soft">

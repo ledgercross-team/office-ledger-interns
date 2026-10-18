@@ -24,6 +24,7 @@ const SETTINGS_COLUMNS: Record<keyof UpdateOrgSettingsDto, string> = {
   weightAttendance: 'weight_attendance',
   weightRating: 'weight_rating',
   weightOntime: 'weight_ontime',
+  weightLeave: 'weight_leave',
   pointsLate: 'points_late',
   pointsMissingCheckout: 'points_missing_checkout',
   pointsUnpaidLeave: 'points_unpaid_leave',
@@ -46,6 +47,7 @@ interface SettingsRow extends Record<string, unknown> {
   weight_attendance: number;
   weight_rating: number;
   weight_ontime: number;
+  weight_leave: number;
   points_late: string;
   points_missing_checkout: string;
   points_unpaid_leave: string;
@@ -67,7 +69,7 @@ export interface SeatUsage {
 const SETTINGS_SELECT = sql`
   select timezone, to_char(work_start_time, 'HH24:MI') as work_start_time, late_grace_minutes,
          weekend_days, request_expiry_working_days, workload_amber_tasks, workload_amber_projects,
-         workload_red_tasks, workload_red_projects, weight_attendance, weight_rating, weight_ontime,
+         workload_red_tasks, workload_red_projects, weight_attendance, weight_rating, weight_ontime, weight_leave,
          points_late::text, points_missing_checkout::text, points_unpaid_leave::text,
          rating_min_count, rating_prior_weight, rating_window_days, high_urgency_reminder_hours
     from org_settings where org_id = current_org_id()`;
@@ -162,6 +164,7 @@ export class OrgService {
       weightAttendance: r.weight_attendance,
       weightRating: r.weight_rating,
       weightOntime: r.weight_ontime,
+      weightLeave: r.weight_leave,
       pointsLate: Number(r.points_late),
       pointsMissingCheckout: Number(r.points_missing_checkout),
       pointsUnpaidLeave: Number(r.points_unpaid_leave),
@@ -174,17 +177,32 @@ export class OrgService {
 
   // ---- office networks ------------------------------------------------
   async listNetworks() {
-    const r = await this.context.tx.execute<{ id: string; network: string; label: string | null; created_at: string }>(
+    const r = await this.context.tx.execute<{
+      id: string;
+      network: string;
+      label: string | null;
+      created_at: string;
+    }>(
       sql`select id, network::text, label, created_at from org_office_networks
            where org_id = current_org_id() order by network`,
     );
     return {
-      items: r.rows.map((n) => ({ id: n.id, network: n.network, label: n.label, createdAt: iso(n.created_at) })),
+      items: r.rows.map((n) => ({
+        id: n.id,
+        network: n.network,
+        label: n.label,
+        createdAt: iso(n.created_at),
+      })),
     };
   }
 
   async addNetwork(dto: CreateOfficeNetworkDto) {
-    const r = await this.context.tx.execute<{ id: string; network: string; label: string | null; created_at: string }>(
+    const r = await this.context.tx.execute<{
+      id: string;
+      network: string;
+      label: string | null;
+      created_at: string;
+    }>(
       sql`insert into org_office_networks (org_id, network, label)
           values (current_org_id(), ${dto.network}::cidr, ${dto.label ?? null})
           returning id, network::text, label, created_at`,

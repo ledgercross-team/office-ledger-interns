@@ -26,7 +26,10 @@ suite('HRMS ratings (integration)', () => {
     const c = await owner.connect();
     try {
       await c.query('begin');
-      await c.query("select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)", [ids.org]);
+      await c.query(
+        "select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)",
+        [ids.org],
+      );
       const r = await fn(c);
       await c.query('commit');
       return r;
@@ -62,7 +65,9 @@ suite('HRMS ratings (integration)', () => {
     }).compile();
     app = moduleRef.createNestApplication();
     app.use(cookieParser());
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+    );
     await app.init();
 
     const hash = await hashPassword(PASSWORD);
@@ -78,10 +83,16 @@ suite('HRMS ratings (integration)', () => {
     try {
       await c.query('begin');
       ids.org = (
-        await c.query(`insert into hrms.orgs (name, plan_code) values ($1, 'premium') returning id`, [`req-${suffix}`])
+        await c.query(
+          `insert into hrms.orgs (name, plan_code) values ($1, 'premium') returning id`,
+          [`req-${suffix}`],
+        )
       ).rows[0].id;
       ids.m_ceo = (
-        await c.query(`insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'ceo') returning id`, [ids.org, ids.ceo])
+        await c.query(
+          `insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'ceo') returning id`,
+          [ids.org, ids.ceo],
+        )
       ).rows[0].id;
       await c.query('commit');
     } finally {
@@ -89,7 +100,9 @@ suite('HRMS ratings (integration)', () => {
     }
     await orgTx(async (cl) => {
       const roles: Array<[string, string]> = [
-        ['coo', 'coo'], ['lead', 'manager'], ['emp', 'employee'],
+        ['coo', 'coo'],
+        ['lead', 'manager'],
+        ['emp', 'employee'],
       ];
       for (const [n, role] of roles) {
         ids[`m_${n}`] = (
@@ -103,7 +116,9 @@ suite('HRMS ratings (integration)', () => {
 
     for (const n of names) {
       const agent = request.agent(app.getHttpServer());
-      expect((await agent.post('/api/auth/login').send({ email: email(n), password: PASSWORD })).status).toBe(200);
+      expect(
+        (await agent.post('/api/auth/login').send({ email: email(n), password: PASSWORD })).status,
+      ).toBe(200);
       agents[n] = agent;
     }
 
@@ -128,20 +143,24 @@ suite('HRMS ratings (integration)', () => {
     await owner.end();
   });
 
-
-
-
   async function completedProject(name: string): Promise<string> {
-    const created = await agents.ceo.post('/api/projects').send({ name: `${name}-${suffix}`, managerIds: [ids.m_lead] });
+    const created = await agents.ceo
+      .post('/api/projects')
+      .send({ name: `${name}-${suffix}`, managerIds: [ids.m_lead] });
     expect(created.status).toBe(201);
     const id = created.body.id as string;
-    expect((await agents.ceo.patch(`/api/projects/${id}/members/${ids.m_lead}/lead`).send({ isLead: true })).status).toBe(200);
+    expect(
+      (
+        await agents.ceo
+          .patch(`/api/projects/${id}/members/${ids.m_lead}/lead`)
+          .send({ isLead: true })
+      ).status,
+    ).toBe(200);
     await orgTx((cl) =>
-      cl.query(`insert into hrms.project_members (org_id, project_id, member_id, role) values ($1, $2, $3, 'employee')`, [
-        ids.org,
-        id,
-        ids.m_emp,
-      ]),
+      cl.query(
+        `insert into hrms.project_members (org_id, project_id, member_id, role) values ($1, $2, $3, 'employee')`,
+        [ids.org, id, ids.m_emp],
+      ),
     );
     // one finished task, so the managers can tick
     await orgTx(async (cl) => {
@@ -155,7 +174,10 @@ suite('HRMS ratings (integration)', () => {
         [ids.org, t.rows[0].id, ids.m_lead, ids.m_emp],
       );
       for (const status of ['in_progress', 'in_review', 'done']) {
-        await cl.query(`update hrms.tasks set status = $2::hrms.task_status where id = $1`, [t.rows[0].id, status]);
+        await cl.query(`update hrms.tasks set status = $2::hrms.task_status where id = $1`, [
+          t.rows[0].id,
+          status,
+        ]);
       }
     });
     // let the "added" timestamps sit before the completion time
@@ -194,7 +216,10 @@ suite('HRMS ratings (integration)', () => {
   it('refuses ratings once the window has closed', async () => {
     ids.p2 = await completedProject('Closed');
     await orgTx((cl) =>
-      cl.query(`update hrms.projects set rating_closes_at = now() - interval '1 day' where id = $1`, [ids.p2]),
+      cl.query(
+        `update hrms.projects set rating_closes_at = now() - interval '1 day' where id = $1`,
+        [ids.p2],
+      ),
     );
     const due = await agents.emp.get('/api/me/ratings-due');
     expect(due.body.items.some((i: { projectId: string }) => i.projectId === ids.p2)).toBe(false);
@@ -205,12 +230,20 @@ suite('HRMS ratings (integration)', () => {
     expect(res.body.message).toMatch(/rating window/i);
   });
 
-  it('keeps performance to the CEO and COO, who see scores after the job runs', async () => {
-    expect((await agents.emp.get('/api/performance')).status).toBe(403);
-    expect((await agents.lead.get('/api/performance')).status).toBe(403);
-    expect((await agents.emp.get(`/api/performance/${ids.m_emp}`)).status).toBe(403);
+  it('shows managers and employees their own performance, while CEO and COO see the org', async () => {
+    await orgTx((cl) =>
+      cl.query('select hrms.job_compute_performance($1, current_date)', [ids.org]),
+    );
 
-    await orgTx((cl) => cl.query('select hrms.job_compute_performance($1, current_date)', [ids.org]));
+    for (const [who, memberId] of [['emp', ids.m_emp], ['lead', ids.m_lead] as const]) {
+      const list = await agents[who].get('/api/performance');
+      expect(list.status).toBe(200);
+      expect(list.body.items).toHaveLength(1);
+      expect(list.body.items[0].memberId).toBe(memberId);
+      expect((await agents[who].get(`/api/performance/${memberId}`)).status).toBe(200);
+    }
+    expect((await agents.emp.get(`/api/performance/${ids.m_lead}`)).status).toBe(403);
+
     for (const who of ['ceo', 'coo'] as const) {
       const list = await agents[who].get('/api/performance');
       expect(list.status).toBe(200);
@@ -221,6 +254,11 @@ suite('HRMS ratings (integration)', () => {
     const detail = await agents.coo.get(`/api/performance/${ids.m_emp}`);
     expect(detail.status).toBe(200);
     expect(detail.body.attendance).toBeDefined();
+    expect(detail.body.leave).toBeDefined();
+    expect(detail.body.leave.weight).toBe(10);
+    expect(detail.body.ratings.weight).toBe(10);
+    expect(detail.body.onTime.weight).toBe(50);
+    expect(detail.body.attendance.weight).toBe(30);
     expect(detail.body.history.length).toBeGreaterThan(0);
   });
 });

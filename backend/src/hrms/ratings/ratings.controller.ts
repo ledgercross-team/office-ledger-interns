@@ -12,6 +12,7 @@ function principalOf(req: HrmsAuthedRequest): HrmsPrincipal {
 }
 
 const uuid = new ParseUUIDPipe();
+const PERFORMANCE_ROLES = ['ceo', 'coo', 'manager', 'employee'] as const;
 
 // Nothing here returns who rated whom: the app role cannot read project_ratings.
 @HrmsController('')
@@ -26,19 +27,23 @@ export class RatingsController {
 
   @HrmsRoles('manager', 'employee')
   @Post('projects/:id/ratings')
-  submit(@Req() req: HrmsAuthedRequest, @Param('id', uuid) id: string, @Body() dto: SubmitRatingsDto) {
+  submit(
+    @Req() req: HrmsAuthedRequest,
+    @Param('id', uuid) id: string,
+    @Body() dto: SubmitRatingsDto,
+  ) {
     return this.ratings.submit(principalOf(req), id, dto);
   }
 
-  @HrmsRoles('ceo', 'coo')
+  @HrmsRoles(...PERFORMANCE_ROLES)
   @Get('performance')
   list(@Req() req: HrmsAuthedRequest) {
     return this.ratings.list(principalOf(req));
   }
 
-  @HrmsRoles('ceo', 'coo')
+  @HrmsRoles(...PERFORMANCE_ROLES)
   @Get('performance/:memberId')
-  breakdown(@Param('memberId', uuid) memberId: string) {
-    return this.ratings.breakdown(memberId);
+  breakdown(@Req() req: HrmsAuthedRequest, @Param('memberId', uuid) memberId: string) {
+    return this.ratings.breakdown(principalOf(req), memberId);
   }
 }

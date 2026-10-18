@@ -88,8 +88,8 @@ export default function AttendancePage() {
           )}
         </div>
         <p className="text-xs text-charcoal-soft">
-          Press and hold for 2.5 seconds. If your CEO or COO has set office IP addresses, check-in
-          works from those only.
+          Press and hold for 2.5 seconds. Your IP address must match an office address configured by
+          a CEO or COO.
         </p>
         {error && (
           <p role="alert" className="text-sm text-alert-deep">

@@ -62,8 +62,8 @@ export class AttendanceService {
   ) {}
 
   async checkIn(p: HrmsPrincipal, rawIp: string | null | undefined) {
-    // Recorded when readable. The database refuses a missing or foreign address only
-    // when the CEO or COO has set office networks; with none set, nothing is checked.
+    // Recorded when readable. The database refuses a missing or foreign address unless
+    // the check-in is being applied through an approved attendance correction.
     const ip = cleanIp(rawIp);
     // The database decides present or late.
     const r = await this.context.tx.execute<{ id: string }>(sql`
@@ -144,7 +144,7 @@ export class AttendanceService {
         join org_settings s on s.org_id = m.org_id
         cross join lateral (select coalesce(${date ?? null}::date, (now() at time zone s.timezone)::date) as day) d
         left join attendance_days a on a.member_id = m.id and a.work_date = d.day
-       where m.org_id = current_org_id() and m.status = 'active' and m.role in ('manager', 'employee')
+       where m.org_id = current_org_id() and m.status = 'active'
          and ${this.visibleTo(p)}
        order by u.full_name`);
     return {
@@ -273,7 +273,7 @@ export class AttendanceService {
         left join attendance_days a on a.member_id = m.id
              and a.work_date >= (${m}::text || '-01')::date
              and a.work_date < ((${m}::text || '-01')::date + interval '1 month')
-       where m.org_id = current_org_id() and m.role in ('manager', 'employee') and ${this.visibleTo(p)}
+       where m.org_id = current_org_id() and m.status = 'active' and ${this.visibleTo(p)}
        group by u.full_name, u.email, m.role
        order by u.full_name`);
     const lines = [

@@ -109,7 +109,12 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['manager', 'employee'],
     badge: 'ratings',
   },
-  { href: '/performance', label: 'Performance', icon: Star, roles: ['ceo', 'coo'] },
+  {
+    href: '/performance',
+    label: 'Performance',
+    icon: Star,
+    roles: ['ceo', 'coo', 'manager', 'employee'],
+  },
   { href: '/history', label: 'History', icon: History, roles: ['ceo', 'coo'] },
   { href: '/settings', label: 'Settings', icon: Settings, roles: ['ceo', 'coo'] },
 ];

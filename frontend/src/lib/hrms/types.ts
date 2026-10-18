@@ -93,6 +93,7 @@ export interface OrgSettings {
   weightAttendance: number;
   weightRating: number;
   weightOntime: number;
+  weightLeave: number;
   pointsLate: number;
   pointsMissingCheckout: number;
   pointsUnpaidLeave: number;
@@ -463,6 +464,11 @@ export interface PerformanceBreakdown {
     workingDays: number | null;
     weight: number | null;
   };
+  leave: {
+    days: number | null;
+    score: number | null;
+    weight: number | null;
+  };
   ratings: {
     score: number | null;
     average: number | null;
@@ -471,7 +477,6 @@ export interface PerformanceBreakdown {
     summary: { count: number; average: number } | null;
   };
   onTime: { score: number | null; done: number; total: number; weight: number | null };
-  earlyBonus: { tasks: number };
   history: Array<{ computedOn: string; score: number | null; band: PerformanceBand | null }>;
 }
 

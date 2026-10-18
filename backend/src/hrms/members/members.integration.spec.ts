@@ -426,8 +426,15 @@ suite('HRMS org settings and members (integration)', () => {
         .post('/api/org/office-networks')
         .send({ network: '203.0.113.0/24', label: 'HQ' });
       expect(net.status).toBe(201);
-      expect((await agents.ceoA.get('/api/org/office-networks')).body.items).toHaveLength(1);
+      const cooNet = await agents.cooA
+        .post('/api/org/office-networks')
+        .send({ network: '198.51.100.0/24', label: 'Remote office' });
+      expect(cooNet.status).toBe(201);
+      expect((await agents.ceoA.get('/api/org/office-networks')).body.items).toHaveLength(2);
       expect((await agents.employeeA.get('/api/org/office-networks')).status).toBe(403);
+      expect((await agents.cooA.delete(`/api/org/office-networks/${cooNet.body.id}`)).status).toBe(
+        204,
+      );
       expect((await agents.ceoA.delete(`/api/org/office-networks/${net.body.id}`)).status).toBe(
         204,
       );
