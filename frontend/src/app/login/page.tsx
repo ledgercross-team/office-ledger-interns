@@ -152,9 +152,9 @@ function LoginForm() {
             className="absolute right-2 top-8 inline-flex size-8 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-surface-sunken hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {showPassword ? (
-              <EyeOff aria-hidden className="size-4" />
-            ) : (
               <Eye aria-hidden className="size-4" />
+            ) : (
+              <EyeOff aria-hidden className="size-4" />
             )}
           </button>
           <Link
