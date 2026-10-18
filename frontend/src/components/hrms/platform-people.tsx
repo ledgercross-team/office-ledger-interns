@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { ConfirmDialog } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 
 const input =
@@ -10,7 +11,7 @@ const primary =
 const secondary =
   'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
 
-type Mode = 'idle' | 'edit' | 'confirmRemove';
+type Mode = 'idle' | 'edit';
 
 /**
  * Update and remove for a gameMaster or an org's CEO. `base` is the API path of the
@@ -112,14 +113,24 @@ export function PersonManager({
           Turn off authenticator
         </button>
         {canRemove && (
-          <button
-            type="button"
-            className={secondary}
-            disabled={pending}
-            onClick={() => setMode('confirmRemove')}
-          >
-            {removeLabel}
-          </button>
+          <ConfirmDialog
+            trigger={
+              <button type="button" className={secondary} disabled={pending}>
+                {removeLabel}
+              </button>
+            }
+            title={`${removeLabel} ${fullName}?`}
+            description={`They will be signed out and can no longer sign in. Their history will be kept.`}
+            confirmLabel={`Yes, ${removeLabel.toLowerCase()}`}
+            variant="danger"
+            loading={pending}
+            onConfirm={() =>
+              run('/remove', { method: 'POST' }, () => {
+                setMode('idle');
+                setNotice('Removed.');
+              })
+            }
+          />
         )}
       </div>
 
@@ -155,37 +166,6 @@ export function PersonManager({
             </button>
           </div>
         </form>
-      )}
-
-      {mode === 'confirmRemove' && (
-        <div
-          role="alertdialog"
-          aria-label={`Remove ${fullName}`}
-          className="max-w-lg space-y-2 rounded-xl border border-alert/30 bg-alert-tint p-3 text-sm"
-        >
-          <p className="text-charcoal">
-            {removeLabel} <strong>{fullName}</strong>? They are signed out and can no longer sign
-            in. Their history is kept.
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="rounded-xl bg-alert px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-              disabled={pending}
-              onClick={() =>
-                void run('/remove', { method: 'POST' }, () => {
-                  setMode('idle');
-                  setNotice('Removed.');
-                })
-              }
-            >
-              Yes, {removeLabel.toLowerCase()}
-            </button>
-            <button type="button" className={secondary} onClick={() => setMode('idle')}>
-              Cancel
-            </button>
-          </div>
-        </div>
       )}
 
       {password && (

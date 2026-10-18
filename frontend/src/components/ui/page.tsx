@@ -162,6 +162,7 @@ export function CommandPalette({ items, trigger }: { items: CommandItem[]; trigg
             <Search aria-hidden className="size-5 text-fg-muted" />
             <input
               autoFocus
+              aria-label="Search command palette"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search pages, people, projects and tasks"

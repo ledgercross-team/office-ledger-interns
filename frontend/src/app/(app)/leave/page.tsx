@@ -253,14 +253,17 @@ export default function LeavePage() {
           className="space-y-3 rounded-card border border-border bg-surface p-4 lg:sticky lg:top-20"
         >
           <h2 className="font-bold text-fg">Ask for leave</h2>
-          <select name="type" required className={input} aria-label="Leave type">
-            <option value="">Type…</option>
-            {balance.data?.items.map((b) => (
-              <option key={b.leaveTypeId} value={b.leaveTypeId}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+          <label htmlFor="leave-type" className="block space-y-1 text-sm text-fg">
+            Leave type
+            <select id="leave-type" name="type" required className={input}>
+              <option value="">Choose a leave type</option>
+              {balance.data?.items.map((b) => (
+                <option key={b.leaveTypeId} value={b.leaveTypeId}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block min-w-0 space-y-1 text-sm text-fg">
               From
@@ -279,14 +282,18 @@ export default function LeavePage() {
               <input name="endHalf" type="checkbox" /> Last day is a half day
             </label>
           </div>
-          <textarea
-            name="reason"
-            required
-            rows={3}
-            maxLength={1000}
-            placeholder="Reason"
-            className={input}
-          />
+          <label htmlFor="leave-reason" className="block space-y-1 text-sm text-fg">
+            Reason
+            <textarea
+              id="leave-reason"
+              name="reason"
+              required
+              rows={3}
+              maxLength={1000}
+              placeholder="Explain why you need leave"
+              className={input}
+            />
+          </label>
           <p className="text-xs text-fg-muted">
             Weekends and holidays are not counted. Your project lead or the COO decides.
           </p>

@@ -33,7 +33,9 @@ function ProjectRatings({ project, onDone }: { project: RatingsDueProject; onDon
       });
       onDone();
     } catch (err) {
-      setError(err instanceof HrmsApiError ? err.message : 'Something went wrong. Please try again.');
+      setError(
+        err instanceof HrmsApiError ? err.message : 'Something went wrong. Please try again.',
+      );
     } finally {
       setPending(false);
     }
@@ -42,7 +44,10 @@ function ProjectRatings({ project, onDone }: { project: RatingsDueProject; onDon
   const complete = project.ratees.every((r) => stars[r.memberId]);
 
   return (
-    <form onSubmit={onSubmit} className="max-w-lg space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4">
+    <form
+      onSubmit={onSubmit}
+      className="max-w-lg space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4"
+    >
       <h2 className="font-medium text-charcoal">{project.projectName}</h2>
       <p className="text-xs text-charcoal-soft">
         Ratings are anonymous. Open until {project.closesAt ? formatDate(project.closesAt) : '—'}.
@@ -71,13 +76,20 @@ function ProjectRatings({ project, onDone }: { project: RatingsDueProject; onDon
               </button>
             ))}
           </div>
-          <input
-            name={`c-${r.memberId}`}
-            maxLength={2000}
-            placeholder={stars[r.memberId] && stars[r.memberId] <= 2 ? 'Comment (required)' : 'Comment (optional)'}
-            required={Boolean(stars[r.memberId] && stars[r.memberId] <= 2)}
-            className={input}
-          />
+          <label
+            htmlFor={`rating-comment-${r.memberId}`}
+            className="block space-y-1 text-sm text-charcoal"
+          >
+            Comment {stars[r.memberId] && stars[r.memberId] <= 2 ? '(required)' : '(optional)'}
+            <input
+              id={`rating-comment-${r.memberId}`}
+              name={`c-${r.memberId}`}
+              maxLength={2000}
+              placeholder="Add context for this rating"
+              required={Boolean(stars[r.memberId] && stars[r.memberId] <= 2)}
+              className={input}
+            />
+          </label>
         </fieldset>
       ))}
       {error && (

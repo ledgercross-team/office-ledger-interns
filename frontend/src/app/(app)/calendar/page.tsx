@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { Button, Dialog } from '@/components/ui';
 import { MemberChips, MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { meetingProblem } from '@/lib/hrms/meeting';
@@ -87,16 +88,22 @@ function MeetingDialog({
   const mine = m?.invitees.find((i) => i.memberId === session?.activeMemberId);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4"
-      role="dialog"
-      aria-modal="true"
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={m?.title ?? 'Meeting details'}
+      description="Review the meeting details and invitee responses."
     >
-      <div className="w-full max-w-md space-y-3 rounded-2xl bg-white p-4">
-        {!m && <p className="text-sm text-charcoal-soft">Loading…</p>}
+      <div className="space-y-3">
+        {!m && (
+          <p className="text-sm text-fg-muted" role="status">
+            Loading meeting details…
+          </p>
+        )}
         {m && (
           <>
-            <h2 className="font-medium text-charcoal">{m.title}</h2>
             <p className="text-sm text-charcoal">
               {m.startsAtLocal.slice(0, 10)} {to12Hour(m.startsAtLocal)} to{' '}
               {to12Hour(m.endsAtLocal)} ({m.timezone})
@@ -128,30 +135,36 @@ function MeetingDialog({
             <div className="flex flex-wrap gap-2">
               {mine && !m.cancelled && (
                 <>
-                  <button
+                  <Button
                     type="button"
+                    loading={respond.isPending}
                     onClick={() => respond.mutate('accepted')}
-                    className={primary}
                   >
                     Accept
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="secondary"
+                    disabled={respond.isPending}
                     onClick={() => respond.mutate('declined')}
-                    className={secondary}
                   >
                     Decline
-                  </button>
+                  </Button>
                 </>
               )}
               {m.canEdit && (
-                <button type="button" onClick={() => cancel.mutate()} className={secondary}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  loading={cancel.isPending}
+                  onClick={() => cancel.mutate()}
+                >
                   Cancel meeting
-                </button>
+                </Button>
               )}
-              <button type="button" onClick={onClose} className={secondary}>
+              <Button type="button" variant="secondary" onClick={onClose}>
                 Close
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -161,7 +174,7 @@ function MeetingDialog({
           </p>
         )}
       </div>
-    </div>
+    </Dialog>
   );
 }
 
@@ -221,37 +234,71 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
       className="max-w-lg space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4"
     >
       <h2 className="font-medium text-charcoal">New meeting</h2>
-      <input name="title" required maxLength={200} placeholder="Title" className={input} />
+      <label htmlFor="meeting-title" className="block space-y-1 text-sm text-charcoal">
+        Title
+        <input
+          id="meeting-title"
+          name="title"
+          required
+          maxLength={200}
+          placeholder="Title"
+          className={input}
+        />
+      </label>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="meeting-start" className="block space-y-1 text-sm text-charcoal">
           Starts
-          <input name="start" type="datetime-local" required className={input} />
+          <input id="meeting-start" name="start" type="datetime-local" required className={input} />
         </label>
-        <label className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="meeting-end" className="block space-y-1 text-sm text-charcoal">
           Ends
-          <input name="end" type="datetime-local" required className={input} />
+          <input id="meeting-end" name="end" type="datetime-local" required className={input} />
         </label>
       </div>
-      <div className="flex gap-4 text-sm text-charcoal">
+      <fieldset className="flex gap-4 text-sm text-charcoal">
+        <legend className="sr-only">Meeting format</legend>
         <label className="flex items-center gap-2">
-          <input type="radio" checked={where === 'link'} onChange={() => setWhere('link')} /> Online
+          <input
+            type="radio"
+            name="meeting-format"
+            value="online"
+            checked={where === 'link'}
+            onChange={() => setWhere('link')}
+          />{' '}
+          Online
         </label>
         <label className="flex items-center gap-2">
           <input
             type="radio"
+            name="meeting-format"
+            value="in-person"
             checked={where === 'location'}
             onChange={() => setWhere('location')}
           />{' '}
           In person
         </label>
-      </div>
-      <input
-        name="place"
-        required
-        placeholder={where === 'link' ? 'https://…' : 'Room or address'}
-        className={input}
-      />
-      <textarea name="description" rows={2} placeholder="Notes (optional)" className={input} />
+      </fieldset>
+      <label htmlFor="meeting-place" className="block space-y-1 text-sm text-charcoal">
+        {where === 'link' ? 'Meeting link' : 'Room or address'}
+        <input
+          id="meeting-place"
+          name="place"
+          required
+          type={where === 'link' ? 'url' : 'text'}
+          placeholder={where === 'link' ? 'https://…' : 'Room or address'}
+          className={input}
+        />
+      </label>
+      <label htmlFor="meeting-description" className="block space-y-1 text-sm text-charcoal">
+        Notes <span className="text-charcoal-soft">(optional)</span>
+        <textarea
+          id="meeting-description"
+          name="description"
+          rows={2}
+          placeholder="Notes"
+          className={input}
+        />
+      </label>
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-charcoal">Invite</legend>
         <MemberSearch

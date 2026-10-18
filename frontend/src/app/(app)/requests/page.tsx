@@ -43,7 +43,8 @@ const input =
   'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
 const primary =
   'rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
-const secondary = 'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+const secondary =
+  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
 
 function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
@@ -103,12 +104,22 @@ function FollowUp({ request, onDone }: { request: HrmsRequest; onDone: () => voi
         </Link>
       )}
       {(request.type === 'add_to_project' || request.type === 'add_and_assign') && (
-        <button type="button" disabled={act.isPending} onClick={() => act.mutate()} className={primary}>
+        <button
+          type="button"
+          disabled={act.isPending}
+          onClick={() => act.mutate()}
+          className={primary}
+        >
           Send invite
         </button>
       )}
       {request.type === 'assign_task' && (
-        <button type="button" disabled={act.isPending} onClick={() => act.mutate()} className={primary}>
+        <button
+          type="button"
+          disabled={act.isPending}
+          onClick={() => act.mutate()}
+          className={primary}
+        >
           Assign now
         </button>
       )}
@@ -148,7 +159,10 @@ function RequestRow({
   });
   const reject = useMutation({
     mutationFn: () =>
-      hrmsFetch(`/requests/${request.id}/reject`, { method: 'POST', body: { reason: reason.trim() } }),
+      hrmsFetch(`/requests/${request.id}/reject`, {
+        method: 'POST',
+        body: { reason: reason.trim() },
+      }),
     ...settle,
   });
   const cancel = useMutation({
@@ -175,21 +189,31 @@ function RequestRow({
             {formatDate(request.createdAt)}
             {request.status === 'pending' && ` · expires ${formatDate(request.expiresAt)}`}
           </p>
-          {request.reason && <p className="text-sm text-charcoal">&ldquo;{request.reason}&rdquo;</p>}
+          {request.reason && (
+            <p className="text-sm text-charcoal">&ldquo;{request.reason}&rdquo;</p>
+          )}
           {request.decisionReason && (
             <p className="text-sm text-charcoal">
-              {request.decidedBy ? `${request.decidedBy.fullName}: ` : ''}&ldquo;{request.decisionReason}&rdquo;
+              {request.decidedBy ? `${request.decidedBy.fullName}: ` : ''}&ldquo;
+              {request.decisionReason}&rdquo;
             </p>
           )}
           {request.status === 'pending' && request.cannotDecideBecause && (
-            <p className="text-xs text-charcoal-soft">You cannot decide this: {request.cannotDecideBecause}</p>
+            <p className="text-xs text-charcoal-soft">
+              You cannot decide this: {request.cannotDecideBecause}
+            </p>
           )}
         </div>
       </div>
 
       {request.canDecide && !rejecting && (
         <div className="flex gap-2">
-          <button type="button" disabled={approve.isPending} onClick={() => approve.mutate()} className={primary}>
+          <button
+            type="button"
+            disabled={approve.isPending}
+            onClick={() => approve.mutate()}
+            className={primary}
+          >
             Approve
           </button>
           <button type="button" onClick={() => setRejecting(true)} className={secondary}>
@@ -201,7 +225,12 @@ function RequestRow({
         <div className="space-y-2">
           <label className="block space-y-1 text-sm text-charcoal">
             Reason for rejecting (required)
-            <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className={input} />
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={2}
+              className={input}
+            />
           </label>
           <div className="flex gap-2">
             <button
@@ -220,7 +249,12 @@ function RequestRow({
       )}
       <FollowUp request={request} onDone={onChanged} />
       {request.canCancel && (
-        <button type="button" disabled={cancel.isPending} onClick={() => cancel.mutate()} className={secondary}>
+        <button
+          type="button"
+          disabled={cancel.isPending}
+          onClick={() => cancel.mutate()}
+          className={secondary}
+        >
           Withdraw
         </button>
       )}
@@ -244,7 +278,9 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
   const [note, setNote] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const needsProject = ['add_to_project', 'create_task', 'assign_task', 'add_and_assign'].includes(type);
+  const needsProject = ['add_to_project', 'create_task', 'assign_task', 'add_and_assign'].includes(
+    type,
+  );
   const needsSubject = ['add_to_project', 'assign_task', 'add_and_assign'].includes(type);
   const needsTask = ['assign_task', 'add_and_assign'].includes(type);
 
@@ -256,7 +292,8 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
   const [subject, setSubject] = useState<MemberOption | null>(null);
   const tasks = useQuery({
     queryKey: ['hrms', 'tasks', 'request-form', projectId],
-    queryFn: () => hrmsFetch<Paginated<HrmsTask>>(`/tasks?projectId=${projectId}&open=true&pageSize=100`),
+    queryFn: () =>
+      hrmsFetch<Paginated<HrmsTask>>(`/tasks?projectId=${projectId}&open=true&pageSize=100`),
     enabled: needsTask && Boolean(projectId),
   });
 
@@ -293,11 +330,19 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-lg space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4">
+    <form
+      onSubmit={onSubmit}
+      className="max-w-lg space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4"
+    >
       <h2 className="font-medium text-charcoal">New request</h2>
-      <label className="block space-y-1 text-sm font-medium text-charcoal">
+      <label htmlFor="request-type" className="block space-y-1 text-sm font-medium text-charcoal">
         Type
-        <select value={type} onChange={(e) => setType(e.target.value as RequestType)} className={input}>
+        <select
+          id="request-type"
+          value={type}
+          onChange={(e) => setType(e.target.value as RequestType)}
+          className={input}
+        >
           {types.map((t) => (
             <option key={t} value={t}>
               {TYPE_LABEL[t]}
@@ -307,28 +352,70 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
       </label>
       {type === 'create_user' && (
         <>
-          <input name="fullName" required placeholder="Full name" maxLength={120} className={input} />
-          <input name="email" type="email" required placeholder="Email" className={input} />
-          <select name="role" defaultValue="employee" className={input}>
-            <option value="employee">Employee</option>
-            <option value="manager">Manager</option>
-          </select>
+          <label htmlFor="request-full-name" className="block space-y-1 text-sm text-charcoal">
+            Full name
+            <input
+              id="request-full-name"
+              name="fullName"
+              required
+              placeholder="Full name"
+              maxLength={120}
+              className={input}
+            />
+          </label>
+          <label htmlFor="request-email" className="block space-y-1 text-sm text-charcoal">
+            Email
+            <input
+              id="request-email"
+              name="email"
+              type="email"
+              required
+              placeholder="Email"
+              className={input}
+            />
+          </label>
+          <label htmlFor="request-role" className="block space-y-1 text-sm text-charcoal">
+            Role
+            <select id="request-role" name="role" defaultValue="employee" className={input}>
+              <option value="employee">Employee</option>
+              <option value="manager">Manager</option>
+            </select>
+          </label>
         </>
       )}
       {type === 'create_project' && (
-        <input name="name" required placeholder="Project name" maxLength={200} className={input} />
+        <label htmlFor="request-project-name" className="block space-y-1 text-sm text-charcoal">
+          Project name
+          <input
+            id="request-project-name"
+            name="name"
+            required
+            placeholder="Project name"
+            maxLength={200}
+            className={input}
+          />
+        </label>
       )}
       {needsProject && (
-        <select value={projectId} required onChange={(e) => setProjectId(e.target.value)} className={input}>
-          <option value="">Project…</option>
-          {projects.data?.items
-            .filter((p) => p.myRole === 'manager')
-            .map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-        </select>
+        <label htmlFor="request-project" className="block space-y-1 text-sm text-charcoal">
+          Project
+          <select
+            id="request-project"
+            value={projectId}
+            required
+            onChange={(e) => setProjectId(e.target.value)}
+            className={input}
+          >
+            <option value="">Choose a project</option>
+            {projects.data?.items
+              .filter((p) => p.myRole === 'manager')
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+          </select>
+        </label>
       )}
       {needsSubject && (
         <MemberSearch
@@ -341,16 +428,29 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
         />
       )}
       {needsTask && (
-        <select name="task" required className={input}>
-          <option value="">Task…</option>
-          {tasks.data?.items.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.title}
-            </option>
-          ))}
-        </select>
+        <label htmlFor="request-task" className="block space-y-1 text-sm text-charcoal">
+          Task
+          <select id="request-task" name="task" required className={input}>
+            <option value="">Choose a task</option>
+            {tasks.data?.items.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
-      <textarea name="reason" rows={2} maxLength={1000} placeholder="Why? (optional)" className={input} />
+      <label htmlFor="request-reason" className="block space-y-1 text-sm text-charcoal">
+        Reason <span className="text-charcoal-soft">(optional)</span>
+        <textarea
+          id="request-reason"
+          name="reason"
+          rows={2}
+          maxLength={1000}
+          placeholder="Add context for the reviewer"
+          className={input}
+        />
+      </label>
       {error && (
         <p role="alert" className="text-sm text-alert-deep">
           {error}
@@ -367,7 +467,8 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
 export default function RequestsPage() {
   const { session } = useHrmsAuth();
   const queryClient = useQueryClient();
-  const canDecide = session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
+  const canDecide =
+    session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
   const canFile = session?.role === 'coo' || session?.role === 'manager';
   const [scope, setScope] = useState<'mine' | 'decide'>(canDecide ? 'decide' : 'mine');
   const [type, setType] = useState('');
@@ -456,7 +557,12 @@ export default function RequestsPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <select value={type} onChange={(e) => setType(e.target.value)} className={`${input} sm:w-48`} aria-label="Type">
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className={`${input} sm:w-48`}
+          aria-label="Type"
+        >
           <option value="">All types</option>
           {(Object.keys(TYPE_LABEL) as RequestType[]).map((t) => (
             <option key={t} value={t}>
@@ -495,7 +601,9 @@ export default function RequestsPage() {
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <button
               type="button"
-              onClick={() => setSelected(selected.length === decidable.length ? [] : decidable.map((r) => r.id))}
+              onClick={() =>
+                setSelected(selected.length === decidable.length ? [] : decidable.map((r) => r.id))
+              }
               className={secondary}
             >
               {selected.length === decidable.length ? 'Clear selection' : 'Select all'}

@@ -11,7 +11,8 @@ import type { AuditEntry, Paginated } from '@/lib/hrms/types';
 
 const input =
   'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
-const secondary = 'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+const secondary =
+  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
 
 function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
   const queryClient = useQueryClient();
@@ -19,7 +20,8 @@ function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const add = useMutation({
-    mutationFn: () => hrmsFetch(`/audit/${entry.id}/notes`, { method: 'POST', body: { note: note.trim() } }),
+    mutationFn: () =>
+      hrmsFetch(`/audit/${entry.id}/notes`, { method: 'POST', body: { note: note.trim() } }),
     onSuccess: () => {
       setNote('');
       void queryClient.invalidateQueries({ queryKey: ['hrms', 'audit'] });
@@ -34,28 +36,49 @@ function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
         {entry.actor?.fullName ? ` by ${entry.actor.fullName}` : ' by the system'}
       </p>
       <p className="text-xs text-charcoal-soft">{formatDateTime(entry.at)}</p>
-      <button type="button" onClick={() => setOpen(!open)} className="text-xs text-forest hover:underline">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-controls={`audit-details-${entry.id}`}
+        className="text-xs text-forest hover:underline"
+      >
         {open ? 'Hide details' : 'Show details'}
       </button>
       {open && (
-        <pre className="overflow-x-auto rounded-xl bg-mist p-2 text-xs">
+        <pre
+          id={`audit-details-${entry.id}`}
+          className="overflow-x-auto rounded-xl bg-mist p-2 text-xs"
+        >
           {JSON.stringify({ before: entry.before, after: entry.after }, null, 2)}
         </pre>
       )}
       {entry.notes.map((n) => (
-        <p key={n.id} className="rounded-xl border border-evergreen/30 bg-mist p-2 text-sm text-charcoal">
+        <p
+          key={n.id}
+          className="rounded-xl border border-evergreen/30 bg-mist p-2 text-sm text-charcoal"
+        >
           Note from {n.authorName}: {n.note}
         </p>
       ))}
       {canNote && (
         <div className="flex gap-2">
+          <label htmlFor={`audit-note-${entry.id}`} className="sr-only">
+            Note for this history entry
+          </label>
           <input
+            id={`audit-note-${entry.id}`}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Add a note (the entry itself never changes)"
             className={input}
           />
-          <button type="button" disabled={note.trim().length === 0 || add.isPending} onClick={() => add.mutate()} className={secondary}>
+          <button
+            type="button"
+            disabled={note.trim().length === 0 || add.isPending}
+            onClick={() => add.mutate()}
+            className={secondary}
+          >
             Add note
           </button>
         </div>
@@ -86,7 +109,11 @@ function History() {
     <>
       <h1 className="text-xl font-semibold text-charcoal">History</h1>
       <div className="flex flex-wrap gap-2">
+        <label htmlFor="history-table" className="sr-only">
+          Filter by table
+        </label>
         <input
+          id="history-table"
           value={table}
           onChange={(e) => {
             setTable(e.target.value);
@@ -113,7 +140,12 @@ function History() {
         ))}
       </ul>
       {data.data && (
-        <Pagination page={page} pageSize={data.data.pageSize} total={data.data.total} onPage={setPage} />
+        <Pagination
+          page={page}
+          pageSize={data.data.pageSize}
+          total={data.data.total}
+          onPage={setPage}
+        />
       )}
     </>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { Drawer } from '@/components/ui';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import type { PerformanceBand, PerformanceBreakdown, PerformanceRow } from '@/lib/hrms/types';
 
@@ -72,21 +73,14 @@ export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClo
   const d = data.data;
 
   return (
-    <aside
-      role="dialog"
-      aria-label="Performance breakdown"
-      className="fixed inset-y-0 right-0 z-50 w-full max-w-sm space-y-3 overflow-y-auto border-l border-charcoal/10 bg-white p-4 shadow-lg"
+    <Drawer
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={d?.fullName ?? 'Performance breakdown'}
+      description="Review the score components and the current calculation window."
     >
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="font-medium text-charcoal">{d?.fullName ?? 'Performance'}</h2>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-sm text-charcoal-soft hover:underline"
-        >
-          Close
-        </button>
-      </div>
       {data.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
       {data.error && (
         <p role="alert" className="text-sm text-alert-deep">
@@ -139,6 +133,6 @@ export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClo
           </div>
         </>
       )}
-    </aside>
+    </Drawer>
   );
 }

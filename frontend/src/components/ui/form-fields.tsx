@@ -176,12 +176,14 @@ export function Checkbox({
   ...props
 }: ChoiceProps & React.ComponentProps<typeof CheckboxPrimitive.Root>) {
   const id = useId();
+  const helperId = helperText ? `${id}-helper` : undefined;
   return (
     <div className="flex items-start gap-2.5">
       <CheckboxPrimitive.Root
         id={id}
         disabled={disabled}
         required={required}
+        aria-describedby={helperId}
         className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border border-border-strong bg-surface text-primary disabled:opacity-50"
         {...props}
       >
@@ -194,7 +196,11 @@ export function Checkbox({
           {label}
           {required && <span className="ml-1 text-danger-fg">*</span>}
         </label>
-        {helperText && <p className="text-xs text-fg-muted">{helperText}</p>}
+        {helperText && (
+          <p id={helperId} className="text-xs text-fg-muted">
+            {helperText}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -213,6 +219,7 @@ export function Radio({
   onValueChange,
   disabled,
   required,
+  helperText,
 }: ChoiceProps & {
   options: RadioOption[];
   value?: string;
@@ -220,6 +227,7 @@ export function Radio({
   onValueChange?: (value: string) => void;
 }) {
   const labelId = useId();
+  const helperId = helperText ? `${labelId}-helper` : undefined;
   return (
     <fieldset disabled={disabled} className="space-y-2">
       <legend id={labelId} className="text-sm font-medium text-fg">
@@ -228,6 +236,7 @@ export function Radio({
       </legend>
       <RadioGroup.Root
         aria-labelledby={labelId}
+        aria-describedby={helperId}
         value={value}
         defaultValue={defaultValue}
         onValueChange={onValueChange}
@@ -251,6 +260,11 @@ export function Radio({
           </label>
         ))}
       </RadioGroup.Root>
+      {helperText && (
+        <p id={helperId} className="text-xs text-fg-muted">
+          {helperText}
+        </p>
+      )}
     </fieldset>
   );
 }
@@ -268,13 +282,18 @@ export function Switch({
   onCheckedChange?: (checked: boolean) => void;
 }) {
   const id = useId();
+  const helperId = helperText ? `${id}-helper` : undefined;
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
         <label htmlFor={id} className="text-sm font-medium text-fg">
           {label}
         </label>
-        {helperText && <p className="text-xs text-fg-muted">{helperText}</p>}
+        {helperText && (
+          <p id={helperId} className="text-xs text-fg-muted">
+            {helperText}
+          </p>
+        )}
       </div>
       <SwitchPrimitive.Root
         id={id}
@@ -282,6 +301,7 @@ export function Switch({
         checked={checked}
         defaultChecked={defaultChecked}
         onCheckedChange={onCheckedChange}
+        aria-describedby={helperId}
         className="relative h-6 w-11 shrink-0 rounded-full border border-border-strong bg-surface-sunken data-[state=checked]:border-primary data-[state=checked]:bg-primary disabled:opacity-50"
       >
         <SwitchPrimitive.Thumb className="block size-5 translate-x-0 rounded-full bg-surface-raised shadow-sm transition-transform duration-150 data-[state=checked]:translate-x-5" />

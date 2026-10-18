@@ -2,6 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { useRef, useState, type FormEvent } from 'react';
+import { Button, Dialog, Textarea } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatTime } from '@/lib/hrms/time';
@@ -216,46 +217,43 @@ export function CorrectionDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4"
-      role="dialog"
-      aria-modal="true"
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={`Correct ${day.date}`}
+      description={
+        isCeo
+          ? 'As CEO your correction is applied straight away. The original entry is kept.'
+          : 'This is a request. Your lead or the COO decides, and the original entry is kept.'
+      }
     >
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-3 rounded-2xl bg-white p-4">
-        <h2 className="font-medium text-charcoal">Correct {day.date}</h2>
-        <p className="text-xs text-charcoal-soft">
-          {isCeo
-            ? 'As CEO your correction is applied straight away. The original entry is kept.'
-            : 'This is a request. Your lead or the COO decides, and the original entry is kept.'}
-        </p>
+      <form onSubmit={onSubmit} className="space-y-3">
         <TimeField name="checkIn" label="Check-in time" />
         <TimeField name="checkOut" label="Check-out time" />
-        <label className="block space-y-1 text-sm text-charcoal">
-          Reason (required)
-          <textarea name="reason" required rows={2} maxLength={1000} className={input} />
-        </label>
+        <Textarea
+          name="reason"
+          label="Reason"
+          helperText="Required. Explain what needs to be corrected."
+          required
+          rows={2}
+          maxLength={1000}
+        />
         {error && (
           <p role="alert" className="text-sm text-alert-deep">
             {error}
           </p>
         )}
         <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={file.isPending}
-            className="rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60"
-          >
+          <Button type="submit" loading={file.isPending}>
             {isCeo ? 'Apply correction' : 'Send request'}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60"
-          >
+          </Button>
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Dialog>
   );
 }

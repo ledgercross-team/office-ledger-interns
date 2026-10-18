@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/hrms/role-gate';
 import { SeatBar } from '@/components/hrms/seat-bar';
-import { TimezoneSelect } from '@/components/ui';
+import { ConfirmDialog, TimezoneSelect } from '@/components/ui';
 import { MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
@@ -113,9 +113,10 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
             disabled={disabled}
           />
         </div>
-        <label className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="work-start-time" className="block space-y-1 text-sm text-charcoal">
           Work starts
           <input
+            id="work-start-time"
             name="workStartTime"
             type="time"
             defaultValue={settings.workStartTime}
@@ -259,13 +260,18 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
               {n.label && <span className="ml-2 text-charcoal-soft">{n.label}</span>}
             </span>
             {canEdit && (
-              <button
-                type="button"
-                onClick={() => remove.mutate(n.id)}
-                className="text-alert-deep hover:underline"
-              >
-                Remove
-              </button>
+              <ConfirmDialog
+                trigger={
+                  <button type="button" className="text-alert-deep hover:underline">
+                    Remove
+                  </button>
+                }
+                title={`Remove ${n.network}?`}
+                description="People will no longer be able to check in from this address."
+                confirmLabel="Remove address"
+                loading={remove.isPending}
+                onConfirm={() => remove.mutate(n.id)}
+              />
             )}
           </li>
         ))}
@@ -287,12 +293,22 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
           }}
         >
           <input
+            id="office-network"
             name="network"
             required
             placeholder="203.0.113.0/24"
+            aria-label="Office IP address or network"
             className={`${input} max-w-48`}
           />
-          <input name="label" placeholder="Label (optional)" className={`${input} max-w-48`} />
+          <label htmlFor="office-network-label" className="sr-only">
+            Network label (optional)
+          </label>
+          <input
+            id="office-network-label"
+            name="label"
+            placeholder="Label (optional)"
+            className={`${input} max-w-48`}
+          />
           <button type="submit" className={button}>
             Add
           </button>
@@ -340,13 +356,18 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
               {h.date} <span className="ml-2 text-charcoal-soft">{h.name}</span>
             </span>
             {canEdit && (
-              <button
-                type="button"
-                onClick={() => remove.mutate(h.date)}
-                className="text-alert-deep hover:underline"
-              >
-                Remove
-              </button>
+              <ConfirmDialog
+                trigger={
+                  <button type="button" className="text-alert-deep hover:underline">
+                    Remove
+                  </button>
+                }
+                title={`Remove ${h.name}?`}
+                description={`The ${h.date} holiday will no longer be excluded from attendance calculations.`}
+                confirmLabel="Remove holiday"
+                loading={remove.isPending}
+                onConfirm={() => remove.mutate(h.date)}
+              />
             )}
           </li>
         ))}
@@ -362,8 +383,26 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
             event.currentTarget.reset();
           }}
         >
-          <input name="date" type="date" required className={`${input} max-w-48`} />
-          <input name="name" required placeholder="Name" className={`${input} max-w-48`} />
+          <label htmlFor="holiday-date" className="sr-only">
+            Holiday date
+          </label>
+          <input
+            id="holiday-date"
+            name="date"
+            type="date"
+            required
+            className={`${input} max-w-48`}
+          />
+          <label htmlFor="holiday-name" className="sr-only">
+            Holiday name
+          </label>
+          <input
+            id="holiday-name"
+            name="name"
+            required
+            placeholder="Name"
+            className={`${input} max-w-48`}
+          />
           <button type="submit" className={button}>
             Add
           </button>
@@ -436,15 +475,30 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
               />
               days
             </label>
-            {canEdit && (
-              <button
-                type="button"
-                onClick={() => patch.mutate({ id: t.id, body: { isActive: !t.isActive } })}
-                className="text-evergreen hover:underline"
-              >
-                {t.isActive ? 'Disable' : 'Enable'}
-              </button>
-            )}
+            {canEdit &&
+              (t.isActive ? (
+                <ConfirmDialog
+                  trigger={
+                    <button type="button" className="text-evergreen hover:underline">
+                      Disable
+                    </button>
+                  }
+                  title={`Disable ${t.name}?`}
+                  description="Existing leave records stay unchanged, but this leave type will no longer be available for new requests."
+                  confirmLabel="Disable leave type"
+                  loading={patch.isPending}
+                  onConfirm={() => patch.mutate({ id: t.id, body: { isActive: false } })}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => patch.mutate({ id: t.id, body: { isActive: true } })}
+                  className="text-evergreen hover:underline"
+                  disabled={patch.isPending}
+                >
+                  Enable
+                </button>
+              ))}
           </li>
         ))}
       </ul>
@@ -463,24 +517,39 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
             event.currentTarget.reset();
           }}
         >
+          <label htmlFor="leave-type-code" className="sr-only">
+            Leave type code
+          </label>
           <input
+            id="leave-type-code"
             name="code"
             required
             placeholder="code (e.g. study)"
             className={`${input} max-w-40`}
           />
-          <input name="name" required placeholder="Name" className={`${input} max-w-40`} />
+          <label htmlFor="leave-type-name" className="sr-only">
+            Leave type name
+          </label>
           <input
+            id="leave-type-name"
+            name="name"
+            required
+            placeholder="Name"
+            className={`${input} max-w-40`}
+          />
+          <input
+            id="leave-type-days"
             name="days"
             type="number"
             min={0}
             step="0.5"
             required
             placeholder="Days"
+            aria-label="Yearly allowance in days"
             className={`${input} w-24`}
           />
           <label className="flex items-center gap-1 text-sm">
-            <input type="checkbox" name="paid" defaultChecked /> Paid
+            <input id="leave-type-paid" type="checkbox" name="paid" defaultChecked /> Paid
           </label>
           <button type="submit" className={button}>
             Add type
@@ -547,13 +616,17 @@ function RecoveryCard({ role }: { role: 'ceo' | 'coo' }) {
         onClear={() => setPerson(null)}
       />
       {role === 'coo' && (
-        <input
-          name="email"
-          type="email"
-          required
-          placeholder="New verified email"
-          className={input}
-        />
+        <label htmlFor="recovery-email" className="block space-y-1 text-sm text-charcoal">
+          New verified email
+          <input
+            id="recovery-email"
+            name="email"
+            type="email"
+            required
+            placeholder="name@example.com"
+            className={input}
+          />
+        </label>
       )}
       {error && (
         <p role="alert" className="text-sm text-alert-deep">

@@ -64,7 +64,7 @@ function CeoPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
         {open ? 'Hide CEOs' : 'Manage CEOs'}
       </button>
       {open && (
-        <div className="space-y-2" aria-label={`CEOs of ${orgName}`}>
+        <div className="space-y-2" role="region" aria-label={`CEOs of ${orgName}`}>
           {list.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
           {list.error && (
             <p role="alert" className="text-sm text-alert-deep">
@@ -124,11 +124,14 @@ function OrgRow({ org, plans, onDone }: { org: PlatformOrg; plans: string[]; onD
       </p>
       <CeoPanel orgId={org.id} orgName={org.name} />
       <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor={`org-plan-${org.id}`} className="sr-only">
+          Plan for {org.name}
+        </label>
         <select
+          id={`org-plan-${org.id}`}
           value={plan}
           onChange={(e) => setPlan(e.target.value)}
           className={`${input} sm:w-44`}
-          aria-label="Plan"
         >
           {plans.map((p) => (
             <option key={p} value={p}>
@@ -157,7 +160,11 @@ function OrgRow({ org, plans, onDone }: { org: PlatformOrg; plans: string[]; onD
           </button>
         ) : (
           <>
+            <label htmlFor={`block-reason-${org.id}`} className="sr-only">
+              Reason to block {org.name}
+            </label>
             <input
+              id={`block-reason-${org.id}`}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Reason to block"
@@ -227,16 +234,47 @@ export function Orgs() {
       </ul>
       <form onSubmit={onCreate} className={`${card} max-w-lg`}>
         <h3 className="text-sm font-medium text-charcoal">New organisation</h3>
-        <input name="name" required placeholder="Organisation name" className={input} />
-        <select name="plan" required className={input} aria-label="Plan">
-          {planCodes.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-        <input name="ceoName" required placeholder="CEO full name" className={input} />
-        <input name="email" type="email" required placeholder="CEO email" className={input} />
+        <label htmlFor="new-org-name" className="block space-y-1 text-sm text-charcoal">
+          Organisation name
+          <input
+            id="new-org-name"
+            name="name"
+            required
+            placeholder="Organisation name"
+            className={input}
+          />
+        </label>
+        <label htmlFor="new-org-plan" className="block space-y-1 text-sm text-charcoal">
+          Plan
+          <select id="new-org-plan" name="plan" required className={input}>
+            {planCodes.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label htmlFor="new-org-ceo-name" className="block space-y-1 text-sm text-charcoal">
+          CEO full name
+          <input
+            id="new-org-ceo-name"
+            name="ceoName"
+            required
+            placeholder="CEO full name"
+            className={input}
+          />
+        </label>
+        <label htmlFor="new-org-email" className="block space-y-1 text-sm text-charcoal">
+          CEO email
+          <input
+            id="new-org-email"
+            name="email"
+            type="email"
+            required
+            placeholder="CEO email"
+            className={input}
+          />
+        </label>
         <Error text={error} />
         <button type="submit" disabled={mutation.isPending} className={primary}>
           Create
@@ -400,8 +438,27 @@ export function GameMasters() {
         <p className="text-xs text-charcoal-soft">
           An active gameMaster other than them must confirm them before they can sign in.
         </p>
-        <input name="name" required placeholder="Full name" className={input} />
-        <input name="email" type="email" required placeholder="Email" className={input} />
+        <label htmlFor="new-gamemaster-name" className="block space-y-1 text-sm text-charcoal">
+          Full name
+          <input
+            id="new-gamemaster-name"
+            name="name"
+            required
+            placeholder="Full name"
+            className={input}
+          />
+        </label>
+        <label htmlFor="new-gamemaster-email" className="block space-y-1 text-sm text-charcoal">
+          Email
+          <input
+            id="new-gamemaster-email"
+            name="email"
+            type="email"
+            required
+            placeholder="Email"
+            className={input}
+          />
+        </label>
         <Error text={error} />
         <button type="submit" disabled={mutation.isPending} className={primary}>
           Add
