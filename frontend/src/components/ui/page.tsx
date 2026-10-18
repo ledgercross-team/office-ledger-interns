@@ -10,7 +10,7 @@ import { Input } from './form-fields';
 
 export function PageShell({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('space-y-6 sm:space-y-8', className)} {...props}>
+    <div className={cn('space-y-7 sm:space-y-9', className)} {...props}>
       {children}
     </div>
   );
@@ -30,14 +30,14 @@ export function PageHeader({
   breadcrumbs?: ReactNode;
 }) {
   return (
-    <header className="space-y-4">
+    <header className="space-y-5">
       {breadcrumbs}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-[1.75rem]">
-            {title}
-          </h1>
-          {description && <p className="mt-1 max-w-2xl text-sm text-fg-muted">{description}</p>}
+          <h1 className="text-2xl font-bold tracking-[-0.03em] text-fg sm:text-[2rem]">{title}</h1>
+          {description && (
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-fg-muted">{description}</p>
+          )}
         </div>
         {(primaryAction || secondaryActions) && (
           <div className="flex shrink-0 flex-wrap gap-2">
@@ -64,7 +64,7 @@ export function SectionHeading({
   return (
     <div className={cn('flex items-end justify-between gap-3', className)}>
       <div className="min-w-0">
-        <h2 className="text-lg font-semibold tracking-tight text-fg">{title}</h2>
+        <h2 className="text-xl font-bold tracking-[-0.02em] text-fg">{title}</h2>
         {description && <p className="mt-1 text-sm text-fg-muted">{description}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}

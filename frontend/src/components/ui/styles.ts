@@ -11,12 +11,12 @@ export const labelClass = 'block space-y-1.5 text-sm font-medium text-fg';
 export const cardClass = 'rounded-card border border-border bg-surface p-5 text-fg';
 
 export const primaryActionClass =
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-primary bg-primary px-4 py-2 text-sm font-medium text-primary-fg transition-[background-color,border-color,color,opacity,transform] duration-150 hover:-translate-y-px hover:bg-primary-hover active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-primary bg-primary px-4 py-2 text-sm font-medium text-primary-fg transition-[background-color,border-color,color,opacity,transform,box-shadow] duration-150 hover:-translate-y-px hover:bg-primary-hover hover:shadow-sm active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 export const secondaryActionClass =
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-border-strong bg-surface-raised px-4 py-2 text-sm font-medium text-fg transition-[background-color,border-color,color,opacity,transform] duration-150 hover:-translate-y-px hover:bg-surface-sunken active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-border-strong bg-surface-raised px-4 py-2 text-sm font-medium text-fg transition-[background-color,border-color,color,opacity,transform,box-shadow] duration-150 hover:-translate-y-px hover:bg-surface-sunken hover:shadow-sm active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 export const dangerActionClass =
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-danger bg-danger px-4 py-2 text-sm font-medium text-primary-fg transition-[background-color,border-color,color,opacity,transform] duration-150 hover:-translate-y-px hover:bg-danger-fg active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-danger bg-danger px-4 py-2 text-sm font-medium text-primary-fg transition-[background-color,border-color,color,opacity,transform,box-shadow] duration-150 hover:-translate-y-px hover:bg-danger-fg hover:shadow-sm active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 export const linkClass = 'font-medium text-primary underline-offset-2 hover:underline';

@@ -1,129 +1,99 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-15T01:14:34.948942Z",
-  "title": "Design System: LedgerCross",
+  "generatedAt": "2026-10-18T00:00:00Z",
+  "title": "Design System: LedgerCross Modern Operations Desk",
   "extensions": {
     "colorMeta": {
-      "clay": {
-        "role": "primary",
-        "displayName": "Clay",
-        "canonical": "#b5532f"
-      },
-      "sage": {
-        "role": "secondary",
-        "displayName": "Sage Rail",
-        "canonical": "#8fa886"
-      },
-      "sage-mist": {
-        "role": "neutral",
-        "displayName": "Sage Mist",
-        "canonical": "#eef1ea"
-      },
-      "ink": {
-        "role": "neutral",
-        "displayName": "Ink",
-        "canonical": "#2a3027"
-      }
+      "teal": { "role": "primary", "displayName": "Teal Action", "canonical": "#087f7b" },
+      "navy-rail": { "role": "secondary", "displayName": "Navy Rail", "canonical": "#102d36" },
+      "mist": { "role": "neutral", "displayName": "Workspace Mist", "canonical": "#f3f6f8" },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#14232b" }
     },
     "typographyMeta": {
       "title": {
         "displayName": "Title",
-        "purpose": "Page headings."
+        "purpose": "Strong page boundaries and primary screen titles."
       },
-      "body": {
-        "displayName": "Body",
-        "purpose": "Default text."
-      },
-      "label": {
-        "displayName": "Label",
-        "purpose": "Controls and table headers."
-      }
+      "body": { "displayName": "Body", "purpose": "Default operational copy." },
+      "label": { "displayName": "Label", "purpose": "Controls and table headers." }
     },
     "shadows": [
       {
         "name": "float",
-        "value": "0 12px 32px rgb(44 46 42 / 0.16)",
-        "purpose": "Menus, popovers, dialogs."
+        "value": "0 18px 45px rgb(15 41 49 / 0.18)",
+        "purpose": "Navigation rail, menus, popovers and dialogs."
       }
     ],
     "motion": [
-      {
-        "name": "fade",
-        "value": "200ms ease-out",
-        "purpose": "Overlay entry."
-      }
+      { "name": "fade", "value": "200ms ease-out", "purpose": "Overlay entry." },
+      { "name": "scale-in", "value": "200ms ease-out", "purpose": "Dialog and popover entry." }
     ],
-    "breakpoints": [
-      {
-        "name": "lg",
-        "value": "1024px"
-      }
-    ]
+    "breakpoints": [{ "name": "lg", "value": "1024px" }]
   },
   "components": [
     {
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The one action per area.",
+      "description": "The primary action for a work area.",
       "html": "<button class=\"ds-btn-primary\">Approve</button>",
-      "css": ".ds-btn-primary{background:#b5532f;color:#fff;border:1px solid #b5532f;border-radius:9999px;min-height:40px;padding:0 18px;font-weight:500;font-family:inherit}.ds-btn-primary:hover{background:#98421f}.ds-btn-primary:focus-visible{outline:2px solid #b5532f;outline-offset:2px}"
+      "css": ".ds-btn-primary{background:#087f7b;color:#fff;border:1px solid #087f7b;border-radius:11px;min-height:40px;padding:0 18px;font-weight:500}.ds-btn-primary:hover{background:#06635f}.ds-btn-primary:focus-visible{outline:2px solid #087f7b;outline-offset:2px}"
     },
     {
       "name": "Secondary Button",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "Supporting actions.",
+      "description": "Supporting actions with a clear boundary.",
       "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
-      "css": ".ds-btn-secondary{background:#fbfcf9;color:#2a3027;border:1px solid #7b8571;border-radius:9999px;min-height:40px;padding:0 18px;font-weight:500;font-family:inherit}.ds-btn-secondary:hover{background:#e2e7dc}.ds-btn-secondary:focus-visible{outline:2px solid #b5532f;outline-offset:2px}"
+      "css": ".ds-btn-secondary{background:#fff;color:#14232b;border:1px solid #91a2ab;border-radius:11px;min-height:40px;padding:0 18px;font-weight:500}.ds-btn-secondary:hover{background:#e8eef1}.ds-btn-secondary:focus-visible{outline:2px solid #087f7b;outline-offset:2px}"
     },
     {
       "name": "Status Badge",
       "kind": "chip",
-      "description": "State as a capsule.",
+      "description": "State as a compact pill with text and tone.",
       "html": "<span class=\"ds-badge\">Approved</span>",
-      "css": ".ds-badge{display:inline-flex;border:1px solid #2e7d1e;background:#ddf2c8;color:#1e5412;border-radius:9999px;padding:2px 10px;font-size:.75rem;font-weight:500}"
+      "css": ".ds-badge{display:inline-flex;border:1px solid #087f7b;background:#dff5ed;color:#07543f;border-radius:9999px;padding:2px 10px;font-size:.75rem;font-weight:500}"
     },
     {
       "name": "Rail Item",
       "kind": "nav",
-      "description": "Navigation capsule on the green rail; active is cream.",
+      "description": "Navigation item on the navy rail; active is a white surface.",
       "html": "<div class=\"ds-rail\"><a class=\"ds-rail-item\">Tasks</a><a class=\"ds-rail-item ds-on\">Requests</a></div>",
-      "css": ".ds-rail{background:#8fa886;border-radius:20px;padding:12px;width:220px;display:grid;gap:4px;font-family:inherit}.ds-rail-item{display:block;padding:9px 14px;border-radius:9999px;color:#2a3027;font-size:.875rem;font-weight:500}.ds-rail-item:hover{background:rgba(255,253,246,.5)}.ds-on{background:#fbfcf9;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.08)}"
+      "css": ".ds-rail{background:#102d36;border-radius:16px;padding:16px;width:240px;display:grid;gap:4px;font-family:inherit}.ds-rail-item{display:block;padding:10px 14px;border-radius:9999px;color:#e9f4f4;font-size:.875rem;font-weight:500}.ds-rail-item:hover{background:rgba(255,255,255,.1)}.ds-on{background:#fff;color:#14232b;font-weight:700;box-shadow:0 1px 2px rgba(15,41,49,.16)}"
     },
     {
       "name": "Card",
       "kind": "card",
-      "description": "Cream container with hairline.",
+      "description": "White operational surface with a cool hairline.",
       "html": "<div class=\"ds-card\"><b>Pending</b><p>7 requests wait on you</p></div>",
-      "css": ".ds-card{background:#fbfcf9;border:1px solid #d5dbcc;border-radius:20px;padding:20px;color:#2a3027;font-family:inherit}"
+      "css": ".ds-card{background:#fff;border:1px solid #d7e0e5;border-radius:16px;padding:20px;color:#14232b;font-family:inherit}"
     },
     {
       "name": "Text Input",
       "kind": "input",
-      "description": "Standard field.",
+      "description": "Standard field with strong focus feedback.",
       "html": "<input class=\"ds-input\" placeholder=\"Search people\">",
-      "css": ".ds-input{background:#fbfcf9;border:1px solid #d5dbcc;border-radius:12px;min-height:40px;padding:8px 12px;color:#2a3027;font-family:inherit}.ds-input:focus-visible{outline:2px solid #b5532f;outline-offset:2px}"
+      "css": ".ds-input{background:#fff;border:1px solid #d7e0e5;border-radius:11px;min-height:40px;padding:8px 12px;color:#14232b;font-family:inherit}.ds-input:focus-visible{outline:2px solid #087f7b;outline-offset:2px}"
     }
   ],
   "narrative": {
-    "northStar": "The Guide Map",
-    "overview": "LedgerCross reads like a printed visitor's map: flat regions of colour do the dividing, and capsules do the acting.",
+    "northStar": "The Modern Operations Desk",
+    "overview": "LedgerCross is a confident, high-contrast operations workspace for running a working day across people, work and approvals.",
     "keyCharacteristics": [
-      "Flat unmodulated colour; depth comes from tonal surface steps, not shadows.",
-      "One green rail owns navigation; one clay capsule per area owns the primary action.",
-      "Rounded forms throughout: capsules for actions and state, large radii for containers.",
+      "A cool white workspace with a deep navy navigation rail.",
+      "Teal marks primary action, focus and selected work without becoming decoration.",
+      "Compact rounded controls and clear card edges keep daily work dense but legible.",
       "Tabular figures everywhere numbers are compared."
     ],
     "rules": [
       {
         "name": "The One Region Rule",
-        "body": "Sage Rail is the navigation rail and nothing else; it never fills content.",
+        "body": "Navy Rail is the navigation rail and nothing else; it never fills content.",
         "section": "colors"
       },
       {
         "name": "The One Action Rule",
-        "body": "Clay marks something that can be done; it is never decoration or a state.",
+        "body": "Teal marks something that can be done; it is never decoration or a state.",
         "section": "colors"
       },
       {
@@ -133,14 +103,14 @@
       }
     ],
     "dos": [
-      "Do keep one clay capsule per work area for the primary action.",
+      "Do keep one teal primary action per work area.",
       "Do carry state in a label or shape as well as colour.",
       "Do use tabular figures for all comparable numbers."
     ],
     "donts": [
       "Don't use gradients, blur or glass on surfaces.",
-      "Don't fill content regions with Sage Rail or use clay as decoration.",
-      "Don't build dark-mode variants without revisiting contrast on the rail and clay."
+      "Don't fill content regions with Navy Rail or use teal as decoration.",
+      "Don't build dark-mode variants without revisiting contrast on the rail and teal."
     ]
   }
 }

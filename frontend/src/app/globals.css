@@ -53,42 +53,42 @@
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
   --text-3xl: 1.875rem;
-  --radius-control: 0.75rem;
-  --radius-card: 1.25rem;
-  --shadow-float: 0 12px 32px rgb(44 46 42 / 0.16);
+  --radius-control: 0.7rem;
+  --radius-card: 1rem;
+  --shadow-float: 0 18px 45px rgb(15 41 49 / 0.18);
 }
 
 :root,
 .theme-light,
 [data-theme='light'] {
   color-scheme: light;
-  --ds-bg: #eef1ea;
-  --ds-surface: #fbfcf9;
+  --ds-bg: #f3f6f8;
+  --ds-surface: #ffffff;
   --ds-surface-raised: #ffffff;
-  --ds-surface-sunken: #e2e7dc;
-  --ds-border: #d5dbcc;
-  --ds-border-strong: #7b8571;
-  --ds-fg: #2a3027;
-  --ds-fg-muted: #5d6657;
-  --ds-fg-subtle: #646e5e;
-  --ds-primary: #b5532f;
-  --ds-primary-hover: #98421f;
+  --ds-surface-sunken: #e8eef1;
+  --ds-border: #d7e0e5;
+  --ds-border-strong: #91a2ab;
+  --ds-fg: #14232b;
+  --ds-fg-muted: #52636d;
+  --ds-fg-subtle: #687982;
+  --ds-primary: #087f7b;
+  --ds-primary-hover: #06635f;
   --ds-primary-fg: #ffffff;
-  --ds-primary-soft: #f0ddd2;
-  --ds-rail: #8fa886;
-  --ds-rail-fg: #1f2a1c;
-  --ds-success: #2e7d1e;
-  --ds-success-soft: #ddf2c8;
-  --ds-success-fg: #1e5412;
-  --ds-warning: #9a6a00;
-  --ds-warning-soft: #fdf3a8;
-  --ds-warning-fg: #6b4a00;
-  --ds-danger: #b3261e;
-  --ds-danger-soft: #ffdad4;
-  --ds-danger-fg: #7f1710;
-  --ds-info: #1b76c9;
-  --ds-info-soft: #d5ecff;
-  --ds-info-fg: #124f8a;
+  --ds-primary-soft: #d9f1ef;
+  --ds-rail: #102d36;
+  --ds-rail-fg: #e9f4f4;
+  --ds-success: #087f5b;
+  --ds-success-soft: #dff5ed;
+  --ds-success-fg: #07543f;
+  --ds-warning: #b7791f;
+  --ds-warning-soft: #fff2cc;
+  --ds-warning-fg: #7b4f0a;
+  --ds-danger: #c2413a;
+  --ds-danger-soft: #fde2df;
+  --ds-danger-fg: #8b211b;
+  --ds-info: #2563eb;
+  --ds-info-soft: #e0ecff;
+  --ds-info-fg: #1e429f;
 }
 
 html {
@@ -131,6 +131,11 @@ select {
   opacity: 1;
 }
 
+::selection {
+  background: var(--ds-primary-soft);
+  color: var(--ds-fg);
+}
+
 body {
   font-variant-numeric: tabular-nums;
   width: 100%;
@@ -149,6 +154,7 @@ h2,
 h3,
 h4 {
   line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 .motion-fade {
   animation: ds-fade 200ms ease-out;
@@ -276,9 +282,4 @@ h4 {
 }
 .slim-scroll::-webkit-scrollbar-track {
   background: transparent;
-}
-
-::selection {
-  background: var(--ds-rail);
-  color: var(--ds-fg);
 }

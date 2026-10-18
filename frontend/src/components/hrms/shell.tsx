@@ -151,7 +151,7 @@ export function HrmsShell({ children }: { children: ReactNode }) {
             Skip to content
           </a>
           <div className="flex min-h-screen">
-            <aside className="sticky top-0 hidden h-screen shrink-0 border-r border-border bg-surface p-3 lg:block">
+            <aside className="sticky top-0 hidden h-screen shrink-0 bg-transparent p-4 lg:block lg:pr-2">
               <Sidebar
                 role={role}
                 orgName={session.org?.name ?? ''}
@@ -165,7 +165,7 @@ export function HrmsShell({ children }: { children: ReactNode }) {
               <OrgGate>
                 <main
                   id="main-content"
-                  className="mx-auto w-full max-w-[1440px] flex-1 space-y-6 p-3 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:space-y-8 sm:p-6 lg:p-8 lg:pb-8"
+                  className="mx-auto w-full max-w-[1480px] flex-1 space-y-6 p-4 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:space-y-8 sm:p-7 lg:p-10 lg:pb-10"
                 >
                   <OrgBanners />
                   {children}

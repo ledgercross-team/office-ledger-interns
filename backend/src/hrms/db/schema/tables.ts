@@ -255,6 +255,7 @@ export const subscriptionsInHrms = hrms.table(
     }).notNull(),
     currentPeriodEnd: timestamp('current_period_end', {
       withTimezone: true,
+
       mode: 'string',
     }).notNull(),
     paymentStatus: text('payment_status').notNull(),

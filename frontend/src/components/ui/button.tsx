@@ -65,7 +65,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   const disabledReason = blockedByReadOnly ? readOnlyReason : disabledReasonProp;
   const isDisabled = disabled || loading;
   const classes = cn(
-    'relative inline-flex shrink-0 items-center justify-center gap-2 rounded-full border font-medium transition-[background-color,border-color,color,opacity,transform,box-shadow] duration-150 ease-out enabled:hover:-translate-y-px enabled:active:translate-y-0 enabled:active:scale-[0.97] motion-reduce:transform-none',
+    'relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control border font-medium transition-[background-color,border-color,color,opacity,transform,box-shadow] duration-150 ease-out enabled:hover:-translate-y-px enabled:active:translate-y-0 enabled:active:scale-[0.97] motion-reduce:transform-none',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary focus-visible:ring-4 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50',
     size === 'sm' ? 'min-h-8 px-3 py-1 text-xs' : 'min-h-10 px-4 py-2 text-sm',
     iconOnly && (size === 'sm' ? 'min-w-8 px-1' : 'min-w-10 px-2'),

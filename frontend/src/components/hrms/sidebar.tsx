@@ -59,7 +59,7 @@ function NavList({
                 'flex min-h-11 items-center gap-3 rounded-full px-3 py-2 text-sm font-medium',
                 active
                   ? 'bg-surface text-fg font-bold shadow-sm'
-                  : 'text-rail-fg hover:bg-surface/50',
+                  : 'text-rail-fg/80 hover:bg-white/10 hover:text-rail-fg',
                 collapsed && 'justify-center px-2',
               )}
             >
@@ -92,21 +92,23 @@ export function Sidebar({
     <nav
       aria-label="Main"
       className={cn(
-        'hidden h-full flex-col gap-4 rounded-card bg-rail p-3 text-rail-fg lg:flex',
+        'hidden h-full flex-col gap-5 rounded-card bg-rail p-4 text-rail-fg shadow-[0_12px_28px_rgb(15_41_49_/_0.12)] lg:flex',
         collapsed ? 'w-16' : 'w-60',
       )}
     >
       <div className={cn('flex items-center gap-2 px-2', collapsed && 'justify-center')}>
         <span
           aria-hidden
-          className="flex size-8 shrink-0 items-center justify-center rounded-control bg-surface font-bold text-fg"
+          className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary font-bold text-primary-fg shadow-sm"
         >
           O
         </span>
         {!collapsed && (
           <span className="min-w-0">
-            <span className="block truncate text-sm font-bold text-rail-fg">office-ledger</span>
-            <span className="block truncate text-xs text-rail-fg">{orgName}</span>
+            <span className="block truncate text-sm font-bold tracking-tight text-rail-fg">
+              office-ledger
+            </span>
+            <span className="mt-0.5 block truncate text-xs text-rail-fg/65">{orgName}</span>
           </span>
         )}
       </div>
@@ -125,7 +127,7 @@ export function Sidebar({
         iconOnly={collapsed}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         onClick={onToggleCollapse}
-        className={cn(collapsed && 'mx-auto')}
+        className={cn('text-rail-fg hover:bg-white/10 hover:text-rail-fg', collapsed && 'mx-auto')}
       >
         {collapsed ? (
           <PanelLeftOpen aria-hidden className="size-4" />

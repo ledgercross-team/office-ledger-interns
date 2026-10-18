@@ -106,8 +106,8 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-surface-raised">
-      <div className="flex min-h-14 w-full items-center gap-1.5 px-2.5 sm:min-h-16 sm:gap-2 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-20 border-b border-border/80 bg-surface-raised">
+      <div className="flex min-h-14 w-full items-center gap-1.5 px-3 sm:min-h-16 sm:gap-2 sm:px-7 lg:px-10">
         <NavDrawerTrigger onOpen={onOpenNav} />
         {pathname !== '/' && (
           <Button
@@ -134,12 +134,12 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
           <CommandPalette
             items={paletteItems}
             trigger={
-              <Button
-                variant="secondary"
-                iconOnly
-                aria-label="Search pages, people, projects and tasks"
-              >
+              <Button variant="secondary" aria-label="Search pages, people, projects and tasks">
                 <Search aria-hidden className="size-4" />
+                <span className="hidden sm:inline">Search</span>
+                <kbd className="hidden rounded border border-border px-1.5 py-0.5 text-[0.7rem] font-medium text-fg-muted md:inline">
+                  ⌘K
+                </kbd>
               </Button>
             }
           />
