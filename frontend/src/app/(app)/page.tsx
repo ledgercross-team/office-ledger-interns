@@ -1,7 +1,20 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { CalendarCheck, Clock, ListChecks, LogIn, LogOut, TimerOff } from 'lucide-react';
+import {
+  BarChart3,
+  CalendarCheck,
+  CalendarPlus,
+  ClipboardList,
+  Clock,
+  ListChecks,
+  LogIn,
+  LogOut,
+  MessageSquare,
+  Plane,
+  TimerOff,
+  UserPlus,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 import { HoldButton } from '@/components/hrms/hold-button';
@@ -14,7 +27,7 @@ import { Button, Card, ErrorState, StatusPill } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
-import { ORG_STATUSES } from '@/lib/hrms/status-vocabulary';
+import { ORG_STATUSES, PERFORMANCE_BANDS } from '@/lib/hrms/status-vocabulary';
 import { formatTime } from '@/lib/hrms/time';
 import {
   HRMS_ROLE_LABELS,
@@ -22,7 +35,9 @@ import {
   type AttendanceDayStatus,
   type HrmsOrg,
   type HrmsTask,
+  type LeaveBalance,
   type Paginated,
+  type PerformanceRow,
 } from '@/lib/hrms/types';
 
 const TARGET_MINUTES = 8 * 60;
@@ -90,6 +105,10 @@ function lastSevenDays(days: AttendanceDayEntry[] | undefined, todayDate: string
   return days.filter((d) => d.date <= todayDate).slice(-7);
 }
 
+function formatDays(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
 export default function HrmsHomePage() {
   const { session } = useHrmsAuth();
   const readOnly = useReadOnly();
@@ -107,6 +126,18 @@ export default function HrmsHomePage() {
   const myTasks = useQuery({
     queryKey: ['hrms', 'tasks', session?.activeMemberId, 'dashboard-mine'],
     queryFn: () => hrmsFetch<Paginated<HrmsTask>>('/tasks?mine=true&open=true&pageSize=5'),
+    enabled: Boolean(session?.activeMemberId),
+    retry: false,
+  });
+  const leave = useQuery({
+    queryKey: ['hrms', 'leave', 'balance', session?.activeMemberId, 'dashboard'],
+    queryFn: () => hrmsFetch<{ items: LeaveBalance[] }>('/leave/balance'),
+    enabled: Boolean(session?.activeMemberId),
+    retry: false,
+  });
+  const performance = useQuery({
+    queryKey: ['hrms', 'performance', session?.activeMemberId, 'dashboard'],
+    queryFn: () => hrmsFetch<{ items: PerformanceRow[] }>('/performance'),
     enabled: Boolean(session?.activeMemberId),
     retry: false,
   });
@@ -134,6 +165,38 @@ export default function HrmsHomePage() {
   const presentDays = days.filter((d) => d.status === 'present' || d.status === 'late').length;
   const lateDays = days.filter((d) => d.status === 'late').length;
   const week = lastSevenDays(me.data?.days, me.data?.todayDate);
+  const leaveItems = leave.data?.items ?? [];
+  const leaveRemaining = leaveItems.reduce((total, item) => total + Math.max(0, item.remaining), 0);
+  const leaveAllowance = leaveItems.reduce((total, item) => total + item.allowance, 0);
+  const myPerformance = performance.data?.items.find(
+    (row) => row.memberId === session.activeMemberId,
+  );
+  const quickActions = [
+    {
+      label: 'View attendance',
+      href: '/attendance',
+      icon: <CalendarCheck aria-hidden className="size-4" />,
+    },
+    { label: 'Request leave', href: '/leave', icon: <Plane aria-hidden className="size-4" /> },
+    { label: 'Open tasks', href: '/tasks', icon: <ClipboardList aria-hidden className="size-4" /> },
+    session.role === 'ceo' || session.role === 'coo'
+      ? {
+          label: 'Manage people',
+          href: '/people',
+          icon: <UserPlus aria-hidden className="size-4" />,
+        }
+      : session.role === 'manager'
+        ? {
+            label: 'Create task',
+            href: '/tasks/new',
+            icon: <ListChecks aria-hidden className="size-4" />,
+          }
+        : {
+            label: 'Open messages',
+            href: '/messages',
+            icon: <MessageSquare aria-hidden className="size-4" />,
+          },
+  ];
   const waiting = [
     { label: 'Requests to decide', n: counts.requests, href: '/requests' },
     { label: 'Project invites', n: counts.invites, href: '/invites' },
@@ -212,85 +275,236 @@ export default function HrmsHomePage() {
         </div>
       </section>
 
-      <div className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <Card className="flex flex-col items-center justify-center gap-4 py-8 text-center">
+      <section className="space-y-3" aria-labelledby="dashboard-glance-heading">
+        <div className="flex items-end justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold">
-              {checkedOut
-                ? 'Day complete'
-                : working
-                  ? 'You are on the clock'
-                  : 'Start your workday'}
+            <h2 id="dashboard-glance-heading" className="text-lg font-bold tracking-tight">
+              Today at a glance
             </h2>
-            <p className="mt-1 text-sm text-fg-muted">
-              {checkedOut
-                ? `You worked ${Math.floor(workedMinutes / 60)}h ${String(workedMinutes % 60).padStart(2, '0')}m today. See you tomorrow.`
-                : working
-                  ? 'Press and hold when you are done for the day.'
-                  : 'Press and hold to record your attendance for today.'}
+            <p className="text-sm text-fg-muted">
+              The information you need before you get to work.
             </p>
           </div>
-          {!checkedOut && (
-            <HoldButton
-              className="min-h-14 min-w-64 px-10 text-lg"
-              disabled={readOnly.readOnly || me.isLoading}
-              disabledReason={readOnly.reason ?? undefined}
-              onHold={() => punch(working ? 'check-out' : 'check-in')}
-            >
-              {working ? (
-                <LogOut aria-hidden className="size-5" />
-              ) : (
-                <LogIn aria-hidden className="size-5" />
-              )}
-              {working ? 'Hold to check out' : 'Hold to check in'}
-            </HoldButton>
-          )}
-          {error && (
-            <p
-              role="alert"
-              className="max-w-sm rounded-control bg-danger-soft px-3 py-2 text-sm text-danger-fg"
-            >
-              {error}
-            </p>
-          )}
-          {me.error && !error && (
-            <p role="alert" className="text-sm text-danger-fg">
-              Could not load today&apos;s attendance.
-            </p>
-          )}
-          <dl className="flex gap-8 text-sm tabular-nums">
+          <Link
+            href="/calendar"
+            className="hidden text-sm font-medium text-primary hover:underline sm:block"
+          >
+            Open calendar
+          </Link>
+        </div>
+        <div className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <Card className="flex flex-col items-center justify-center gap-4 py-8 text-center">
             <div>
-              <dt className="text-fg-muted">In</dt>
-              <dd className="font-bold">{formatTime(today?.checkInAt ?? null)}</dd>
+              <h2 className="text-xl font-bold">
+                {checkedOut
+                  ? 'Day complete'
+                  : working
+                    ? 'You are on the clock'
+                    : 'Start your workday'}
+              </h2>
+              <p className="mt-1 text-sm text-fg-muted">
+                {checkedOut
+                  ? `You worked ${Math.floor(workedMinutes / 60)}h ${String(workedMinutes % 60).padStart(2, '0')}m today. See you tomorrow.`
+                  : working
+                    ? 'Press and hold when you are done for the day.'
+                    : 'Press and hold to record your attendance for today.'}
+              </p>
             </div>
+            {!checkedOut && (
+              <HoldButton
+                className="min-h-14 min-w-64 px-10 text-lg"
+                disabled={readOnly.readOnly || me.isLoading}
+                disabledReason={readOnly.reason ?? undefined}
+                onHold={() => punch(working ? 'check-out' : 'check-in')}
+              >
+                {working ? (
+                  <LogOut aria-hidden className="size-5" />
+                ) : (
+                  <LogIn aria-hidden className="size-5" />
+                )}
+                {working ? 'Hold to check out' : 'Hold to check in'}
+              </HoldButton>
+            )}
+            {error && (
+              <p
+                role="alert"
+                className="max-w-sm rounded-control bg-danger-soft px-3 py-2 text-sm text-danger-fg"
+              >
+                {error}
+              </p>
+            )}
+            {me.error && !error && (
+              <p role="alert" className="text-sm text-danger-fg">
+                Could not load today&apos;s attendance.
+              </p>
+            )}
+            <dl className="flex gap-8 text-sm tabular-nums">
+              <div>
+                <dt className="text-fg-muted">In</dt>
+                <dd className="font-bold">{formatTime(today?.checkInAt ?? null)}</dd>
+              </div>
+              <div>
+                <dt className="text-fg-muted">Out</dt>
+                <dd className="font-bold">{formatTime(today?.checkOutAt ?? null)}</dd>
+              </div>
+            </dl>
+          </Card>
+
+          <div className="grid gap-3">
+            <Stat
+              icon={<CalendarCheck className="size-5" />}
+              label="Present days"
+              value={me.data ? `${presentDays}/${counted.length}` : '–'}
+              hint={me.data ? `of ${counted.length} working days so far` : undefined}
+            />
+            <Stat
+              icon={<TimerOff className="size-5" />}
+              label="Late arrivals"
+              value={me.data ? String(lateDays).padStart(2, '0') : '–'}
+              hint="This month"
+            />
+            <Stat
+              icon={<ListChecks className="size-5" />}
+              label="Open tasks"
+              value={myTasks.data ? String(myTasks.data.total) : '–'}
+              hint="Assigned to you"
+            />
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="space-y-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <dt className="text-fg-muted">Out</dt>
-              <dd className="font-bold">{formatTime(today?.checkOutAt ?? null)}</dd>
+              <h2 className="flex items-center gap-2 text-lg font-bold">
+                <Plane aria-hidden className="size-5 text-primary" />
+                Leave balance
+              </h2>
+              <p className="mt-1 text-sm text-fg-muted">Your remaining allowance this year.</p>
             </div>
-          </dl>
+            <Button asChild variant="secondary" size="sm">
+              <Link href="/leave">View leave</Link>
+            </Button>
+          </div>
+          {leave.isLoading ? (
+            <p className="text-sm text-fg-muted" role="status">
+              Loading leave balance…
+            </p>
+          ) : leave.error ? (
+            <p className="text-sm text-danger-fg" role="alert">
+              Leave balance is unavailable right now.
+            </p>
+          ) : leaveItems.length === 0 ? (
+            <p className="text-sm text-fg-muted">No active leave types are configured.</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-end gap-2">
+                <span className="text-3xl font-bold tabular-nums text-fg">
+                  {formatDays(leaveRemaining)}
+                </span>
+                <span className="pb-1 text-sm text-fg-muted">
+                  of {formatDays(leaveAllowance)} days remaining
+                </span>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {leaveItems.slice(0, 4).map((item) => (
+                  <div
+                    key={item.leaveTypeId}
+                    className="flex items-center justify-between gap-3 rounded-control bg-surface-sunken px-3 py-2 text-sm"
+                  >
+                    <span className="min-w-0 truncate text-fg-muted">{item.name}</span>
+                    <span className="shrink-0 font-semibold tabular-nums text-fg">
+                      {formatDays(Math.max(0, item.remaining))}d
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </Card>
 
-        <div className="grid gap-3">
-          <Stat
-            icon={<CalendarCheck className="size-5" />}
-            label="Present days"
-            value={me.data ? `${presentDays}/${counted.length}` : '–'}
-            hint={me.data ? `of ${counted.length} working days so far` : undefined}
-          />
-          <Stat
-            icon={<TimerOff className="size-5" />}
-            label="Late arrivals"
-            value={me.data ? String(lateDays).padStart(2, '0') : '–'}
-            hint="This month"
-          />
-          <Stat
-            icon={<ListChecks className="size-5" />}
-            label="Open tasks"
-            value={myTasks.data ? String(myTasks.data.total) : '–'}
-            hint="Assigned to you"
-          />
-        </div>
+        <Card className="space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-bold">
+                <BarChart3 aria-hidden className="size-5 text-primary" />
+                Performance
+              </h2>
+              <p className="mt-1 text-sm text-fg-muted">Your latest calculated score.</p>
+            </div>
+            <Button asChild variant="secondary" size="sm">
+              <Link href="/performance">View details</Link>
+            </Button>
+          </div>
+          {performance.isLoading ? (
+            <p className="text-sm text-fg-muted" role="status">
+              Loading performance…
+            </p>
+          ) : performance.error ? (
+            <p className="text-sm text-danger-fg" role="alert">
+              Performance is unavailable right now.
+            </p>
+          ) : !myPerformance ? (
+            <p className="text-sm text-fg-muted">
+              Your first score will appear after performance is calculated.
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex size-20 items-center justify-center rounded-card bg-primary-soft text-2xl font-bold tabular-nums text-primary">
+                {myPerformance.score === null ? '—' : Math.round(myPerformance.score)}
+              </div>
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {myPerformance.band && (
+                    <StatusPill status={PERFORMANCE_BANDS[myPerformance.band]} />
+                  )}
+                  {myPerformance.isNew && <span className="text-sm text-fg-muted">New score</span>}
+                </div>
+                <p className="text-sm text-fg-muted">
+                  {myPerformance.score === null
+                    ? 'Not enough data yet.'
+                    : `Updated ${myPerformance.computedOn}`}
+                </p>
+              </div>
+            </div>
+          )}
+        </Card>
       </div>
+
+      <Card className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold">Quick actions</h2>
+            <p className="mt-1 text-sm text-fg-muted">
+              Jump straight to the work you do most often.
+            </p>
+          </div>
+          <CalendarPlus aria-hidden className="size-5 text-primary" />
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {quickActions.map((action) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="group flex min-h-11 items-center gap-3 rounded-control border border-border bg-surface-raised px-3 py-2 text-sm font-medium transition-[background-color,border-color,transform] duration-150 hover:-translate-y-px hover:border-primary/50 hover:bg-primary-soft/50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary transition-colors group-hover:bg-primary group-hover:text-primary-fg">
+                {action.icon}
+              </span>
+              <span>{action.label}</span>
+            </Link>
+          ))}
+        </div>
+      </Card>
+
+      {myTasks.error && (
+        <ErrorState
+          title="Could not load your tasks"
+          message="Your attendance and other dashboard summaries are still available."
+          onRetry={() => void myTasks.refetch()}
+        />
+      )}
 
       {week.length > 0 && (
         <Card className="space-y-4">
@@ -320,10 +534,10 @@ export default function HrmsHomePage() {
                 <span className="text-lg font-bold tabular-nums leading-none">
                   {d.date.slice(8)}
                 </span>
-                <span className="hidden text-[11px] sm:block">
+                <span className="hidden text-xs sm:block">
                   {d.status ? DAY_LABEL[d.status] : '—'}
                 </span>
-                <span className="text-[11px] tabular-nums">
+                <span className="text-xs tabular-nums">
                   {d.workedMinutes != null
                     ? `${Math.floor(d.workedMinutes / 60)}h${String(d.workedMinutes % 60).padStart(2, '0')}`
                     : ' '}
