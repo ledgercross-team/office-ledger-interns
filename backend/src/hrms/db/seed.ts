@@ -9,9 +9,14 @@
  */
 import { config } from 'dotenv';
 import { Client } from 'pg';
+import { resolve } from 'node:path';
+import { prepareDatabaseUrl } from '../../config/database-url';
 import { hashPassword } from '../../common/utils/passwords';
 
-config({ path: '.env.local' });
+// Prefer explicit process variables, then backend/.env.local, then the shared repo .env.
+// dotenv never overwrites an existing value, so this keeps local overrides intact.
+config({ path: resolve(__dirname, '../../../.env.local') });
+config({ path: resolve(__dirname, '../../../../.env') });
 
 const DOMAIN = 'demo.local';
 
@@ -76,7 +81,10 @@ async function main(): Promise<void> {
   }
   if (!password) throw new Error('SEED_DEMO_PASSWORD is required to seed the database.');
 
-  const client = new Client({ connectionString: url, options: '-c search_path=hrms,public' });
+  const client = new Client({
+    connectionString: prepareDatabaseUrl(url),
+    options: '-c search_path=hrms,public',
+  });
   await client.connect();
   const passwordHash = await hashPassword(password);
 
@@ -84,7 +92,9 @@ async function main(): Promise<void> {
     const { rows } = await client.query<{ id: string }>(
       `insert into users (email, password_hash, full_name, email_verified_at)
        values ($1, $2, $3, now())
-       on conflict (email) do update set full_name = excluded.full_name
+       on conflict (email) do update
+       set full_name = excluded.full_name,
+           password_hash = excluded.password_hash
        returning id`,
       [addr(local), passwordHash, fullName],
     );

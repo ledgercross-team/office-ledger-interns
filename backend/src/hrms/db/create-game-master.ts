@@ -13,9 +13,13 @@
  */
 import { config } from 'dotenv';
 import { Client } from 'pg';
+import { resolve } from 'node:path';
+import { prepareDatabaseUrl } from '../../config/database-url';
 import { hashPassword } from '../../common/utils/passwords';
 
-config({ path: '.env.local' });
+// Prefer explicit process variables, then backend/.env.local, then the shared repo .env.
+config({ path: resolve(__dirname, '../../../.env.local') });
+config({ path: resolve(__dirname, '../../../../.env') });
 
 async function main(): Promise<void> {
   const url = process.env.HRMS_MIGRATE_DATABASE_URL;
@@ -30,14 +34,16 @@ async function main(): Promise<void> {
   if (password.length < 10 || password.length > 128) {
     throw new Error('The password must be 10 to 128 characters.');
   }
-  if (password.toLowerCase() === email) throw new Error('The password must not be the email address.');
+  if (password.toLowerCase() === email)
+    throw new Error('The password must not be the email address.');
 
-  const client = new Client({ connectionString: url });
+  const client = new Client({ connectionString: prepareDatabaseUrl(url) });
   await client.connect();
   try {
     await client.query('SET search_path = hrms, public');
     const existing = await client.query('select 1 from users where email = $1', [email]);
-    if (existing.rows.length > 0) throw new Error('That email already has an account. Nothing was changed.');
+    if (existing.rows.length > 0)
+      throw new Error('That email already has an account. Nothing was changed.');
 
     const hash = await hashPassword(password);
     await client.query('begin');
@@ -51,7 +57,9 @@ async function main(): Promise<void> {
       [user.rows[0].id],
     );
     await client.query('commit');
-    console.log(`gameMaster created for ${email}. Sign in at /login; the first sign-in enrols two-step.`);
+    console.log(
+      `gameMaster created for ${email}. Sign in at /login; the first sign-in enrols two-step.`,
+    );
   } catch (error) {
     await client.query('rollback').catch(() => undefined);
     throw error;

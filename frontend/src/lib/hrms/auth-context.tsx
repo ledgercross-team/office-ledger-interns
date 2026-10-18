@@ -1,13 +1,15 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 import { hrmsFetch } from './api-client';
 import { setDisplayTimeZone } from '@/lib/hrms/time';
 import type { HrmsMembership, HrmsSession } from './types';
 
 export const HRMS_SESSION_KEY = ['hrms', 'session'] as const;
+
+const PUBLIC_AUTH_PATHS = new Set(['/login', '/accept-invite', '/forgot-password']);
 
 interface HrmsAuthValue {
   session: HrmsSession | null;
@@ -24,11 +26,14 @@ const HrmsAuthContext = createContext<HrmsAuthValue | null>(null);
 
 export function HrmsAuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const pathname = usePathname();
   const router = useRouter();
+  const isPublicAuthPath = pathname !== null && PUBLIC_AUTH_PATHS.has(pathname);
 
   const query = useQuery({
     queryKey: HRMS_SESSION_KEY,
     queryFn: () => hrmsFetch<HrmsSession>('/auth/me'),
+    enabled: !isPublicAuthPath,
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
@@ -48,8 +53,7 @@ export function HrmsAuthProvider({ children }: { children: ReactNode }) {
       // drop everything cached for the previous org.
       queryClient.setQueryData(HRMS_SESSION_KEY, session);
       await queryClient.invalidateQueries({
-        predicate: (query) =>
-          query.queryKey[0] === 'hrms' && query.queryKey[1] !== 'session',
+        predicate: (query) => query.queryKey[0] === 'hrms' && query.queryKey[1] !== 'session',
       });
     },
     [queryClient],
@@ -69,14 +73,14 @@ export function HrmsAuthProvider({ children }: { children: ReactNode }) {
     setDisplayTimeZone(session?.user.timezone);
     return {
       session,
-      isLoading: query.isLoading,
+      isLoading: !isPublicAuthPath && query.isLoading,
       isAuthenticated: session !== null,
       usableMemberships: session?.memberships.filter((m) => m.usable) ?? [],
       switchOrg,
       logout,
       setSession,
     };
-  }, [query.data, query.isLoading, switchOrg, logout, setSession]);
+  }, [isPublicAuthPath, query.data, query.isLoading, switchOrg, logout, setSession]);
 
   return <HrmsAuthContext.Provider value={value}>{children}</HrmsAuthContext.Provider>;
 }

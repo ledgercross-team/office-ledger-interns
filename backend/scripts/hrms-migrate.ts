@@ -16,10 +16,12 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { config as loadEnv } from 'dotenv';
 import { Client } from 'pg';
+import { prepareDatabaseUrl } from '../src/config/database-url';
 
 // Load the backend's local environment for manual migrations. Existing process
 // environment variables win, so CI/Render can still inject the URL directly.
 loadEnv({ path: resolve(__dirname, '../.env.local') });
+loadEnv({ path: resolve(__dirname, '../../.env') });
 
 const SQL_DIR = resolve(__dirname, '../../docs/hrms');
 const BASE_FILE = 'hrms_schema.sql';
@@ -43,7 +45,7 @@ async function main(): Promise<void> {
   const files = listMigrationFiles(readdirSync(SQL_DIR));
   if (!files.includes(BASE_FILE)) throw new Error(`${BASE_FILE} not found in ${SQL_DIR}`);
 
-  const client = new Client({ connectionString: url });
+  const client = new Client({ connectionString: prepareDatabaseUrl(url) });
   await client.connect();
   try {
     await client.query(`
