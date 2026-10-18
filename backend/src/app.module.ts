@@ -74,6 +74,7 @@ function positiveInteger(config: ConfigService, name: string, fallback: number):
     }),
   ],
   providers: [
+    OriginCheckMiddleware,
     {
       provide: APP_GUARD,
       useClass: AppThrottlerGuard,

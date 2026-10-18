@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, type NestMiddleware } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, type NestMiddleware } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { NextFunction, Request, Response } from 'express';
 
@@ -10,7 +10,7 @@ const STATE_CHANGING_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 export class OriginCheckMiddleware implements NestMiddleware {
   private readonly allowedOrigins: string[];
 
-  constructor(config: ConfigService) {
+  constructor(@Inject(ConfigService) config: ConfigService) {
     this.allowedOrigins = (config.get<string>('FRONTEND_URL') ?? '')
       .split(',')
       .map((origin) => origin.trim())
