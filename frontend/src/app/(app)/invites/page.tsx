@@ -216,7 +216,16 @@ export default function InvitesPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight text-fg">Invites</h1>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-fg">
+          {session?.role === 'employee' ? 'My invites' : 'Invite reviews'}
+        </h1>
+        <p className="mt-1 text-sm text-fg-muted">
+          {session?.role === 'employee'
+            ? 'Accept or decline invitations to join projects.'
+            : 'Review declined invitations and keep project membership moving.'}
+        </p>
+      </div>
       {invites.isLoading && (
         <div className="space-y-3" aria-label="Loading invites">
           {[1, 2, 3].map((item) => (

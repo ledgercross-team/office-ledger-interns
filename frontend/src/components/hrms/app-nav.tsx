@@ -23,6 +23,7 @@ export type NavBadgeKey = 'requests' | 'invites' | 'ratings' | 'messages';
 export interface NavItem {
   href: string;
   label: string;
+  labels?: Partial<Record<HrmsRole, string>>;
   icon: LucideIcon;
   roles: HrmsRole[];
   badge?: NavBadgeKey;
@@ -47,6 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     href: '/requests',
     label: 'Requests',
+    labels: { employee: 'My requests', manager: 'Approvals', ceo: 'Approvals', coo: 'Approvals' },
     icon: Inbox,
     roles: ['ceo', 'coo', 'manager', 'employee'],
     badge: 'requests',
@@ -62,6 +64,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     href: '/tasks',
     label: 'Tasks',
+    labels: { employee: 'My tasks', manager: 'Team tasks' },
     icon: SquareCheckBig,
     roles: ['ceo', 'coo', 'manager', 'employee'],
     bottomTab: true,
@@ -77,6 +80,12 @@ export const NAV_ITEMS: NavItem[] = [
   {
     href: '/invites',
     label: 'Invites',
+    labels: {
+      employee: 'My invites',
+      manager: 'Invite reviews',
+      ceo: 'Invite reviews',
+      coo: 'Invite reviews',
+    },
     icon: Mail,
     roles: ['ceo', 'coo', 'manager', 'employee'],
     badge: 'invites',
@@ -85,12 +94,19 @@ export const NAV_ITEMS: NavItem[] = [
   {
     href: '/attendance',
     label: 'Attendance',
+    labels: { employee: 'My attendance' },
     icon: CalendarCheck,
     roles: ['ceo', 'coo', 'manager', 'employee'],
   },
   {
     href: '/leave',
     label: 'Leave',
+    labels: {
+      employee: 'My leave',
+      manager: 'Leave approvals',
+      ceo: 'Leave approvals',
+      coo: 'Leave approvals',
+    },
     icon: CalendarDays,
     roles: ['ceo', 'coo', 'manager', 'employee'],
     bottomTab: true,
@@ -105,6 +121,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     href: '/ratings',
     label: 'Ratings',
+    labels: { manager: 'Rate projects', employee: 'Rate projects' },
     icon: Star,
     roles: ['manager', 'employee'],
     badge: 'ratings',
@@ -112,11 +129,29 @@ export const NAV_ITEMS: NavItem[] = [
   {
     href: '/performance',
     label: 'Performance',
+    labels: {
+      ceo: 'Team performance',
+      coo: 'Team performance',
+      manager: 'My performance',
+      employee: 'My performance',
+    },
     icon: Star,
     roles: ['ceo', 'coo', 'manager', 'employee'],
   },
-  { href: '/history', label: 'History', icon: History, roles: ['ceo', 'coo'] },
-  { href: '/settings', label: 'Settings', icon: Settings, roles: ['ceo', 'coo'] },
+  {
+    href: '/history',
+    label: 'History',
+    labels: { ceo: 'Audit history', coo: 'Audit history' },
+    icon: History,
+    roles: ['ceo', 'coo'],
+  },
+  {
+    href: '/settings',
+    label: 'Settings',
+    labels: { ceo: 'Organisation settings', coo: 'Organisation settings' },
+    icon: Settings,
+    roles: ['ceo', 'coo'],
+  },
 ];
 
 /** The four most-used items per role for the mobile bottom tab bar. */
@@ -130,6 +165,10 @@ const BOTTOM_TABS: Record<string, string[]> = {
 export function navItemsFor(role: HrmsRole | null): NavItem[] {
   if (!role || role === 'gameMaster') return [];
   return NAV_ITEMS.filter((item) => item.roles.includes(role));
+}
+
+export function navLabelFor(item: NavItem, role: HrmsRole | null): string {
+  return (role && item.labels?.[role]) ?? item.label;
 }
 
 export function bottomTabsFor(role: HrmsRole | null): NavItem[] {

@@ -539,7 +539,7 @@ export default function RequestsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Requests"
+        title={canDecide ? 'Approvals & requests' : 'My requests'}
         description={
           scope === 'decide'
             ? 'Review and decide requests assigned to you.'

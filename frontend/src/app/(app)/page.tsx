@@ -35,6 +35,7 @@ import {
 import { cn } from '@/lib/cn';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
+import { canDecideRequests, isLeadershipRole, ROLE_UI } from '@/lib/hrms/role-ui';
 import { ORG_STATUSES, PERFORMANCE_BANDS } from '@/lib/hrms/status-vocabulary';
 import { formatTime } from '@/lib/hrms/time';
 import {
@@ -150,8 +151,11 @@ export default function HrmsHomePage() {
     retry: false,
   });
 
-  if (!session) return null;
+  if (!session || !session.role || session.role === 'gameMaster') return null;
 
+  const roleUi = ROLE_UI[session.role];
+  const isLeadership = isLeadershipRole(session.role);
+  const canDecide = canDecideRequests(session.role);
   const firstName = session.user.fullName.split(' ')[0];
   const working = checkedIn && !checkedOut;
   const workedMinutes =
@@ -179,36 +183,113 @@ export default function HrmsHomePage() {
   const myPerformance = performance.data?.items.find(
     (row) => row.memberId === session.activeMemberId,
   );
-  const quickActions = [
-    {
-      label: 'View attendance',
-      href: '/attendance',
-      icon: <CalendarCheck aria-hidden className="size-4" />,
-    },
-    { label: 'Request leave', href: '/leave', icon: <Plane aria-hidden className="size-4" /> },
-    { label: 'Open tasks', href: '/tasks', icon: <ClipboardList aria-hidden className="size-4" /> },
-    session.role === 'ceo' || session.role === 'coo'
-      ? {
-          label: 'Manage people',
-          href: '/people',
-          icon: <UserPlus aria-hidden className="size-4" />,
-        }
-      : session.role === 'manager'
-        ? {
-            label: 'Create task',
-            href: '/tasks/new',
-            icon: <ListChecks aria-hidden className="size-4" />,
-          }
-        : {
-            label: 'Open messages',
-            href: '/messages',
-            icon: <MessageSquare aria-hidden className="size-4" />,
+  const performanceRows = performance.data?.items ?? [];
+  const scoredRows = performanceRows.filter((row) => row.score !== null);
+  const teamAverage = scoredRows.length
+    ? Math.round(scoredRows.reduce((total, row) => total + (row.score ?? 0), 0) / scoredRows.length)
+    : null;
+  const quickActions =
+    session.role === 'ceo'
+      ? [
+          {
+            label: 'Review approvals',
+            href: '/requests',
+            icon: <Clock aria-hidden className="size-4" />,
           },
-  ];
+          {
+            label: 'Manage people',
+            href: '/people',
+            icon: <UserPlus aria-hidden className="size-4" />,
+          },
+          {
+            label: 'New project',
+            href: '/projects/new',
+            icon: <CalendarPlus aria-hidden className="size-4" />,
+          },
+          {
+            label: 'Team performance',
+            href: '/performance',
+            icon: <BarChart3 aria-hidden className="size-4" />,
+          },
+        ]
+      : session.role === 'coo'
+        ? [
+            {
+              label: 'Review approvals',
+              href: '/requests',
+              icon: <Clock aria-hidden className="size-4" />,
+            },
+            {
+              label: 'Manage people',
+              href: '/people',
+              icon: <UserPlus aria-hidden className="size-4" />,
+            },
+            {
+              label: 'Team attendance',
+              href: '/attendance/team',
+              icon: <CalendarCheck aria-hidden className="size-4" />,
+            },
+            {
+              label: 'Team performance',
+              href: '/performance',
+              icon: <BarChart3 aria-hidden className="size-4" />,
+            },
+          ]
+        : session.role === 'manager'
+          ? [
+              {
+                label: 'Create task',
+                href: '/tasks/new',
+                icon: <ListChecks aria-hidden className="size-4" />,
+              },
+              {
+                label: 'Review requests',
+                href: '/requests',
+                icon: <Clock aria-hidden className="size-4" />,
+              },
+              {
+                label: 'Team attendance',
+                href: '/attendance/team',
+                icon: <CalendarCheck aria-hidden className="size-4" />,
+              },
+              {
+                label: 'Team workload',
+                href: '/workload',
+                icon: <BarChart3 aria-hidden className="size-4" />,
+              },
+            ]
+          : [
+              {
+                label: 'Open tasks',
+                href: '/tasks',
+                icon: <ClipboardList aria-hidden className="size-4" />,
+              },
+              {
+                label: 'Request leave',
+                href: '/leave',
+                icon: <Plane aria-hidden className="size-4" />,
+              },
+              {
+                label: 'My attendance',
+                href: '/attendance',
+                icon: <CalendarCheck aria-hidden className="size-4" />,
+              },
+              {
+                label: 'Open messages',
+                href: '/messages',
+                icon: <MessageSquare aria-hidden className="size-4" />,
+              },
+            ];
   const waiting = [
-    { label: 'Requests to decide', n: counts.requests, href: '/requests' },
-    { label: 'Project invites', n: counts.invites, href: '/invites' },
-    { label: 'Ratings due', n: counts.ratings, href: '/ratings' },
+    ...(canDecide ? [{ label: 'Requests to decide', n: counts.requests, href: '/requests' }] : []),
+    {
+      label: isLeadership || session.role === 'manager' ? 'Invites to review' : 'Invites to answer',
+      n: counts.invites,
+      href: '/invites',
+    },
+    ...(session.role === 'manager' || session.role === 'employee'
+      ? [{ label: 'Ratings due', n: counts.ratings, href: '/ratings' }]
+      : []),
     { label: 'Unread messages', n: counts.messages, href: '/messages' },
   ].filter((w) => w.n > 0);
 
@@ -226,7 +307,8 @@ export default function HrmsHomePage() {
             <h1 className="text-2xl font-bold sm:text-3xl">
               {greeting(now.getHours())}, {firstName}
             </h1>
-            <p className="mt-1 text-sm text-bg/75">
+            <p className="mt-1 max-w-xl text-sm text-bg/75">{roleUi.dashboardDescription}</p>
+            <p className="mt-2 text-xs text-bg/60">
               {now.toLocaleDateString(undefined, {
                 weekday: 'long',
                 day: 'numeric',
@@ -442,9 +524,11 @@ export default function HrmsHomePage() {
             <div>
               <h2 className="flex items-center gap-2 text-lg font-bold">
                 <BarChart3 aria-hidden className="size-5 text-primary" />
-                Performance
+                {isLeadership ? 'Team performance' : 'Your performance'}
               </h2>
-              <p className="mt-1 text-sm text-fg-muted">Your latest calculated score.</p>
+              <p className="mt-1 text-sm text-fg-muted">
+                {isLeadership ? 'Current organisation scorecard.' : 'Your latest calculated score.'}
+              </p>
             </div>
             <Button asChild variant="secondary" size="sm">
               <Link href="/performance">View details</Link>
@@ -458,9 +542,38 @@ export default function HrmsHomePage() {
           ) : performance.error ? (
             <ErrorState
               title="Could not load performance"
-              message="Your performance score is unavailable right now."
+              message={
+                isLeadership
+                  ? 'The team performance scorecard is unavailable right now.'
+                  : 'Your performance score is unavailable right now.'
+              }
               onRetry={() => void performance.refetch()}
             />
+          ) : isLeadership ? (
+            performanceRows.length === 0 ? (
+              <EmptyState
+                title="No team scores yet"
+                description="Scores will appear after enough attendance, task, leave, and rating data is available."
+              />
+            ) : (
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex size-20 items-center justify-center rounded-card bg-primary-soft text-2xl font-bold tabular-nums text-primary">
+                  {teamAverage === null ? '—' : teamAverage}
+                </div>
+                <div className="space-y-1">
+                  <p className="font-semibold text-fg">Team average</p>
+                  <p className="text-sm text-fg-muted">
+                    {scoredRows.length} of {performanceRows.length} people have a calculated score.
+                  </p>
+                  <Link
+                    href="/performance"
+                    className="text-sm font-medium text-primary hover:underline"
+                  >
+                    Inspect the scorecard
+                  </Link>
+                </div>
+              </div>
+            )
           ) : !myPerformance ? (
             <EmptyState
               title="No score yet"
@@ -567,10 +680,13 @@ export default function HrmsHomePage() {
 
       {(waiting.length > 0 || (myTasks.data && myTasks.data.total > 0)) && (
         <Card className="space-y-4">
-          <h2 className="flex items-center gap-2 text-lg font-bold">
-            <Clock aria-hidden className="size-5" />
-            Your work
-          </h2>
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-bold">
+              <Clock aria-hidden className="size-5" />
+              {roleUi.workHeading}
+            </h2>
+            <p className="mt-1 text-sm text-fg-muted">{roleUi.workDescription}</p>
+          </div>
           {waiting.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {waiting.map((w) => (

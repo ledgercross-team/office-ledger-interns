@@ -66,7 +66,16 @@ export default function PeoplePage() {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-fg">People</h1>
+        <div>
+          <h1 className="text-xl font-semibold text-fg">
+            {session?.role === 'manager' ? 'Team' : 'People'}
+          </h1>
+          <p className="mt-1 text-sm text-fg-muted">
+            {session?.role === 'manager'
+              ? 'See the people connected to your projects and work.'
+              : 'Manage people, roles, and organisation access.'}
+          </p>
+        </div>
         {isAdmin && (
           <Button asChild size="sm">
             <Link href="/people/new">Add person</Link>

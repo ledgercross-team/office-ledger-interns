@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'next/navigation';
 import { ArrowLeft, Search } from 'lucide-react';
 import { Breadcrumbs, Button, CommandPalette, type CommandItem } from '@/components/ui';
-import { ROUTE_LABELS, navItemsFor } from './app-nav';
+import { ROUTE_LABELS, navItemsFor, navLabelFor } from './app-nav';
 import { NotificationBell } from './notification-bell';
 import { QuickCheckIn } from './quick-check-in';
 import { NavDrawerTrigger } from './sidebar';
@@ -59,7 +59,7 @@ function usePaletteItems(role: HrmsRole | null): CommandItem[] {
   return [
     ...navItemsFor(role).map((item) => ({
       id: `page-${item.href}`,
-      label: item.label,
+      label: navLabelFor(item, role),
       group: 'Pages',
       icon: <item.icon aria-hidden className="size-4" />,
       onSelect: go(item.href),

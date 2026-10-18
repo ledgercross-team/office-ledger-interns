@@ -60,8 +60,12 @@ export default function AttendancePage() {
   return (
     <>
       <PageHeader
-        title="Attendance"
-        description="Check in from an approved office network and review your working-day history."
+        title={canSeeTeam ? 'Attendance' : 'My attendance'}
+        description={
+          canSeeTeam
+            ? 'Check in from an approved office network, then review your own or your team’s record.'
+            : 'Check in from an approved office network and review your working-day history.'
+        }
         secondaryActions={
           canSeeTeam ? (
             <Link href="/attendance/team" className={secondaryActionClass}>

@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
+import { canDecideRequests } from '@/lib/hrms/role-ui';
 import type { Paginated, ProjectInvite, RatingsDueProject, HrmsRequest } from '@/lib/hrms/types';
 
 interface Mine {
@@ -45,7 +46,7 @@ export function useNavCounts(): NavCounts {
   const requests = useQuery({
     queryKey: ['hrms', 'nav-counts', 'requests', memberId],
     queryFn: () => hrmsFetch<Paginated<HrmsRequest>>('/requests?scope=decide&pageSize=1'),
-    enabled: orgMember && memberId !== null,
+    enabled: canDecideRequests(role) && memberId !== null,
     staleTime: 60_000,
     retry: false,
   });

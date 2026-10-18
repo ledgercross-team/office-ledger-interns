@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button, Drawer } from '@/components/ui';
-import { bottomTabsFor, navItemsFor, type NavItem } from './app-nav';
+import { bottomTabsFor, navItemsFor, navLabelFor, type NavItem } from './app-nav';
 import type { NavCounts } from './use-nav-counts';
 import type { HrmsRole } from '@/lib/hrms/types';
 
@@ -28,12 +28,14 @@ function CountBadge({ count }: { count: number }) {
 function NavList({
   items,
   counts,
+  role,
   pathname,
   collapsed,
   onNavigate,
 }: {
   items: NavItem[];
   counts: NavCounts;
+  role: HrmsRole;
   pathname: string;
   collapsed: boolean;
   onNavigate?: () => void;
@@ -52,7 +54,7 @@ function NavList({
               href={item.href}
               aria-current={active ? 'page' : undefined}
               onClick={onNavigate}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? navLabelFor(item, role) : undefined}
               className={cn(
                 'flex min-h-11 items-center gap-3 rounded-full px-3 py-2 text-sm font-medium',
                 active
@@ -62,7 +64,7 @@ function NavList({
               )}
             >
               <Icon aria-hidden className="size-5 shrink-0" />
-              {!collapsed && <span className="flex-1">{item.label}</span>}
+              {!collapsed && <span className="flex-1">{navLabelFor(item, role)}</span>}
               {!collapsed && item.badge && <CountBadge count={counts[item.badge]} />}
             </Link>
           </li>
@@ -112,6 +114,7 @@ export function Sidebar({
         <NavList
           items={navItemsFor(role)}
           counts={counts}
+          role={role}
           pathname={pathname}
           collapsed={collapsed}
         />
@@ -164,6 +167,7 @@ export function NavDrawer({
         <NavList
           items={navItemsFor(role)}
           counts={counts}
+          role={role}
           pathname={pathname}
           collapsed={false}
           onNavigate={() => onOpenChange(false)}
@@ -215,7 +219,7 @@ export function BottomTabs({ role, counts }: { role: HrmsRole; counts: NavCounts
                 )}
               >
                 <Icon aria-hidden className="size-5 shrink-0" />
-                <span className="max-w-full truncate">{item.label}</span>
+                <span className="max-w-full truncate">{navLabelFor(item, role)}</span>
                 {item.badge && counts[item.badge] > 0 && (
                   <span
                     aria-label={`${counts[item.badge]} waiting`}

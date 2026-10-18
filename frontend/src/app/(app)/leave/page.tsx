@@ -233,7 +233,16 @@ export default function LeavePage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold text-fg">Leave</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-fg">
+          {canDecide ? 'Leave & approvals' : 'My leave'}
+        </h1>
+        <p className="mt-1 text-sm text-fg-muted">
+          {canDecide
+            ? 'Submit your own leave and review requests assigned to you.'
+            : 'Check your allowance and track your leave requests.'}
+        </p>
+      </div>
 
       {balance.isLoading && (
         <div

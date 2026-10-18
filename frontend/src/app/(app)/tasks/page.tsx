@@ -46,6 +46,12 @@ function TasksList() {
   });
   const canCreate =
     session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
+  const pageTitle =
+    session?.role === 'employee'
+      ? 'My tasks'
+      : session?.role === 'manager'
+        ? 'Team tasks'
+        : 'Tasks';
   const reset = (fn: () => void) => {
     fn();
     setPage(1);
@@ -54,7 +60,16 @@ function TasksList() {
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Tasks</h1>
+        <div>
+          <h1 className="text-2xl font-bold">{pageTitle}</h1>
+          <p className="mt-1 text-sm text-fg-muted">
+            {session?.role === 'employee'
+              ? 'Focus on the tasks assigned to you.'
+              : session?.role === 'manager'
+                ? 'Coordinate work assigned to your team.'
+                : 'Track work across the organisation.'}
+          </p>
+        </div>
         {canCreate && (
           <Button asChild>
             <Link href={`/tasks/new${projectId ? `?projectId=${projectId}` : ''}`}>
