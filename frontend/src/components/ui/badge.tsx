@@ -11,11 +11,46 @@ const tones: Record<SemanticTone, string> = {
   info: 'border-info/30 bg-info-soft text-info-fg',
 };
 
-export function Badge({ children, tone = 'neutral', icon, className }: { children: ReactNode; tone?: SemanticTone; icon?: ReactNode; className?: string }) {
-  return <span className={cn('inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium', tones[tone], className)}>{icon}{children}</span>;
+export function Badge({
+  children,
+  tone = 'neutral',
+  icon,
+  className,
+}: {
+  children: ReactNode;
+  tone?: SemanticTone;
+  icon?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex max-w-full items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium leading-4',
+        tones[tone],
+        className,
+      )}
+    >
+      {icon}
+      {children}
+    </span>
+  );
 }
 
-export function StatusPill({ status, className }: { status: StatusDefinition; className?: string }) {
+export function StatusPill({
+  status,
+  className,
+}: {
+  status: StatusDefinition;
+  className?: string;
+}) {
   const Icon = status.icon;
-  return <Badge tone={status.tone} icon={<Icon aria-hidden className="size-3.5" />} className={cn(status.strike && 'line-through', className)}>{status.label}</Badge>;
+  return (
+    <Badge
+      tone={status.tone}
+      icon={<Icon aria-hidden className="size-3.5" />}
+      className={cn(status.strike && 'line-through', className)}
+    >
+      {status.label}
+    </Badge>
+  );
 }

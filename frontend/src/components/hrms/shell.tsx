@@ -165,7 +165,7 @@ export function HrmsShell({ children }: { children: ReactNode }) {
               <OrgGate>
                 <main
                   id="main-content"
-                  className="mx-auto w-full max-w-[1280px] flex-1 space-y-6 p-4 pb-24 sm:p-6 lg:pb-6"
+                  className="mx-auto w-full max-w-[1440px] flex-1 space-y-8 p-4 pb-24 sm:p-6 lg:p-8 lg:pb-8"
                 >
                   <OrgBanners />
                   {children}

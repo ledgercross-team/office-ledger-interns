@@ -11,6 +11,7 @@
   --color-fg-muted: var(--ds-fg-muted);
   --color-fg-subtle: var(--ds-fg-subtle);
   --color-primary: var(--ds-primary);
+  --color-primary-hover: var(--ds-primary-hover);
   --color-primary-fg: var(--ds-primary-fg);
   --color-primary-soft: var(--ds-primary-soft);
   --color-rail: var(--ds-rail);
@@ -116,6 +117,18 @@ textarea,
 select {
   font: inherit;
   max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  caret-color: var(--ds-primary);
+}
+
+::placeholder {
+  color: var(--ds-fg-subtle);
+  opacity: 1;
 }
 
 body {

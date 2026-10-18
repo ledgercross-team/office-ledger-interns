@@ -14,7 +14,7 @@ import {
 import { cn } from '@/lib/cn';
 
 const control =
-  'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-fg-subtle';
+  'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-fg-subtle';
 
 interface FieldFrameProps {
   id: string;
