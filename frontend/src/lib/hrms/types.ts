@@ -510,6 +510,10 @@ export interface EmailPref {
   canMute: boolean;
 }
 
+export interface AuditPage extends Paginated<AuditEntry> {
+  names: Record<string, string>;
+}
+
 export interface AuditEntry {
   id: string;
   action: string;

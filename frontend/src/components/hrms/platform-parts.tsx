@@ -1,7 +1,11 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
+import { ArrowLeft, ChevronRight, Plus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { Badge, Button, Dialog, Input, PageHeader, Select, Skeleton } from '@/components/ui';
+import type { SemanticTone } from '@/lib/hrms/status-vocabulary';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { PersonManager } from '@/components/hrms/platform-people';
@@ -41,8 +45,16 @@ function Error({ text }: { text: string | null }) {
   ) : null;
 }
 
-function CeoPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
-  const [open, setOpen] = useState(false);
+function CeoPanel({
+  orgId,
+  orgName,
+  defaultOpen = false,
+}: {
+  orgId: string;
+  orgName: string;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   const queryClient = useQueryClient();
   const list = useQuery({
     queryKey: ['hrms', 'platform', 'ceos', orgId],
@@ -106,85 +118,121 @@ function CeoPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
   );
 }
 
-function OrgRow({ org, plans, onDone }: { org: PlatformOrg; plans: string[]; onDone: () => void }) {
-  const [plan, setPlan] = useState(org.planCode);
-  const [reason, setReason] = useState('');
-  const { mutation, error } = useAction(onDone);
+function OrgForm({ onCreated }: { onCreated: () => void }) {
+  const queryClient = useQueryClient();
+  const plans = useQuery({
+    queryKey: ['hrms', 'platform', 'plans'],
+    queryFn: () => hrmsFetch<{ items: Array<{ code: string }> }>('/platform/plans'),
+  });
+  const { mutation, error } = useAction(() => {
+    void queryClient.invalidateQueries({ queryKey: ['hrms', 'platform'] });
+    onCreated();
+  });
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const f = new FormData(event.currentTarget);
+    mutation.mutate({
+      path: '/platform/orgs',
+      body: {
+        name: String(f.get('name')).trim(),
+        planCode: String(f.get('plan')),
+        ceoEmail: String(f.get('email')).trim(),
+        ceoFullName: String(f.get('ceoName')).trim(),
+      },
+    });
+  }
+
   return (
-    <li className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-3">
-      <p className="text-sm text-charcoal">
-        <span className="font-medium">{org.name}</span> · {org.status} · {org.planCode} · seats{' '}
-        {org.seatsUsed}/{org.seatLimit}
-      </p>
-      <p className="text-xs text-charcoal-soft">
-        {org.ceoCount} CEO, {org.cooCount} COO
-        {org.overThreshold && (
-          <span className="ml-2 text-alert-deep">More than 25 CEOs and COOs</span>
-        )}
-      </p>
-      <CeoPanel orgId={org.id} orgName={org.name} />
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={plan}
-          onChange={(e) => setPlan(e.target.value)}
-          className={`${input} sm:w-44`}
-          aria-label="Plan"
-        >
-          {plans.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          disabled={plan === org.planCode || mutation.isPending}
-          onClick={() =>
-            mutation.mutate({ path: `/platform/orgs/${org.id}/plan`, body: { planCode: plan } })
-          }
-          className={secondary}
-        >
-          Change plan
-        </button>
-        {org.status === 'blocked' ? (
-          <button
-            type="button"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate({ path: `/platform/orgs/${org.id}/unblock` })}
-            className={secondary}
-          >
-            Unblock
-          </button>
-        ) : (
-          <>
-            <input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Reason to block"
-              className={`${input} sm:w-48`}
-            />
-            <button
-              type="button"
-              disabled={reason.trim().length === 0 || mutation.isPending}
-              onClick={() =>
-                mutation.mutate({
-                  path: `/platform/orgs/${org.id}/block`,
-                  body: { reason: reason.trim() },
-                })
-              }
-              className={secondary}
-            >
-              Block
-            </button>
-          </>
-        )}
-      </div>
+    <form onSubmit={onSubmit} className="space-y-4">
+      <Input name="name" label="Organisation name" required />
+      <Select name="plan" label="Plan" required>
+        {plans.data?.items.map((p) => (
+          <option key={p.code} value={p.code}>
+            {p.code}
+          </option>
+        ))}
+      </Select>
+      <Input name="ceoName" label="CEO full name" required />
+      <Input name="email" type="email" label="CEO email" required />
       <Error text={error} />
-    </li>
+      <div className="flex justify-end">
+        <Button type="submit" loading={mutation.isPending}>
+          Create organisation
+        </Button>
+      </div>
+    </form>
   );
 }
 
+const STATUS_TONE: Record<string, SemanticTone> = {
+  active: 'success',
+  grace: 'warning',
+  read_only: 'warning',
+  suspended: 'danger',
+  blocked: 'danger',
+};
+
 export function Orgs() {
+  const [adding, setAdding] = useState(false);
+  const orgs = useQuery({
+    queryKey: ['hrms', 'platform', 'orgs'],
+    queryFn: () => hrmsFetch<{ items: PlatformOrg[] }>('/platform/orgs'),
+  });
+  const items = orgs.data?.items ?? [];
+
+  return (
+    <section className="space-y-4">
+      <PageHeader
+        title="Organisations"
+        description="Counts only. No organisation data is shown here."
+        primaryAction={
+          <Dialog
+            open={adding}
+            onOpenChange={setAdding}
+            title="Add organisation"
+            description="Creates the organisation and invites its first CEO."
+            trigger={
+              <Button>
+                <Plus aria-hidden className="size-4" />
+                Add organisation
+              </Button>
+            }
+          >
+            <OrgForm onCreated={() => setAdding(false)} />
+          </Dialog>
+        }
+      />
+      {orgs.isLoading && <Skeleton className="h-24 w-full" />}
+      {orgs.data && items.length === 0 && (
+        <p className="text-sm text-fg-muted">No organisations yet.</p>
+      )}
+      <ul className="divide-y divide-border overflow-hidden rounded-card border border-border bg-surface">
+        {items.map((o) => (
+          <li key={o.id}>
+            <Link
+              href={`/platform/orgs/${o.id}`}
+              className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-surface-sunken/70"
+            >
+              <span className="min-w-0 flex-1 truncate font-medium text-fg">{o.name}</span>
+              <Badge tone={STATUS_TONE[o.status] ?? 'neutral'}>{o.status.replace('_', ' ')}</Badge>
+              <span className="text-sm text-fg-muted">{o.planCode}</span>
+              <span className="text-sm tabular-nums text-fg-muted">
+                {o.seatsUsed}/{o.seatLimit} seats
+              </span>
+              <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                Manage
+                <ChevronRight aria-hidden className="size-4" />
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function OrgManage({ orgId }: { orgId: string }) {
   const queryClient = useQueryClient();
   const orgs = useQuery({
     queryKey: ['hrms', 'platform', 'orgs'],
@@ -195,53 +243,121 @@ export function Orgs() {
     queryFn: () => hrmsFetch<{ items: Array<{ code: string }> }>('/platform/plans'),
   });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ['hrms', 'platform'] });
-  const { mutation, error } = useAction(refresh);
-  const planCodes = plans.data?.items.map((p) => p.code) ?? [];
+  const org = orgs.data?.items.find((o) => o.id === orgId);
+  const back = (
+    <Link
+      href="/platform"
+      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+    >
+      <ArrowLeft aria-hidden className="size-4" />
+      All organisations
+    </Link>
+  );
 
-  function onCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const f = new FormData(form);
-    mutation.mutate(
-      {
-        path: '/platform/orgs',
-        body: {
-          name: String(f.get('name')).trim(),
-          planCode: String(f.get('plan')),
-          ceoEmail: String(f.get('email')).trim(),
-          ceoFullName: String(f.get('ceoName')).trim(),
-        },
-      },
-      { onSuccess: () => form.reset() },
+  if (orgs.isLoading) return <Skeleton className="h-40 w-full" />;
+  if (!org) {
+    return (
+      <div className="space-y-3">
+        {back}
+        <p className="text-sm text-fg-muted">Organisation not found.</p>
+      </div>
     );
   }
-
   return (
-    <section className="space-y-3">
-      <h2 className="font-medium text-charcoal">Organisations</h2>
-      <p className="text-xs text-charcoal-soft">Counts only. No organisation data is shown here.</p>
-      <ul className="space-y-2">
-        {orgs.data?.items.map((o) => (
-          <OrgRow key={o.id} org={o} plans={planCodes} onDone={refresh} />
-        ))}
-      </ul>
-      <form onSubmit={onCreate} className={`${card} max-w-lg`}>
-        <h3 className="text-sm font-medium text-charcoal">New organisation</h3>
-        <input name="name" required placeholder="Organisation name" className={input} />
-        <select name="plan" required className={input} aria-label="Plan">
-          {planCodes.map((p) => (
+    <div className="space-y-6">
+      <PageHeader
+        breadcrumbs={back}
+        title={org.name}
+        description={`${org.planCode} plan · ${org.seatsUsed}/${org.seatLimit} seats · ${org.ceoCount} CEO, ${org.cooCount} COO`}
+        secondaryActions={
+          <Badge tone={STATUS_TONE[org.status] ?? 'neutral'}>{org.status.replace('_', ' ')}</Badge>
+        }
+      />
+      {org.overThreshold && <p className="text-sm text-danger-fg">More than 25 CEOs and COOs.</p>}
+      <PlanBlock
+        key={org.planCode + org.status}
+        org={org}
+        plans={plans.data?.items.map((p) => p.code) ?? []}
+        onDone={refresh}
+      />
+      <section className={card}>
+        <h2 className="font-medium text-fg">CEOs</h2>
+        <CeoPanel orgId={org.id} orgName={org.name} defaultOpen />
+      </section>
+    </div>
+  );
+}
+
+function PlanBlock({
+  org,
+  plans,
+  onDone,
+}: {
+  org: PlatformOrg;
+  plans: string[];
+  onDone: () => void;
+}) {
+  const [plan, setPlan] = useState(org.planCode);
+  const [reason, setReason] = useState('');
+  const { mutation, error } = useAction(onDone);
+  return (
+    <section className="grid gap-4 md:grid-cols-2">
+      <div className={card}>
+        <h2 className="font-medium text-fg">Plan</h2>
+        <Select label="Plan" value={plan} onChange={(e) => setPlan(e.target.value)}>
+          {plans.map((p) => (
             <option key={p} value={p}>
               {p}
             </option>
           ))}
-        </select>
-        <input name="ceoName" required placeholder="CEO full name" className={input} />
-        <input name="email" type="email" required placeholder="CEO email" className={input} />
+        </Select>
+        <Button
+          variant="secondary"
+          disabled={plan === org.planCode}
+          loading={mutation.isPending}
+          onClick={() =>
+            mutation.mutate({ path: `/platform/orgs/${org.id}/plan`, body: { planCode: plan } })
+          }
+        >
+          Change plan
+        </Button>
+      </div>
+      <div className={card}>
+        <h2 className="font-medium text-fg">Access</h2>
+        {org.status === 'blocked' ? (
+          <Button
+            variant="secondary"
+            loading={mutation.isPending}
+            onClick={() => mutation.mutate({ path: `/platform/orgs/${org.id}/unblock` })}
+          >
+            Unblock organisation
+          </Button>
+        ) : (
+          <>
+            <Input
+              label="Reason to block"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+            <Button
+              variant="danger"
+              disabled={reason.trim().length === 0}
+              loading={mutation.isPending}
+              onClick={() =>
+                mutation.mutate({
+                  path: `/platform/orgs/${org.id}/block`,
+                  body: { reason: reason.trim() },
+                })
+              }
+            >
+              Block organisation
+            </Button>
+          </>
+        )}
+      </div>
+      <div className="md:col-span-2">
         <Error text={error} />
-        <button type="submit" disabled={mutation.isPending} className={primary}>
-          Create
-        </button>
-      </form>
+      </div>
     </section>
   );
 }

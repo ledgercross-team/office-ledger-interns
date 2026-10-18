@@ -7,19 +7,23 @@ import { RoleGate } from '@/components/hrms/role-gate';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatDateTime } from '@/lib/hrms/time';
-import type { AuditEntry, Paginated } from '@/lib/hrms/types';
+import { describeAudit, HISTORY_FILTERS, type Names } from '@/lib/hrms/audit-describe';
+import type { AuditEntry, AuditPage } from '@/lib/hrms/types';
 
 const input =
   'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
-const secondary = 'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+const secondary =
+  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
 
-function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
+function Entry({ entry, names, canNote }: { entry: AuditEntry; names: Names; canNote: boolean }) {
+  const summary = describeAudit(entry, names);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const add = useMutation({
-    mutationFn: () => hrmsFetch(`/audit/${entry.id}/notes`, { method: 'POST', body: { note: note.trim() } }),
+    mutationFn: () =>
+      hrmsFetch(`/audit/${entry.id}/notes`, { method: 'POST', body: { note: note.trim() } }),
     onSuccess: () => {
       setNote('');
       void queryClient.invalidateQueries({ queryKey: ['hrms', 'audit'] });
@@ -29,21 +33,39 @@ function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
 
   return (
     <li className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-3">
-      <p className="text-sm text-charcoal">
-        <span className="font-medium">{entry.action}</span> on {entry.table}
-        {entry.actor?.fullName ? ` by ${entry.actor.fullName}` : ' by the system'}
-      </p>
+      <p className="text-sm font-medium text-charcoal">{summary.sentence}</p>
+      {summary.reason && <p className="text-sm text-charcoal-soft">“{summary.reason}”</p>}
       <p className="text-xs text-charcoal-soft">{formatDateTime(entry.at)}</p>
-      <button type="button" onClick={() => setOpen(!open)} className="text-xs text-forest hover:underline">
-        {open ? 'Hide details' : 'Show details'}
-      </button>
-      {open && (
-        <pre className="overflow-x-auto rounded-xl bg-mist p-2 text-xs">
-          {JSON.stringify({ before: entry.before, after: entry.after }, null, 2)}
-        </pre>
+      {summary.changes.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="text-xs text-forest hover:underline"
+          >
+            {open ? 'Hide details' : 'Show details'}
+          </button>
+          {open && (
+            <dl className="space-y-1 rounded-xl bg-mist p-2 text-xs">
+              {summary.changes.map((c) => (
+                <div key={c.label} className="flex flex-wrap gap-x-2">
+                  <dt className="font-medium">{c.label}:</dt>
+                  <dd>
+                    {c.from !== null && c.to !== null
+                      ? `${c.from} → ${c.to}`
+                      : (c.to ?? `${c.from} (removed)`)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </>
       )}
       {entry.notes.map((n) => (
-        <p key={n.id} className="rounded-xl border border-evergreen/30 bg-mist p-2 text-sm text-charcoal">
+        <p
+          key={n.id}
+          className="rounded-xl border border-evergreen/30 bg-mist p-2 text-sm text-charcoal"
+        >
           Note from {n.authorName}: {n.note}
         </p>
       ))}
@@ -55,7 +77,12 @@ function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
             placeholder="Add a note (the entry itself never changes)"
             className={input}
           />
-          <button type="button" disabled={note.trim().length === 0 || add.isPending} onClick={() => add.mutate()} className={secondary}>
+          <button
+            type="button"
+            disabled={note.trim().length === 0 || add.isPending}
+            onClick={() => add.mutate()}
+            className={secondary}
+          >
             Add note
           </button>
         </div>
@@ -79,22 +106,28 @@ function History() {
   if (from) params.set('from', new Date(from).toISOString());
   const data = useQuery({
     queryKey: ['hrms', 'audit', params.toString()],
-    queryFn: () => hrmsFetch<Paginated<AuditEntry>>(`/audit?${params.toString()}`),
+    queryFn: () => hrmsFetch<AuditPage>(`/audit?${params.toString()}`),
   });
 
   return (
     <>
       <h1 className="text-xl font-semibold text-charcoal">History</h1>
       <div className="flex flex-wrap gap-2">
-        <input
+        <select
           value={table}
           onChange={(e) => {
             setTable(e.target.value);
             setPage(1);
           }}
-          placeholder="Table, e.g. tasks"
-          className={`${input} sm:w-48`}
-        />
+          aria-label="Show"
+          className={`${input} sm:w-56`}
+        >
+          {HISTORY_FILTERS.map((f) => (
+            <option key={f.label} value={f.tables}>
+              {f.label}
+            </option>
+          ))}
+        </select>
         <input
           type="date"
           value={from}
@@ -109,11 +142,16 @@ function History() {
       {data.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
       <ul className="space-y-3">
         {data.data?.items.map((e) => (
-          <Entry key={e.id} entry={e} canNote={session?.role === 'ceo'} />
+          <Entry key={e.id} entry={e} names={data.data.names} canNote={session?.role === 'ceo'} />
         ))}
       </ul>
       {data.data && (
-        <Pagination page={page} pageSize={data.data.pageSize} total={data.data.total} onPage={setPage} />
+        <Pagination
+          page={page}
+          pageSize={data.data.pageSize}
+          total={data.data.total}
+          onPage={setPage}
+        />
       )}
     </>
   );

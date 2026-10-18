@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn';
 import { Button, Skeleton, ToastProvider } from '@/components/ui';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
+import { PlatformNotifications } from '@/components/hrms/platform-notifications';
 
 const ITEMS = [
   { href: '/platform', label: 'Organisations', icon: Building2 },
@@ -118,6 +119,7 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
                 <p className="hidden truncate text-sm text-fg-muted sm:block">
                   {session.user.email}
                 </p>
+                <PlatformNotifications />
                 <Button variant="secondary" size="sm" onClick={() => void logout()}>
                   <LogOut aria-hidden className="size-4" />
                   Sign out

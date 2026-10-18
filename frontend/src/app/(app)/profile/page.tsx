@@ -1,8 +1,9 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 import { SecurityCard } from '@/components/hrms/security-card';
-import { Avatar, Card } from '@/components/ui';
+import { Avatar, Button, Card } from '@/components/ui';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatDate, formatDateTime } from '@/lib/hrms/time';
@@ -61,6 +62,17 @@ export default function ProfilePage() {
             Could not load all profile details.
           </p>
         )}
+      </Card>
+      <Card className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold">Password</h2>
+          <p className="text-sm text-fg-muted">
+            You will be asked for your current password, then the new one.
+          </p>
+        </div>
+        <Button asChild variant="secondary">
+          <Link href="/change-password">Change password</Link>
+        </Button>
       </Card>
       <SecurityCard />
     </div>

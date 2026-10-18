@@ -1,13 +1,30 @@
 import { Transform, Type } from 'class-transformer';
-import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class ListAuditQueryDto {
-  @IsOptional() @IsString() @Matches(/^[a-z_]{1,64}$/) table?: string;
+  @IsOptional()
+  @IsString() // one table, or several separated by commas
+  @Matches(/^[a-z_]{1,64}(,[a-z_]{1,64}){0,15}$/)
+  table?: string;
   // The person who did it (an org member id).
   @IsOptional() @IsUUID() memberId?: string;
   @IsOptional() @IsDateString() from?: string;
   @IsOptional() @IsDateString() to?: string;
-  @IsOptional() @Transform(({ value }) => (typeof value === 'string' ? value : undefined)) @IsString() @MaxLength(20)
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value : undefined))
+  @IsString()
+  @MaxLength(20)
   action?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize?: number;

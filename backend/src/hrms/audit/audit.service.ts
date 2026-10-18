@@ -37,7 +37,13 @@ export class AuditService {
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 25;
     const where: SQL[] = [sql`a.org_id = current_org_id()`];
-    if (q.table) where.push(sql`a.table_name = ${q.table}`);
+    if (q.table) {
+      const tables = q.table.split(',').map((t) => sql`${t}`);
+      where.push(sql`a.table_name in (${sql.join(tables, sql`, `)})`);
+    }
+    // Sign-in stamps and bare touches carry no information for a reader.
+    where.push(sql`not (a.action = 'UPDATE'
+      and (a.new_data - 'updated_at' - 'last_login_at') = (a.old_data - 'updated_at' - 'last_login_at'))`);
     if (q.memberId) where.push(sql`a.actor_member_id = ${q.memberId}`);
     if (q.action) where.push(sql`a.action = ${q.action.toUpperCase()}`);
     if (q.from) where.push(sql`a.created_at >= ${q.from}::timestamptz`);
@@ -45,7 +51,9 @@ export class AuditService {
     const cond = sql.join(where, sql` and `);
 
     const tx = this.context.tx;
-    const total = await tx.execute<{ n: number }>(sql`select count(*)::int as n from audit_log a where ${cond}`);
+    const total = await tx.execute<{ n: number }>(
+      sql`select count(*)::int as n from audit_log a where ${cond}`,
+    );
     const rows = await tx.execute<AuditRow>(sql`
       select a.id::text as id, a.action, a.table_name, a.row_id, a.old_data, a.new_data, a.created_at,
              a.actor_member_id, u.full_name as actor_name,
@@ -62,7 +70,9 @@ export class AuditService {
        where ${cond}
        order by a.id desc limit ${pageSize} offset ${(page - 1) * pageSize}`);
 
+    const names = await this.resolveNames(rows.rows);
     return {
+      names,
       items: rows.rows.map((r) => ({
         id: r.id,
         action: r.action,
@@ -78,6 +88,40 @@ export class AuditService {
       page,
       pageSize,
     };
+  }
+
+  /** Names for the ids an entry mentions, so the page can say "Sara" instead of a uuid. */
+  private async resolveNames(rows: AuditRow[]): Promise<Record<string, string>> {
+    const ids = new Set<string>();
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    for (const r of rows) {
+      for (const data of [r.old_data, r.new_data]) {
+        for (const [k, v] of Object.entries(data ?? {})) {
+          if (typeof v === 'string' && uuid.test(v) && k !== 'id' && k !== 'org_id') ids.add(v);
+        }
+      }
+      if (r.row_id && uuid.test(r.row_id)) ids.add(r.row_id);
+    }
+    if (ids.size === 0) return {};
+    const list = sql.join(
+      [...ids].map((i) => sql`${i}`),
+      sql`, `,
+    );
+    const tx = this.context.tx;
+    const [members, projects, tasks] = await Promise.all([
+      tx.execute<{ id: string; name: string }>(sql`
+        select m.id::text as id, u.full_name as name from org_members m join users u on u.id = m.user_id
+         where m.id::text in (${list})`),
+      tx.execute<{ id: string; name: string }>(
+        sql`select id::text as id, name from projects where id::text in (${list})`,
+      ),
+      tx.execute<{ id: string; name: string }>(
+        sql`select id::text as id, title as name from tasks where id::text in (${list})`,
+      ),
+    ]);
+    const out: Record<string, string> = {};
+    for (const r of [...members.rows, ...projects.rows, ...tasks.rows]) out[r.id] = r.name;
+    return out;
   }
 
   /** The entry itself is never changed: the CEO's note is a separate row beside it. */

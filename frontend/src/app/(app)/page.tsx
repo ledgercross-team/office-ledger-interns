@@ -382,12 +382,6 @@ export default function HrmsHomePage() {
           <SeatBar seats={org.data.seats} />
         </Card>
       )}
-
-      <p className="text-center text-sm">
-        <Link href="/change-password" className="text-fg-muted underline-offset-2 hover:underline">
-          Change password
-        </Link>
-      </p>
     </div>
   );
 }
