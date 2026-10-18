@@ -82,7 +82,7 @@ export function DataTable<T>({
 
   return (
     <div className="space-y-3">
-      <div className="hidden overflow-x-auto rounded-card border border-border md:block">
+      <div className="hidden overflow-x-auto rounded-card border border-border lg:block">
         <table className="w-full min-w-[680px] border-collapse text-left text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead className="sticky top-0 bg-surface-sunken/80 text-xs uppercase tracking-wide text-fg-muted">
@@ -168,7 +168,7 @@ export function DataTable<T>({
         </table>
       </div>
 
-      <div role="group" className="grid gap-3 md:hidden" aria-label={caption}>
+      <div role="group" className="grid gap-3 lg:hidden" aria-label={caption}>
         {loading
           ? Array.from({ length: 3 }, (_, index) => (
               <div key={index} className="rounded-card border border-border bg-surface p-4">
@@ -181,11 +181,11 @@ export function DataTable<T>({
               return (
                 <article
                   key={id}
-                  className="space-y-3 rounded-card border border-border bg-surface p-4"
+                  className="min-w-0 space-y-3 overflow-hidden rounded-card border border-border bg-surface p-4"
                 >
                   {selectable && (
                     <Checkbox
-                      label="Select item"
+                      label={`Select row ${id}`}
                       checked={selected?.has(id)}
                       onCheckedChange={(checked) => toggleRow(id, checked === true)}
                     />
@@ -193,11 +193,14 @@ export function DataTable<T>({
                   {columns
                     .filter((column) => !column.hideOnMobile)
                     .map((column) => (
-                      <div key={column.id} className="flex items-start justify-between gap-4">
+                      <div
+                        key={column.id}
+                        className="grid min-w-0 grid-cols-[minmax(5rem,auto)_minmax(0,1fr)] items-start gap-3"
+                      >
                         <span className="text-xs font-semibold uppercase tracking-wide text-fg-muted">
                           {column.cardLabel ?? column.header}
                         </span>
-                        <span className="min-w-0 text-right text-sm text-fg">
+                        <span className="min-w-0 break-words text-left text-sm text-fg sm:text-right">
                           {column.cell(row)}
                         </span>
                       </div>

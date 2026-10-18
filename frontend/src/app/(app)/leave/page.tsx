@@ -264,7 +264,7 @@ export default function LeavePage() {
               ))}
             </select>
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <label className="block min-w-0 space-y-1 text-sm text-fg">
               From
               <input name="start" type="date" required className={input} />

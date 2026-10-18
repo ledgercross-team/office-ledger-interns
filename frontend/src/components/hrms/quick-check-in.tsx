@@ -26,9 +26,15 @@ export function QuickCheckIn() {
   return (
     <Popover
       trigger={
-        <Button variant="secondary" size="sm" loading={pending} disabled={today.isLoading}>
+        <Button
+          variant="secondary"
+          size="sm"
+          loading={pending}
+          disabled={today.isLoading}
+          aria-label={label}
+        >
           <Icon aria-hidden className="size-4" />
-          {label}
+          <span className="hidden sm:inline">{label}</span>
         </Button>
       }
       title="Today's attendance"

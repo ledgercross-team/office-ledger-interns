@@ -54,7 +54,7 @@ function NavList({
               onClick={onNavigate}
               title={collapsed ? item.label : undefined}
               className={cn(
-                'flex min-h-10 items-center gap-3 rounded-full px-3 py-2 text-sm font-medium',
+                'flex min-h-11 items-center gap-3 rounded-full px-3 py-2 text-sm font-medium',
                 active
                   ? 'bg-surface text-fg font-bold shadow-sm'
                   : 'text-rail-fg hover:bg-surface/50',
@@ -198,7 +198,7 @@ export function BottomTabs({ role, counts }: { role: HrmsRole; counts: NavCounts
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <ul
-        className="grid"
+        className="mx-auto grid max-w-xl px-1 pt-1"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map((item) => {
@@ -210,16 +210,16 @@ export function BottomTabs({ role, counts }: { role: HrmsRole; counts: NavCounts
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px] font-medium',
-                  active ? 'text-primary' : 'text-fg-muted',
+                  'relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-control px-1 py-1.5 text-xs font-medium transition-colors active:bg-surface-sunken',
+                  active ? 'bg-primary-soft text-primary' : 'text-fg-muted',
                 )}
               >
-                <Icon aria-hidden className="size-5" />
-                {item.label}
+                <Icon aria-hidden className="size-5 shrink-0" />
+                <span className="max-w-full truncate">{item.label}</span>
                 {item.badge && counts[item.badge] > 0 && (
                   <span
                     aria-label={`${counts[item.badge]} waiting`}
-                    className="absolute right-1/2 top-1 translate-x-5 rounded-full bg-primary px-1 text-[10px] tabular-nums text-primary-fg"
+                    className="absolute right-1/2 top-1 translate-x-5 rounded-full bg-primary px-1 text-xs tabular-nums text-primary-fg"
                   >
                     {counts[item.badge] > 99 ? '99+' : counts[item.badge]}
                   </span>

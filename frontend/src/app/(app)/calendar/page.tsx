@@ -11,17 +11,17 @@ import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { CalendarFeed, CalendarItem, HrmsMeeting } from '@/lib/hrms/types';
 
 const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
+  'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle outline-none transition-[border-color,box-shadow] focus:border-primary focus:ring-4 focus:ring-primary/10';
 const primary =
-  'rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
+  'inline-flex min-h-10 items-center justify-center rounded-full border border-primary bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50';
 const secondary =
-  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+  'inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-surface px-3 py-2 text-sm font-medium text-fg hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50';
 
 const KIND_CLASS: Record<CalendarItem['kind'], string> = {
-  task_due: 'bg-amber-100 text-amber-900',
-  meeting: 'bg-evergreen/10 text-forest',
-  leave: 'bg-sky-100 text-sky-900',
-  holiday: 'bg-mist text-charcoal-soft',
+  task_due: 'bg-warning-soft text-warning-fg',
+  meeting: 'bg-success-soft text-success-fg',
+  leave: 'bg-info-soft text-info-fg',
+  holiday: 'bg-surface-sunken text-fg-muted',
 };
 
 function message(error: unknown): string {
@@ -48,6 +48,45 @@ function daysOf(item: CalendarItem): string[] {
 function label(item: CalendarItem): string {
   const t = item.allDay ? '' : `${to12Hour(item.startsAtLocal)} `;
   return `${t}${item.title}${item.member ? ` · ${item.member.fullName}` : ''}`;
+}
+
+function dayLabel(date: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(`${date}T00:00:00Z`));
+}
+
+function EventButton({
+  item,
+  compact = false,
+  onOpen,
+}: {
+  item: CalendarItem;
+  compact?: boolean;
+  onOpen: (id: string) => void;
+}) {
+  const text =
+    compact && item.kind !== 'meeting'
+      ? item.kind === 'task_due'
+        ? 'Task due'
+        : item.kind === 'holiday'
+          ? 'Holiday'
+          : 'Leave'
+      : label(item);
+  return (
+    <button
+      type="button"
+      disabled={item.kind !== 'meeting'}
+      onClick={() => item.refId && onOpen(item.refId)}
+      aria-label={label(item)}
+      className={`block min-h-7 w-full rounded-control px-1.5 py-1 text-left text-xs ${KIND_CLASS[item.kind]} ${compact ? 'line-clamp-2' : 'truncate'}`}
+      title={label(item)}
+    >
+      {text}
+    </button>
+  );
 }
 
 function MeetingDialog({
@@ -104,17 +143,17 @@ function MeetingDialog({
         )}
         {m && (
           <>
-            <p className="text-sm text-charcoal">
+            <p className="text-sm text-fg">
               {m.startsAtLocal.slice(0, 10)} {to12Hour(m.startsAtLocal)} to{' '}
               {to12Hour(m.endsAtLocal)} ({m.timezone})
             </p>
-            <p className="text-sm text-charcoal">
+            <p className="text-sm text-fg">
               {m.meetingLink ? (
                 <a
                   href={m.meetingLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-forest hover:underline"
+                  className="text-primary hover:underline"
                 >
                   Join the meeting
                 </a>
@@ -122,17 +161,17 @@ function MeetingDialog({
                 m.location
               )}
             </p>
-            {m.description && <p className="text-sm text-charcoal">{m.description}</p>}
-            <p className="text-xs text-charcoal-soft">Organised by {m.createdBy.fullName}</p>
-            <ul className="text-sm text-charcoal">
+            {m.description && <p className="text-sm text-fg">{m.description}</p>}
+            <p className="text-xs text-fg-muted">Organised by {m.createdBy.fullName}</p>
+            <ul className="space-y-1 text-sm text-fg">
               {m.invitees.map((i) => (
                 <li key={i.memberId}>
-                  {i.fullName} <span className="text-xs text-charcoal-soft">{i.response}</span>
+                  {i.fullName} <span className="text-xs text-fg-muted">{i.response}</span>
                 </li>
               ))}
             </ul>
-            {m.cancelled && <p className="text-sm text-alert-deep">This meeting is cancelled.</p>}
-            <div className="flex flex-wrap gap-2">
+            {m.cancelled && <p className="text-sm text-danger-fg">This meeting is cancelled.</p>}
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               {mine && !m.cancelled && (
                 <>
                   <Button
@@ -169,7 +208,7 @@ function MeetingDialog({
           </>
         )}
         {error && (
-          <p role="alert" className="text-sm text-alert-deep">
+          <p role="alert" className="text-sm text-danger-fg">
             {error}
           </p>
         )}
@@ -231,10 +270,15 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
   return (
     <form
       onSubmit={onSubmit}
-      className="max-w-lg space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4"
+      className="w-full max-w-2xl space-y-4 rounded-card border border-border bg-surface p-5"
     >
-      <h2 className="font-medium text-charcoal">New meeting</h2>
-      <label htmlFor="meeting-title" className="block space-y-1 text-sm text-charcoal">
+      <div>
+        <h2 className="text-lg font-semibold text-fg">New meeting</h2>
+        <p className="mt-1 text-sm text-fg-muted">
+          Schedule a meeting and invite the people who need to attend.
+        </p>
+      </div>
+      <label htmlFor="meeting-title" className="block space-y-1.5 text-sm font-medium text-fg">
         Title
         <input
           id="meeting-title"
@@ -246,16 +290,16 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
         />
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label htmlFor="meeting-start" className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="meeting-start" className="block space-y-1.5 text-sm font-medium text-fg">
           Starts
           <input id="meeting-start" name="start" type="datetime-local" required className={input} />
         </label>
-        <label htmlFor="meeting-end" className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="meeting-end" className="block space-y-1.5 text-sm font-medium text-fg">
           Ends
           <input id="meeting-end" name="end" type="datetime-local" required className={input} />
         </label>
       </div>
-      <fieldset className="flex gap-4 text-sm text-charcoal">
+      <fieldset className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-fg">
         <legend className="sr-only">Meeting format</legend>
         <label className="flex items-center gap-2">
           <input
@@ -278,7 +322,7 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
           In person
         </label>
       </fieldset>
-      <label htmlFor="meeting-place" className="block space-y-1 text-sm text-charcoal">
+      <label htmlFor="meeting-place" className="block space-y-1.5 text-sm font-medium text-fg">
         {where === 'link' ? 'Meeting link' : 'Room or address'}
         <input
           id="meeting-place"
@@ -289,8 +333,11 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
           className={input}
         />
       </label>
-      <label htmlFor="meeting-description" className="block space-y-1 text-sm text-charcoal">
-        Notes <span className="text-charcoal-soft">(optional)</span>
+      <label
+        htmlFor="meeting-description"
+        className="block space-y-1.5 text-sm font-medium text-fg"
+      >
+        Notes <span className="text-fg-muted">(optional)</span>
         <textarea
           id="meeting-description"
           name="description"
@@ -300,7 +347,7 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
         />
       </label>
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-charcoal">Invite</legend>
+        <legend className="text-sm font-medium text-fg">Invite</legend>
         <MemberSearch
           label="Add people"
           excludeIds={[...invitees, ...(session?.activeMemberId ? [session.activeMemberId] : [])]}
@@ -313,7 +360,7 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
         />
       </fieldset>
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {error}
         </p>
       )}
@@ -372,74 +419,145 @@ export default function CalendarPage() {
   };
 
   return (
-    <>
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-2 text-xl font-semibold text-charcoal">Calendar</h1>
-        <button type="button" onClick={() => step(-1)} className={secondary} aria-label="Previous">
-          ‹
-        </button>
-        <span className="text-sm text-charcoal">
-          {view === 'month' ? from.slice(0, 7) : `Week of ${from}`}
-        </span>
-        <button type="button" onClick={() => step(1)} className={secondary} aria-label="Next">
-          ›
-        </button>
-        <button
-          type="button"
-          onClick={() => setView(view === 'month' ? 'week' : 'month')}
-          className={secondary}
-        >
-          {view === 'month' ? 'Week view' : 'Month view'}
-        </button>
-        {canTeam && (
-          <label className="flex items-center gap-2 text-sm text-charcoal">
-            <input type="checkbox" checked={team} onChange={(e) => setTeam(e.target.checked)} />{' '}
-            Team
-          </label>
-        )}
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight text-fg">Calendar</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 rounded-full border border-border bg-surface p-1">
+            <button
+              type="button"
+              onClick={() => step(-1)}
+              className={secondary}
+              aria-label="Previous period"
+            >
+              <span aria-hidden>‹</span>
+            </button>
+            <span
+              aria-live="polite"
+              className="min-w-28 px-2 text-center text-sm font-medium tabular-nums text-fg"
+            >
+              {view === 'month' ? from.slice(0, 7) : `Week of ${from}`}
+            </span>
+            <button
+              type="button"
+              onClick={() => step(1)}
+              className={secondary}
+              aria-label="Next period"
+            >
+              <span aria-hidden>›</span>
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setView(view === 'month' ? 'week' : 'month')}
+            className={secondary}
+          >
+            {view === 'month' ? 'Week view' : 'Month view'}
+          </button>
+          {canTeam && (
+            <label className="flex min-h-10 items-center gap-2 rounded-full border border-border px-3 text-sm font-medium text-fg">
+              <input type="checkbox" checked={team} onChange={(e) => setTeam(e.target.checked)} />
+              Team
+            </label>
+          )}
+        </div>
       </div>
-      {feed.data && (
-        <p className="text-xs text-charcoal-soft">Times are in {feed.data.timezone}.</p>
-      )}
+      {feed.data && <p className="text-sm text-fg-muted">Times are in {feed.data.timezone}.</p>}
       {feed.error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {message(feed.error)}
         </p>
       )}
 
-      <div className={view === 'month' ? 'grid grid-cols-7 gap-1' : 'space-y-1'}>
-        {view === 'month' &&
-          ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
-            <div key={d} className="text-center text-xs text-charcoal-soft">
-              {d}
+      {feed.isLoading && (
+        <p className="text-sm text-fg-muted" role="status">
+          Loading calendar…
+        </p>
+      )}
+
+      {view === 'month' ? (
+        <>
+          <div className="hidden sm:grid sm:grid-cols-7 sm:gap-1">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+              <div key={d} className="px-1 text-center text-xs font-medium text-fg-muted">
+                {d}
+              </div>
+            ))}
+          </div>
+          <div className="hidden sm:grid sm:grid-cols-7 sm:gap-1">
+            {Array.from({ length: lead }).map((_, i) => (
+              <div key={`pad-${i}`} />
+            ))}
+            {days.map((d) => (
+              <div
+                key={d}
+                className="min-h-24 rounded-control border border-border bg-surface p-2 lg:min-h-28"
+              >
+                <p className="text-xs font-medium tabular-nums text-fg-muted">
+                  {Number(d.slice(8))}
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {(byDay.get(d) ?? []).map((item, i) => (
+                    <li key={`${item.kind}-${item.refId}-${i}`}>
+                      <EventButton item={item} onOpen={setOpen} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2 sm:hidden">
+            {days.map((d) => (
+              <div
+                key={d}
+                className="flex min-w-0 gap-3 rounded-card border border-border bg-surface p-3"
+              >
+                <div className="w-16 shrink-0 border-r border-border pr-3">
+                  <p className="text-xs font-medium text-fg-muted">{dayLabel(d).split(',')[0]}</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums text-fg">
+                    {Number(d.slice(8))}
+                  </p>
+                </div>
+                <ul className="min-w-0 flex-1 space-y-1">
+                  {(byDay.get(d) ?? []).length > 0 ? (
+                    (byDay.get(d) ?? []).map((item, i) => (
+                      <li key={`${item.kind}-${item.refId}-${i}`}>
+                        <EventButton item={item} compact onOpen={setOpen} />
+                      </li>
+                    ))
+                  ) : (
+                    <li className="py-1 text-sm text-fg-muted">No events</li>
+                  )}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="space-y-2">
+          {days.map((d) => (
+            <div
+              key={d}
+              className="flex min-w-0 gap-3 rounded-card border border-border bg-surface p-3 sm:p-4"
+            >
+              <div className="w-24 shrink-0 border-r border-border pr-3 sm:w-32">
+                <p className="text-sm font-semibold text-fg">{dayLabel(d)}</p>
+              </div>
+              <ul className="min-w-0 flex-1 space-y-1">
+                {(byDay.get(d) ?? []).length > 0 ? (
+                  (byDay.get(d) ?? []).map((item, i) => (
+                    <li key={`${item.kind}-${item.refId}-${i}`}>
+                      <EventButton item={item} onOpen={setOpen} />
+                    </li>
+                  ))
+                ) : (
+                  <li className="py-1 text-sm text-fg-muted">No events</li>
+                )}
+              </ul>
             </div>
           ))}
-        {Array.from({ length: lead }).map((_, i) => (
-          <div key={`pad-${i}`} />
-        ))}
-        {days.map((d) => (
-          <div key={d} className="min-h-16 rounded-xl border border-charcoal/10 bg-white p-1.5">
-            <p className="text-xs text-charcoal-soft">
-              {view === 'month' ? Number(d.slice(8)) : d}
-            </p>
-            <ul className="space-y-0.5">
-              {(byDay.get(d) ?? []).map((item, i) => (
-                <li key={`${item.kind}-${item.refId}-${i}`}>
-                  <button
-                    type="button"
-                    disabled={item.kind !== 'meeting'}
-                    onClick={() => item.refId && setOpen(item.refId)}
-                    className={`block w-full truncate rounded px-1 text-left text-xs ${KIND_CLASS[item.kind]}`}
-                    title={label(item)}
-                  >
-                    {label(item)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
+        </div>
+      )}
 
       {canMeet && (
         <NewMeeting
@@ -453,6 +571,6 @@ export default function CalendarPage() {
           onChanged={() => void queryClient.invalidateQueries({ queryKey: ['hrms', 'calendar'] })}
         />
       )}
-    </>
+    </div>
   );
 }

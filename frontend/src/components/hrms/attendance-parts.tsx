@@ -76,71 +76,131 @@ export function MonthTable({
   for (const c of corrections) byDate.set(c.workDate, [...(byDate.get(c.workDate) ?? []), c]);
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white">
-      <table className="w-full text-left text-sm">
-        <thead className="text-xs text-charcoal-soft">
-          <tr>
-            <th className="p-3">Date</th>
-            <th className="p-3">Status</th>
-            <th className="p-3">In</th>
-            <th className="p-3">Out</th>
-            <th className="p-3">Worked</th>
-            <th className="p-3" />
-          </tr>
-        </thead>
-        <tbody>
-          {shown.map((d) => (
-            <tr
-              key={d.date}
-              className={`border-t border-charcoal/10 align-top ${d.date === todayDate ? 'bg-mist/50' : ''}`}
-            >
-              <td className="p-3 whitespace-nowrap">
-                {new Date(`${d.date}T00:00:00`).toLocaleDateString([], {
-                  weekday: 'short',
-                  day: 'numeric',
-                  month: 'short',
-                })}
-                {d.date === todayDate && (
-                  <span className="ml-2 rounded-full bg-evergreen px-2 py-0.5 text-xs text-white">
-                    Today
-                  </span>
-                )}
-              </td>
-              <td className="p-3">
-                <StatusPill status={d.status} />
-                {d.holiday && <span className="ml-2 text-xs text-charcoal-soft">{d.holiday}</span>}
-                {d.autoCheckedOut && (
-                  <span className="ml-2 text-xs text-alert-deep">Missing check-out</span>
-                )}
-                {d.corrected && <span className="ml-2 text-xs text-charcoal-soft">Corrected</span>}
-                {(byDate.get(d.date) ?? []).map((c) => (
-                  <p key={c.requestId} className="mt-1 text-xs text-charcoal-soft">
-                    Correction {c.status === 'applied' ? 'applied' : c.status}
-                    {c.original?.status
-                      ? ` (was ${c.original.status}, in ${time(c.original.check_in_at ?? null)})`
-                      : ''}
-                    {c.decisionReason ? `: ${c.decisionReason}` : ''}
-                  </p>
-                ))}
-              </td>
-              <td className="p-3">{time(d.checkInAt)}</td>
-              <td className="p-3">{time(d.checkOutAt)}</td>
-              <td className="p-3">{hours(d.workedMinutes)}</td>
-              <td className="p-3 text-right">
-                {onCorrect && d.status !== 'weekend' && d.status !== 'holiday' && (
-                  <button
-                    type="button"
-                    onClick={() => onCorrect(d)}
-                    className="text-xs text-forest hover:underline"
-                  >
-                    Correct
-                  </button>
-                )}
-              </td>
+    <div className="space-y-3">
+      <div className="hidden overflow-x-auto rounded-card border border-border bg-surface lg:block">
+        <table className="w-full text-left text-sm">
+          <thead className="text-xs text-fg-muted">
+            <tr>
+              <th className="p-3">Date</th>
+              <th className="p-3">Status</th>
+              <th className="p-3">In</th>
+              <th className="p-3">Out</th>
+              <th className="p-3">Worked</th>
+              <th className="p-3" />
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {shown.map((d) => (
+              <tr
+                key={d.date}
+                className={`border-t border-border align-top ${d.date === todayDate ? 'bg-surface-sunken/50' : ''}`}
+              >
+                <td className="p-3 whitespace-nowrap">
+                  {new Date(`${d.date}T00:00:00`).toLocaleDateString([], {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                  {d.date === todayDate && (
+                    <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-fg">
+                      Today
+                    </span>
+                  )}
+                </td>
+                <td className="p-3">
+                  <StatusPill status={d.status} />
+                  {d.holiday && <span className="ml-2 text-xs text-fg-muted">{d.holiday}</span>}
+                  {d.autoCheckedOut && (
+                    <span className="ml-2 text-xs text-danger-fg">Missing check-out</span>
+                  )}
+                  {d.corrected && <span className="ml-2 text-xs text-fg-muted">Corrected</span>}
+                  {(byDate.get(d.date) ?? []).map((c) => (
+                    <p key={c.requestId} className="mt-1 text-xs text-fg-muted">
+                      Correction {c.status === 'applied' ? 'applied' : c.status}
+                      {c.original?.status
+                        ? ` (was ${c.original.status}, in ${time(c.original.check_in_at ?? null)})`
+                        : ''}
+                      {c.decisionReason ? `: ${c.decisionReason}` : ''}
+                    </p>
+                  ))}
+                </td>
+                <td className="p-3">{time(d.checkInAt)}</td>
+                <td className="p-3">{time(d.checkOutAt)}</td>
+                <td className="p-3">{hours(d.workedMinutes)}</td>
+                <td className="p-3 text-right">
+                  {onCorrect && d.status !== 'weekend' && d.status !== 'holiday' && (
+                    <button
+                      type="button"
+                      onClick={() => onCorrect(d)}
+                      className="min-h-10 text-sm text-primary hover:underline"
+                    >
+                      Correct
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="grid gap-2 lg:hidden">
+        {shown.map((d) => (
+          <article
+            key={d.date}
+            className={`rounded-card border border-border bg-surface p-4 ${d.date === todayDate ? 'ring-2 ring-primary/20' : ''}`}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="font-medium text-fg">
+                  {new Date(`${d.date}T00:00:00`).toLocaleDateString([], {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                </p>
+                {d.date === todayDate && (
+                  <span className="text-xs font-medium text-primary">Today</span>
+                )}
+              </div>
+              <StatusPill status={d.status} />
+            </div>
+            <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-border pt-3 text-sm">
+              <div>
+                <dt className="text-xs text-fg-muted">In</dt>
+                <dd className="mt-0.5 tabular-nums text-fg">{time(d.checkInAt)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-fg-muted">Out</dt>
+                <dd className="mt-0.5 tabular-nums text-fg">{time(d.checkOutAt)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-fg-muted">Worked</dt>
+                <dd className="mt-0.5 tabular-nums text-fg">{hours(d.workedMinutes)}</dd>
+              </div>
+            </dl>
+            <div className="mt-3 space-y-1 text-xs text-fg-muted">
+              {d.holiday && <p>{d.holiday}</p>}
+              {d.autoCheckedOut && <p className="text-danger-fg">Missing check-out</p>}
+              {d.corrected && <p>Corrected</p>}
+              {(byDate.get(d.date) ?? []).map((c) => (
+                <p key={c.requestId}>
+                  Correction {c.status === 'applied' ? 'applied' : c.status}
+                  {c.decisionReason ? `: ${c.decisionReason}` : ''}
+                </p>
+              ))}
+            </div>
+            {onCorrect && d.status !== 'weekend' && d.status !== 'holiday' && (
+              <button
+                type="button"
+                onClick={() => onCorrect(d)}
+                className="mt-3 min-h-10 text-sm font-medium text-primary hover:underline"
+              >
+                Correct attendance
+              </button>
+            )}
+          </article>
+        ))}
+      </div>
     </div>
   );
 }

@@ -55,7 +55,6 @@ export default function PeoplePage() {
   const scoreOf = (id: string) => scores.data?.items.find((r) => r.memberId === id);
   const [drawer, setDrawer] = useState<string | null>(null);
 
-
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -73,7 +72,7 @@ export default function PeoplePage() {
       {isAdmin && org.data?.seats && <SeatBar seats={org.data.seats} />}
 
       <form
-        className="flex flex-wrap gap-2"
+        className="grid w-full gap-2 sm:flex sm:flex-wrap"
         onSubmit={(event) => {
           event.preventDefault();
           setPage(1);
@@ -87,7 +86,7 @@ export default function PeoplePage() {
             setQ(event.target.value);
             setPage(1);
           }}
-          className="min-w-0 flex-1 rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen"
+          className="min-h-10 min-w-0 rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 sm:flex-1"
         />
         <select
           aria-label="Role"
@@ -96,7 +95,7 @@ export default function PeoplePage() {
             setRole(event.target.value);
             setPage(1);
           }}
-          className="rounded-xl border border-charcoal/15 px-3 py-2 text-sm"
+          className="min-h-10 rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg"
         >
           <option value="">All roles</option>
           {(['ceo', 'coo', 'manager', 'employee'] as const).map((r) => (
@@ -112,7 +111,7 @@ export default function PeoplePage() {
             setStatus(event.target.value);
             setPage(1);
           }}
-          className="rounded-xl border border-charcoal/15 px-3 py-2 text-sm"
+          className="min-h-10 rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg"
         >
           <option value="">Any status</option>
           <option value="active">Active</option>
@@ -129,59 +128,124 @@ export default function PeoplePage() {
       )}
 
       {members.data && (
-        <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-charcoal/10 text-charcoal-soft">
-              <tr>
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Role</th>
-                <th className="px-3 py-2 font-medium">Designation</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                {isAdmin && <th className="px-3 py-2 font-medium">Performance</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {members.data.items.map((m) => (
-                <tr key={m.id} className="border-b border-charcoal/5 last:border-0">
-                  <td className="px-3 py-2">
+        <>
+          <div className="hidden overflow-x-auto rounded-card border border-border bg-surface lg:block">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-border text-fg-muted">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Name</th>
+                  <th className="px-3 py-2 font-medium">Role</th>
+                  <th className="px-3 py-2 font-medium">Designation</th>
+                  <th className="px-3 py-2 font-medium">Status</th>
+                  {isAdmin && <th className="px-3 py-2 font-medium">Performance</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {members.data.items.map((m) => (
+                  <tr key={m.id} className="border-b border-border last:border-0">
+                    <td className="px-3 py-2">
+                      <Link
+                        href={`/people/${m.id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {m.fullName}
+                      </Link>
+                      <div className="text-fg-muted">{m.email}</div>
+                    </td>
+                    <td className="px-3 py-2">{HRMS_ROLE_LABELS[m.role]}</td>
+                    <td className="px-3 py-2">{m.designation ?? '—'}</td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs ${STATUS_STYLE[m.status]}`}
+                      >
+                        {m.status}
+                      </span>
+                    </td>
+                    {isAdmin && (
+                      <td className="px-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => setDrawer(m.id)}
+                          className="hover:underline"
+                        >
+                          <ScoreBadge row={scoreOf(m.id)} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+                {members.data.items.length === 0 && (
+                  <tr>
+                    <td colSpan={isAdmin ? 5 : 4} className="px-3 py-6 text-center text-fg-muted">
+                      No people match.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="grid gap-3 lg:hidden">
+            {members.data.items.map((m) => (
+              <article
+                key={m.id}
+                className="min-w-0 rounded-card border border-border bg-surface p-4"
+              >
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0">
                     <Link
                       href={`/people/${m.id}`}
-                      className="font-medium text-forest hover:underline"
+                      className="break-words font-medium text-primary hover:underline"
                     >
                       {m.fullName}
                     </Link>
-                    <div className="text-charcoal-soft">{m.email}</div>
-                  </td>
-                  <td className="px-3 py-2">{HRMS_ROLE_LABELS[m.role]}</td>
-                  <td className="px-3 py-2">{m.designation ?? '—'}</td>
-                  <td className="px-3 py-2">
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_STYLE[m.status]}`}>
-                      {m.status}
-                    </span>
-                  </td>
+                    <p className="mt-1 break-all text-xs text-fg-muted">{m.email}</p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLE[m.status]}`}
+                  >
+                    {m.status}
+                  </span>
+                </div>
+                <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-fg-muted">Role</dt>
+                    <dd className="mt-0.5 font-medium text-fg">{HRMS_ROLE_LABELS[m.role]}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-fg-muted">Designation</dt>
+                    <dd className="mt-0.5 break-words text-fg">{m.designation ?? '—'}</dd>
+                  </div>
                   {isAdmin && (
-                    <td className="px-3 py-2">
-                      <button type="button" onClick={() => setDrawer(m.id)} className="hover:underline">
+                    <div className="col-span-2 border-t border-border pt-3">
+                      <button
+                        type="button"
+                        onClick={() => setDrawer(m.id)}
+                        className="text-left hover:underline"
+                      >
+                        <span className="mr-2 text-xs text-fg-muted">Performance</span>
                         <ScoreBadge row={scoreOf(m.id)} />
                       </button>
-                    </td>
+                    </div>
                   )}
-                </tr>
-              ))}
-              {members.data.items.length === 0 && (
-                <tr>
-                  <td colSpan={isAdmin ? 5 : 4} className="px-3 py-6 text-center text-charcoal-soft">
-                    No people match.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                </dl>
+              </article>
+            ))}
+            {members.data.items.length === 0 && (
+              <div className="rounded-card border border-dashed border-border p-6 text-center text-sm text-fg-muted">
+                No people match.
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {members.data && (
-        <Pagination page={page} pageSize={members.data.pageSize} total={members.data.total} onPage={setPage} />
+        <Pagination
+          page={page}
+          pageSize={members.data.pageSize}
+          total={members.data.total}
+          onPage={setPage}
+        />
       )}
       {drawer && <BreakdownDrawer memberId={drawer} onClose={() => setDrawer(null)} />}
     </>

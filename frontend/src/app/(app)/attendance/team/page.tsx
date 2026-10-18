@@ -8,7 +8,8 @@ import { RoleGate } from '@/components/hrms/role-gate';
 import { hrmsFetch, hrmsFetchText } from '@/lib/hrms/api-client';
 import type { AttendanceMonth, TeamAttendanceDay } from '@/lib/hrms/types';
 
-const secondary = 'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60';
+const secondary =
+  'inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-surface px-3 py-2 text-sm font-medium text-fg hover:bg-surface-sunken';
 
 function TeamAttendance() {
   const [date, setDate] = useState('');
@@ -44,29 +45,29 @@ function TeamAttendance() {
   return (
     <>
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-semibold text-charcoal">Team attendance</h1>
-        <Link href="/attendance" className="text-sm text-forest hover:underline">
+        <h1 className="text-2xl font-semibold tracking-tight text-fg">Team attendance</h1>
+        <Link href="/attendance" className="text-sm text-primary hover:underline">
           My attendance
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="space-y-1 text-sm text-charcoal">
+      <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-end">
+        <label className="space-y-1.5 text-sm font-medium text-fg">
           Day
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="block rounded-xl border border-charcoal/15 px-3 py-2 text-sm"
+            className="block min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg sm:w-auto"
           />
         </label>
-        <label className="space-y-1 text-sm text-charcoal">
+        <label className="space-y-1.5 text-sm font-medium text-fg">
           Month
           <input
             type="month"
             value={month}
             onChange={(e) => e.target.value && setMonth(e.target.value)}
-            className="block rounded-xl border border-charcoal/15 px-3 py-2 text-sm"
+            className="block min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg sm:w-auto"
           />
         </label>
         <button type="button" onClick={download} className={secondary}>
@@ -74,62 +75,105 @@ function TeamAttendance() {
         </button>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {error}
         </p>
       )}
 
-      {day.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
+      {day.isLoading && <p className="text-sm text-fg-muted">Loading…</p>}
       {day.error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {message(day.error)}
         </p>
       )}
       {day.data && (
-        <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs text-charcoal-soft">
-              <tr>
-                <th className="p-3">{day.data.date}</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">In</th>
-                <th className="p-3">Out</th>
-                <th className="p-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {day.data.items.map((r) => (
-                <tr key={r.memberId} className="border-t border-charcoal/10">
-                  <td className="p-3">
-                    {r.fullName} <span className="text-xs text-charcoal-soft">({r.role})</span>
-                  </td>
-                  <td className="p-3">
-                    <StatusPill status={r.status} />
-                    {r.autoCheckedOut && (
-                      <span className="ml-2 text-xs text-alert-deep">Missing check-out</span>
-                    )}
-                  </td>
-                  <td className="p-3">{time(r.checkInAt)}</td>
-                  <td className="p-3">{time(r.checkOutAt)}</td>
-                  <td className="p-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setMemberId(r.memberId)}
-                      className="text-xs text-forest hover:underline"
-                    >
-                      Month
-                    </button>
-                  </td>
+        <>
+          <div className="hidden overflow-x-auto rounded-card border border-border bg-surface lg:block">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs text-fg-muted">
+                <tr>
+                  <th className="p-3">{day.data.date}</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3">In</th>
+                  <th className="p-3">Out</th>
+                  <th className="p-3" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {day.data.items.map((r) => (
+                  <tr key={r.memberId} className="border-t border-border">
+                    <td className="p-3">
+                      {r.fullName} <span className="text-xs text-fg-muted">({r.role})</span>
+                    </td>
+                    <td className="p-3">
+                      <StatusPill status={r.status} />
+                      {r.autoCheckedOut && (
+                        <span className="ml-2 text-xs text-danger-fg">Missing check-out</span>
+                      )}
+                    </td>
+                    <td className="p-3">{time(r.checkInAt)}</td>
+                    <td className="p-3">{time(r.checkOutAt)}</td>
+                    <td className="p-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setMemberId(r.memberId)}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        Month
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="grid gap-3 lg:hidden">
+            {day.data.items.map((r) => (
+              <article
+                key={r.memberId}
+                className="min-w-0 rounded-card border border-border bg-surface p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="break-words font-medium text-fg">{r.fullName}</p>
+                    <p className="mt-1 text-xs text-fg-muted">{r.role}</p>
+                  </div>
+                  <StatusPill status={r.status} />
+                </div>
+                {r.autoCheckedOut && (
+                  <p className="mt-2 text-xs text-danger-fg">Missing check-out</p>
+                )}
+                <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-fg-muted">In</dt>
+                    <dd className="mt-0.5 tabular-nums text-fg">{time(r.checkInAt)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-fg-muted">Out</dt>
+                    <dd className="mt-0.5 tabular-nums text-fg">{time(r.checkOutAt)}</dd>
+                  </div>
+                </dl>
+                <button
+                  type="button"
+                  onClick={() => setMemberId(r.memberId)}
+                  className="mt-4 min-h-10 text-sm font-medium text-primary hover:underline"
+                >
+                  View month
+                </button>
+              </article>
+            ))}
+            {day.data.items.length === 0 && (
+              <div className="rounded-card border border-dashed border-border p-6 text-center text-sm text-fg-muted">
+                No attendance records for this date.
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {memberId && (
         <section className="space-y-2">
-          <h2 className="font-medium text-charcoal">
+          <h2 className="text-lg font-semibold text-fg">
             {day.data?.items.find((i) => i.memberId === memberId)?.fullName} · {month}
           </h2>
           {person.data && (

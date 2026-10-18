@@ -3,13 +3,20 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState, type FormEvent } from 'react';
+import { Button } from '@/components/ui';
 import { RoleGate } from '@/components/hrms/role-gate';
 import { WorkloadChip } from '@/components/hrms/workload-chip';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
-import type { HrmsProject, HrmsProjectDetail, HrmsTask, Paginated, WorkloadItem } from '@/lib/hrms/types';
+import type {
+  HrmsProject,
+  HrmsProjectDetail,
+  HrmsTask,
+  Paginated,
+  WorkloadItem,
+} from '@/lib/hrms/types';
 
 const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
+  'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle outline-none transition-[border-color,box-shadow] focus:border-primary focus:ring-4 focus:ring-primary/10';
 
 function NewTaskForm() {
   const router = useRouter();
@@ -36,7 +43,8 @@ function NewTaskForm() {
     queryKey: ['hrms', 'workload'],
     queryFn: () => hrmsFetch<{ items: WorkloadItem[] }>('/workload'),
   });
-  const workloadOf = (memberId: string) => workload.data?.items.find((w) => w.memberId === memberId);
+  const workloadOf = (memberId: string) =>
+    workload.data?.items.find((w) => w.memberId === memberId);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,15 +67,25 @@ function NewTaskForm() {
       void queryClient.invalidateQueries({ queryKey: ['hrms', 'tasks'] });
       router.replace(`/tasks/${created.id}`);
     } catch (err) {
-      setError(err instanceof HrmsApiError ? err.message : 'Something went wrong. Please try again.');
+      setError(
+        err instanceof HrmsApiError ? err.message : 'Something went wrong. Please try again.',
+      );
       setPending(false);
     }
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-lg space-y-4 rounded-2xl border border-charcoal/10 bg-white p-4">
-      <h1 className="text-xl font-semibold text-charcoal">New task</h1>
-      <label className="block space-y-1 text-sm font-medium text-charcoal">
+    <form
+      onSubmit={onSubmit}
+      className="w-full max-w-2xl space-y-5 rounded-card border border-border bg-surface p-5"
+    >
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-fg">New task</h1>
+        <p className="mt-1 text-sm text-fg-muted">
+          Create a task, set its urgency and due date, then assign the people responsible.
+        </p>
+      </div>
+      <label className="block space-y-1.5 text-sm font-medium text-fg">
         Project
         <select
           value={projectId}
@@ -86,16 +104,16 @@ function NewTaskForm() {
           ))}
         </select>
       </label>
-      <label className="block space-y-1 text-sm font-medium text-charcoal">
+      <label className="block space-y-1.5 text-sm font-medium text-fg">
         Title
         <input name="title" required maxLength={200} className={input} />
       </label>
-      <label className="block space-y-1 text-sm font-medium text-charcoal">
+      <label className="block space-y-1.5 text-sm font-medium text-fg">
         Description (optional)
         <textarea name="description" rows={3} maxLength={5000} className={input} />
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block space-y-1 text-sm font-medium text-charcoal">
+        <label className="block space-y-1.5 text-sm font-medium text-fg">
           Urgency
           <select name="urgency" defaultValue="medium" className={input}>
             <option value="high">High</option>
@@ -103,19 +121,19 @@ function NewTaskForm() {
             <option value="low">Low</option>
           </select>
         </label>
-        <label className="block space-y-1 text-sm font-medium text-charcoal">
+        <label className="block space-y-1.5 text-sm font-medium text-fg">
           Due date
           <input name="dueDate" type="date" required className={input} />
         </label>
       </div>
       <fieldset className="space-y-1">
-        <legend className="text-sm font-medium text-charcoal">Assign to</legend>
-        <p className="text-xs text-charcoal-soft">
+        <legend className="text-sm font-medium text-fg">Assign to</legend>
+        <p className="text-sm text-fg-muted">
           A task needs at least one manager and one employee before work can start. You can save it
           now and assign later.
         </p>
         {project.data?.members.map((m) => (
-          <label key={m.memberId} className="flex items-center gap-2 text-sm text-charcoal">
+          <label key={m.memberId} className="flex min-h-11 items-center gap-2 text-sm text-fg">
             <input
               type="checkbox"
               checked={assigneeIds.includes(m.memberId)}
@@ -125,26 +143,22 @@ function NewTaskForm() {
                 )
               }
             />
-            {m.fullName} <span className="text-charcoal-soft">({m.role})</span>
+            {m.fullName} <span className="text-fg-muted">({m.role})</span>
             <WorkloadChip workload={workloadOf(m.memberId)} />
           </label>
         ))}
         {projectId && project.data?.members.length === 0 && (
-          <p className="text-sm text-charcoal-soft">Nobody is on this project yet.</p>
+          <p className="text-sm text-fg-muted">Nobody is on this project yet.</p>
         )}
       </fieldset>
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {error}
         </p>
       )}
-      <button
-        type="submit"
-        disabled={pending || !projectId}
-        className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60"
-      >
-        {pending ? 'Creating…' : 'Create task'}
-      </button>
+      <Button type="submit" loading={pending} disabled={!projectId} loadingLabel="Creating">
+        Create task
+      </Button>
     </form>
   );
 }

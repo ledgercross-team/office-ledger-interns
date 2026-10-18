@@ -107,7 +107,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-surface-raised">
-      <div className="flex min-h-16 w-full items-center gap-2 px-3 sm:px-6 lg:px-8">
+      <div className="flex min-h-14 w-full items-center gap-1.5 px-2.5 sm:min-h-16 sm:gap-2 sm:px-6 lg:px-8">
         <NavDrawerTrigger onOpen={onOpenNav} />
         {pathname !== '/' && (
           <Button
@@ -130,7 +130,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
               .join(' / ')}
           </p>
         </div>
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
           <CommandPalette
             items={paletteItems}
             trigger={

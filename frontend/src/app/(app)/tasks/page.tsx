@@ -65,7 +65,7 @@ function TasksList() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
         <select
           aria-label="Project"
           value={projectId}
@@ -103,7 +103,7 @@ function TasksList() {
           <option value="no_manager">No manager</option>
           <option value="no_employee">No employee</option>
         </select>
-        <div className="col-span-2 flex flex-wrap items-center gap-x-5 gap-y-2 md:col-span-4">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:col-span-2 md:col-span-4">
           <label className="flex items-center gap-2 text-sm text-fg">
             <input
               type="checkbox"
