@@ -4,7 +4,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { MemberSearch, type MemberOption } from '@/components/hrms/member-search';
-import { Banner, EmptyState, ErrorState, PageHeader, Pagination, Skeleton } from '@/components/ui';
+import {
+  Banner,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  Pagination,
+  Skeleton,
+  cardClass,
+  controlClass,
+  labelClass,
+  primaryActionClass,
+  secondaryActionClass,
+} from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatDate } from '@/lib/hrms/time';
@@ -39,12 +51,9 @@ const STATUS_LABEL: Record<RequestStatus, string> = {
   expired: 'Expired',
 };
 
-const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
-const primary =
-  'rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
-const secondary =
-  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+const input = controlClass;
+const primary = primaryActionClass;
+const secondary = secondaryActionClass;
 
 function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
@@ -171,7 +180,7 @@ function RequestRow({
   });
 
   return (
-    <li className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-4">
+    <li className={`space-y-2 ${cardClass}`}>
       <div className="flex items-start gap-3">
         {request.canDecide && (
           <input
@@ -183,23 +192,21 @@ function RequestRow({
           />
         )}
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="text-sm text-charcoal">{describe(request)}</p>
-          <p className="text-xs text-charcoal-soft">
+          <p className="text-sm text-fg">{describe(request)}</p>
+          <p className="text-xs text-fg-muted">
             {TYPE_LABEL[request.type]} · {STATUS_LABEL[request.status]} ·{' '}
             {formatDate(request.createdAt)}
             {request.status === 'pending' && ` · expires ${formatDate(request.expiresAt)}`}
           </p>
-          {request.reason && (
-            <p className="text-sm text-charcoal">&ldquo;{request.reason}&rdquo;</p>
-          )}
+          {request.reason && <p className="text-sm text-fg">&ldquo;{request.reason}&rdquo;</p>}
           {request.decisionReason && (
-            <p className="text-sm text-charcoal">
+            <p className="text-sm text-fg">
               {request.decidedBy ? `${request.decidedBy.fullName}: ` : ''}&ldquo;
               {request.decisionReason}&rdquo;
             </p>
           )}
           {request.status === 'pending' && request.cannotDecideBecause && (
-            <p className="text-xs text-charcoal-soft">
+            <p className="text-xs text-fg-muted">
               You cannot decide this: {request.cannotDecideBecause}
             </p>
           )}
@@ -223,7 +230,7 @@ function RequestRow({
       )}
       {rejecting && (
         <div className="space-y-2">
-          <label className="block space-y-1 text-sm text-charcoal">
+          <label className={labelClass}>
             Reason for rejecting (required)
             <textarea
               value={reason}
@@ -330,12 +337,9 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="max-w-lg space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4"
-    >
-      <h2 className="font-medium text-charcoal">New request</h2>
-      <label htmlFor="request-type" className="block space-y-1 text-sm font-medium text-charcoal">
+    <form onSubmit={onSubmit} className={`max-w-lg space-y-3 ${cardClass}`}>
+      <h2 className="font-medium text-fg">New request</h2>
+      <label htmlFor="request-type" className={labelClass}>
         Type
         <select
           id="request-type"
@@ -352,7 +356,7 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
       </label>
       {type === 'create_user' && (
         <>
-          <label htmlFor="request-full-name" className="block space-y-1 text-sm text-charcoal">
+          <label htmlFor="request-full-name" className={labelClass}>
             Full name
             <input
               id="request-full-name"
@@ -363,7 +367,7 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
               className={input}
             />
           </label>
-          <label htmlFor="request-email" className="block space-y-1 text-sm text-charcoal">
+          <label htmlFor="request-email" className={labelClass}>
             Email
             <input
               id="request-email"
@@ -374,7 +378,7 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
               className={input}
             />
           </label>
-          <label htmlFor="request-role" className="block space-y-1 text-sm text-charcoal">
+          <label htmlFor="request-role" className={labelClass}>
             Role
             <select id="request-role" name="role" defaultValue="employee" className={input}>
               <option value="employee">Employee</option>
@@ -384,7 +388,7 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
         </>
       )}
       {type === 'create_project' && (
-        <label htmlFor="request-project-name" className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="request-project-name" className={labelClass}>
           Project name
           <input
             id="request-project-name"
@@ -397,7 +401,7 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
         </label>
       )}
       {needsProject && (
-        <label htmlFor="request-project" className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="request-project" className={labelClass}>
           Project
           <select
             id="request-project"
@@ -428,7 +432,7 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
         />
       )}
       {needsTask && (
-        <label htmlFor="request-task" className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="request-task" className={labelClass}>
           Task
           <select id="request-task" name="task" required className={input}>
             <option value="">Choose a task</option>
@@ -440,8 +444,8 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
           </select>
         </label>
       )}
-      <label htmlFor="request-reason" className="block space-y-1 text-sm text-charcoal">
-        Reason <span className="text-charcoal-soft">(optional)</span>
+      <label htmlFor="request-reason" className={labelClass}>
+        Reason <span className="text-fg-muted">(optional)</span>
         <textarea
           id="request-reason"
           name="reason"
@@ -456,7 +460,7 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
           {error}
         </Banner>
       )}
-      {note && <p className="text-sm text-forest">{note}</p>}
+      {note && <p className="text-sm text-success-fg">{note}</p>}
       <button type="submit" disabled={pending} className={primary}>
         {pending ? 'Sending…' : 'Send request'}
       </button>
@@ -554,8 +558,10 @@ export default function RequestsPage() {
               setScope(s);
               setSelected([]);
             }}
-            className={`rounded-lg px-3 py-1.5 text-sm ${
-              scope === s ? 'bg-mist text-forest' : 'text-charcoal hover:bg-mist/60'
+            className={`rounded-full border px-3 py-2 text-sm font-medium transition-colors ${
+              scope === s
+                ? 'border-primary bg-primary-soft text-primary'
+                : 'border-transparent text-fg-muted hover:border-border hover:bg-surface-sunken'
             }`}
           >
             {s === 'decide' ? 'To decide' : 'Mine'}
@@ -604,7 +610,7 @@ export default function RequestsPage() {
       </div>
 
       {scope === 'decide' && decidable.length > 0 && (
-        <div className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-3">
+        <div className={`space-y-2 ${cardClass}`}>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <button
               type="button"
@@ -615,7 +621,7 @@ export default function RequestsPage() {
             >
               {selected.length === decidable.length ? 'Clear selection' : 'Select all'}
             </button>
-            <span className="text-charcoal-soft">{selected.length} selected</span>
+            <span className="text-fg-muted">{selected.length} selected</span>
             <button
               type="button"
               disabled={selected.length === 0 || bulk.isPending}

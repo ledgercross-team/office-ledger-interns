@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import type { StatusDefinition, SemanticTone } from '@/lib/hrms/status-vocabulary';
 import { cn } from '@/lib/cn';
 
@@ -16,12 +16,13 @@ export function Badge({
   tone = 'neutral',
   icon,
   className,
+  ...props
 }: {
   children: ReactNode;
   tone?: SemanticTone;
   icon?: ReactNode;
   className?: string;
-}) {
+} & Omit<HTMLAttributes<HTMLSpanElement>, 'children' | 'className'>) {
   return (
     <span
       className={cn(
@@ -29,6 +30,7 @@ export function Badge({
         tones[tone],
         className,
       )}
+      {...props}
     >
       {icon}
       {children}

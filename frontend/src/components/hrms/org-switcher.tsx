@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Banner } from '@/components/ui';
+import { Banner, controlClass } from '@/components/ui';
 import { HrmsApiError } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { HRMS_ROLE_LABELS } from '@/lib/hrms/types';
@@ -35,7 +35,7 @@ export function OrgSwitcher() {
         value={session.activeMemberId ?? ''}
         disabled={pending}
         onChange={(event) => void onChange(event.target.value)}
-        className="rounded-xl border border-charcoal/15 bg-white px-3 py-2 text-sm text-charcoal outline-none focus:border-evergreen disabled:opacity-60"
+        className={`${controlClass} w-auto min-w-48`}
       >
         {session.activeMemberId === null && (
           <option value="" disabled>

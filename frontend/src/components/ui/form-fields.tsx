@@ -12,9 +12,7 @@ import {
   type TextareaHTMLAttributes,
 } from 'react';
 import { cn } from '@/lib/cn';
-
-const control =
-  'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-fg-subtle';
+import { controlClass } from './styles';
 
 interface FieldFrameProps {
   id: string;
@@ -71,7 +69,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         required={required}
         aria-invalid={Boolean(error)}
         aria-describedby={helperText || error ? `${id}-description` : undefined}
-        className={cn(control, error && 'border-danger', className)}
+        className={cn(controlClass, error && 'border-danger', className)}
         {...props}
       />
     </FieldFrame>
@@ -98,7 +96,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
         required={required}
         aria-invalid={Boolean(error)}
         aria-describedby={helperText || error ? `${id}-description` : undefined}
-        className={cn(control, 'min-h-24 resize-y', error && 'border-danger', className)}
+        className={cn(controlClass, 'min-h-24 resize-y', error && 'border-danger', className)}
         {...props}
       />
     </FieldFrame>
@@ -126,7 +124,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         required={required}
         aria-invalid={Boolean(error)}
         aria-describedby={helperText || error ? `${id}-description` : undefined}
-        className={cn(control, error && 'border-danger', className)}
+        className={cn(controlClass, error && 'border-danger', className)}
         {...props}
       >
         {children}

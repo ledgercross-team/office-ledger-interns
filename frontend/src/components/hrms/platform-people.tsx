@@ -1,15 +1,20 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Banner, ConfirmDialog } from '@/components/ui';
+import {
+  Banner,
+  ConfirmDialog,
+  cardClass,
+  controlClass,
+  labelClass,
+  primaryActionClass,
+  secondaryActionClass,
+} from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 
-const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
-const primary =
-  'rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
-const secondary =
-  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+const input = controlClass;
+const primary = primaryActionClass;
+const secondary = secondaryActionClass;
 
 type Mode = 'idle' | 'edit';
 
@@ -136,7 +141,7 @@ export function PersonManager({
 
       {mode === 'edit' && (
         <form onSubmit={onEdit} className="grid max-w-lg gap-2 sm:grid-cols-2">
-          <label className="block space-y-1 text-xs text-charcoal-soft">
+          <label className={`${labelClass} text-xs`}>
             Full name
             <input
               name="fullName"
@@ -146,7 +151,7 @@ export function PersonManager({
               className={input}
             />
           </label>
-          <label className="block space-y-1 text-xs text-charcoal-soft">
+          <label className={`${labelClass} text-xs`}>
             Email
             <input
               name="email"
@@ -171,11 +176,11 @@ export function PersonManager({
       {password && (
         <div
           role="status"
-          className="max-w-lg space-y-1 rounded-xl border border-forest/30 p-3 text-sm"
+          className={`max-w-lg space-y-1 ${cardClass} border-success/30 bg-success-soft text-sm`}
         >
-          <p className="text-charcoal">New temporary password for {email}</p>
-          <p className="select-all font-mono text-base tabular-nums text-charcoal">{password}</p>
-          <p className="text-xs text-charcoal-soft">
+          <p className="text-fg">New temporary password for {email}</p>
+          <p className="select-all font-mono text-base tabular-nums text-fg">{password}</p>
+          <p className="text-xs text-fg-muted">
             Shown only now. Give it to them yourself; they choose their own at the next sign-in and
             are signed out everywhere.
           </p>

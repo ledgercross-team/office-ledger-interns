@@ -5,12 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { MemberChips, MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { RoleGate } from '@/components/hrms/role-gate';
-import { Banner } from '@/components/ui';
+import { Banner, Button, Input, Textarea, cardClass } from '@/components/ui';
+import { labelClass } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import type { HrmsProjectDetail } from '@/lib/hrms/types';
-
-const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
 
 function NewProjectForm() {
   const router = useRouter();
@@ -48,32 +46,17 @@ function NewProjectForm() {
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="max-w-lg space-y-4 rounded-2xl border border-charcoal/10 bg-white p-4"
-    >
-      <h1 className="text-xl font-semibold text-charcoal">New project</h1>
-      <label className="block space-y-1 text-sm font-medium text-charcoal">
-        Name
-        <input name="name" required maxLength={200} className={input} />
-      </label>
-      <label className="block space-y-1 text-sm font-medium text-charcoal">
-        Description (optional)
-        <textarea name="description" rows={3} maxLength={5000} className={input} />
-      </label>
+    <form onSubmit={onSubmit} className={`${cardClass} max-w-lg space-y-4`}>
+      <h1 className="text-xl font-semibold text-fg">New project</h1>
+      <Input label="Name" name="name" required maxLength={200} />
+      <Textarea label="Description (optional)" name="description" rows={3} maxLength={5000} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block space-y-1 text-sm font-medium text-charcoal">
-          Start date
-          <input name="startDate" type="date" className={input} />
-        </label>
-        <label className="block space-y-1 text-sm font-medium text-charcoal">
-          Due date
-          <input name="dueDate" type="date" className={input} />
-        </label>
+        <Input label="Start date" name="startDate" type="date" />
+        <Input label="Due date" name="dueDate" type="date" />
       </div>
       <fieldset className="space-y-1">
-        <legend className="text-sm font-medium text-charcoal">Managers</legend>
-        <p className="text-xs text-charcoal-soft">
+        <legend className={labelClass}>Managers</legend>
+        <p className="text-xs text-fg-muted">
           A project needs at least one manager and one employee. Employees are invited from the
           project page.
         </p>
@@ -94,13 +77,9 @@ function NewProjectForm() {
           {error}
         </Banner>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60"
-      >
-        {pending ? 'Creating…' : 'Create project'}
-      </button>
+      <Button type="submit" loading={pending} loadingLabel="Creating">
+        Create project
+      </Button>
     </form>
   );
 }

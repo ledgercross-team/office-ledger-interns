@@ -7,6 +7,9 @@ import {
   PageHeader,
   Pagination,
   Skeleton,
+  Button,
+  cardClass,
+  controlClass,
   useToast,
 } from '@/components/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -16,11 +19,6 @@ import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatDateTime } from '@/lib/hrms/time';
 import type { AuditEntry, Paginated } from '@/lib/hrms/types';
-
-const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
-const secondary =
-  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
 
 function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
   const queryClient = useQueryClient();
@@ -44,25 +42,25 @@ function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
   });
 
   return (
-    <li className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-3">
-      <p className="text-sm text-charcoal">
+    <li className={`${cardClass} space-y-2 p-4`}>
+      <p className="text-sm text-fg">
         <span className="font-medium">{entry.action}</span> on {entry.table}
         {entry.actor?.fullName ? ` by ${entry.actor.fullName}` : ' by the system'}
       </p>
-      <p className="text-xs text-charcoal-soft">{formatDateTime(entry.at)}</p>
+      <p className="text-xs text-fg-muted">{formatDateTime(entry.at)}</p>
       <button
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-controls={`audit-details-${entry.id}`}
-        className="text-xs text-forest hover:underline"
+        className="text-xs font-medium text-primary underline-offset-2 hover:underline"
       >
         {open ? 'Hide details' : 'Show details'}
       </button>
       {open && (
         <pre
           id={`audit-details-${entry.id}`}
-          className="overflow-x-auto rounded-xl bg-mist p-2 text-xs"
+          className="overflow-x-auto rounded-control bg-surface-sunken p-2 text-xs"
         >
           {JSON.stringify({ before: entry.before, after: entry.after }, null, 2)}
         </pre>
@@ -70,7 +68,7 @@ function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
       {entry.notes.map((n) => (
         <p
           key={n.id}
-          className="rounded-xl border border-evergreen/30 bg-mist p-2 text-sm text-charcoal"
+          className="rounded-control border border-primary/30 bg-primary-soft p-2 text-sm text-fg"
         >
           Note from {n.authorName}: {n.note}
         </p>
@@ -85,16 +83,17 @@ function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Add a note (the entry itself never changes)"
-            className={input}
+            className={controlClass}
           />
-          <button
+          <Button
             type="button"
-            disabled={note.trim().length === 0 || add.isPending}
+            variant="secondary"
+            loading={add.isPending}
+            disabled={note.trim().length === 0}
             onClick={() => add.mutate()}
-            className={secondary}
           >
             Add note
-          </button>
+          </Button>
         </div>
       )}
       {error && (
@@ -137,7 +136,7 @@ function History() {
             setPage(1);
           }}
           placeholder="Table, e.g. tasks"
-          className={`${input} sm:w-48`}
+          className={`${controlClass} sm:w-48`}
         />
         <input
           type="date"
@@ -147,7 +146,7 @@ function History() {
             setPage(1);
           }}
           aria-label="From"
-          className={`${input} sm:w-48`}
+          className={`${controlClass} sm:w-48`}
         />
       </div>
       {data.isLoading && (

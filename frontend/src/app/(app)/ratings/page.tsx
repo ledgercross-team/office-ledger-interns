@@ -10,14 +10,15 @@ import {
   ErrorState,
   PageHeader,
   Skeleton,
+  cardClass,
+  controlClass,
+  labelClass,
   useToast,
 } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { formatDate } from '@/lib/hrms/time';
+import { cn } from '@/lib/cn';
 import type { RatingsDueProject } from '@/lib/hrms/types';
-
-const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
 
 function ProjectRatings({ project, onDone }: { project: RatingsDueProject; onDone: () => void }) {
   const [stars, setStars] = useState<Record<string, number>>({});
@@ -53,19 +54,16 @@ function ProjectRatings({ project, onDone }: { project: RatingsDueProject; onDon
   const complete = project.ratees.every((r) => stars[r.memberId]);
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="max-w-lg space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4"
-    >
-      <h2 className="font-medium text-charcoal">{project.projectName}</h2>
-      <p className="text-xs text-charcoal-soft">
+    <form onSubmit={onSubmit} className={`${cardClass} max-w-lg space-y-3`}>
+      <h2 className="font-medium text-fg">{project.projectName}</h2>
+      <p className="text-xs text-fg-muted">
         Ratings are anonymous. Open until {project.closesAt ? formatDate(project.closesAt) : '—'}.
         One or two stars need a comment.
       </p>
       {project.ratees.map((r) => (
         <fieldset key={r.memberId} className="space-y-1">
-          <legend className="text-sm text-charcoal">
-            {r.fullName} <span className="text-xs text-charcoal-soft">({r.role})</span>
+          <legend className={labelClass}>
+            {r.fullName} <span className="text-xs font-normal text-fg-muted">({r.role})</span>
           </legend>
           <div className="flex gap-1" role="radiogroup" aria-label={`Stars for ${r.fullName}`}>
             {[1, 2, 3, 4, 5].map((n) => (
@@ -75,20 +73,18 @@ function ProjectRatings({ project, onDone }: { project: RatingsDueProject; onDon
                 role="radio"
                 aria-checked={stars[r.memberId] === n}
                 onClick={() => setStars((s) => ({ ...s, [r.memberId]: n }))}
-                className={`h-8 w-8 rounded-lg border text-sm ${
+                className={cn(
+                  'flex size-9 items-center justify-center rounded-control border text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
                   stars[r.memberId] === n
-                    ? 'border-evergreen bg-evergreen text-white'
-                    : 'border-charcoal/15 hover:bg-mist/60'
-                }`}
+                    ? 'border-primary bg-primary text-primary-fg'
+                    : 'border-border bg-surface hover:bg-surface-sunken',
+                )}
               >
                 {n}
               </button>
             ))}
           </div>
-          <label
-            htmlFor={`rating-comment-${r.memberId}`}
-            className="block space-y-1 text-sm text-charcoal"
-          >
+          <label htmlFor={`rating-comment-${r.memberId}`} className={labelClass}>
             Comment {stars[r.memberId] && stars[r.memberId] <= 2 ? '(required)' : '(optional)'}
             <input
               id={`rating-comment-${r.memberId}`}
@@ -96,7 +92,7 @@ function ProjectRatings({ project, onDone }: { project: RatingsDueProject; onDon
               maxLength={2000}
               placeholder="Add context for this rating"
               required={Boolean(stars[r.memberId] && stars[r.memberId] <= 2)}
-              className={input}
+              className={controlClass}
             />
           </label>
         </fieldset>

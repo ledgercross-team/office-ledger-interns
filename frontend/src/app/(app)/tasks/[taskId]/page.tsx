@@ -6,7 +6,17 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { TaskFlags, TaskStatusBadge, UrgencyBadge } from '@/components/hrms/task-badges';
-import { Banner, EmptyState, ErrorState, Skeleton } from '@/components/ui';
+import {
+  Banner,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  Skeleton,
+  controlClass,
+  labelClass,
+  linkClass,
+} from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { actionsFrom, TASK_STATUS_LABELS, type TaskAction } from '@/lib/hrms/task-meta';
@@ -16,14 +26,6 @@ import type { HrmsProjectDetail, HrmsTask, TaskHistoryItem } from '@/lib/hrms/ty
 function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
 }
-
-const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
-const card = 'space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4';
-const primary =
-  'rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
-const secondary =
-  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
 
 export default function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>();
@@ -111,29 +113,27 @@ export default function TaskDetailPage() {
   return (
     <>
       <div className="space-y-2">
-        <Link href="/tasks" className="text-sm text-evergreen hover:underline">
+        <Link href="/tasks" className={`text-sm ${linkClass}`}>
           ← Tasks
         </Link>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-xl font-semibold text-charcoal">{t.title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-fg">{t.title}</h1>
           <UrgencyBadge urgency={t.urgency} />
           <TaskStatusBadge status={t.status} />
           <TaskFlags flags={t.flags} />
         </div>
-        <p className="text-sm text-charcoal-soft">
-          <Link href={`/projects/${t.projectId}`} className="text-evergreen hover:underline">
+        <p className="text-sm text-fg-muted">
+          <Link href={`/projects/${t.projectId}`} className={linkClass}>
             {t.projectName}
           </Link>{' '}
           · Due {formatDateTime(t.dueAt)}
         </p>
-        {t.description && (
-          <p className="whitespace-pre-wrap text-sm text-charcoal">{t.description}</p>
-        )}
+        {t.description && <p className="whitespace-pre-wrap text-sm text-fg">{t.description}</p>}
         {t.blockedReason && t.status === 'blocked' && (
-          <p className="text-sm text-alert-deep">Blocked: {t.blockedReason}</p>
+          <p className="text-sm text-danger-fg">Blocked: {t.blockedReason}</p>
         )}
         {t.cancelReason && t.status === 'cancelled' && (
-          <p className="text-sm text-charcoal-soft">Cancelled: {t.cancelReason}</p>
+          <p className="text-sm text-fg-muted">Cancelled: {t.cancelReason}</p>
         )}
       </div>
 
@@ -144,19 +144,18 @@ export default function TaskDetailPage() {
       )}
 
       {actions.length > 0 && (
-        <section className={card}>
-          <h2 className="font-medium text-charcoal">Move this task</h2>
+        <Card className="space-y-3">
+          <h2 className="font-semibold text-fg">Move this task</h2>
           {t.flags.noAssignee || t.flags.noManager || t.flags.noEmployee ? (
-            <p className="text-xs text-charcoal-soft">
+            <p className="text-xs text-fg-muted">
               It needs at least one manager and one employee before work can start.
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">
             {actions.map((a) => (
-              <button
+              <Button
                 key={`${a.to}-${a.label}`}
-                type="button"
-                className={a.needs ? secondary : primary}
+                variant={a.needs ? 'secondary' : 'primary'}
                 onClick={() => {
                   setError(null);
                   if (a.needs) {
@@ -168,12 +167,12 @@ export default function TaskDetailPage() {
                 }}
               >
                 {a.label}
-              </button>
+              </Button>
             ))}
           </div>
           {pendingAction && (
             <div className="space-y-2">
-              <label className="block space-y-1 text-sm text-charcoal">
+              <label className={labelClass}>
                 {pendingAction.needs === 'reason'
                   ? `Reason for “${pendingAction.label}” (required)`
                   : `Comment for “${pendingAction.label}” (required)`}
@@ -181,14 +180,12 @@ export default function TaskDetailPage() {
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   rows={2}
-                  className={input}
+                  className={`${controlClass} min-h-24 resize-y`}
                 />
               </label>
               <div className="flex gap-2">
-                <button
-                  type="button"
+                <Button
                   disabled={text.trim().length === 0}
-                  className={primary}
                   onClick={() =>
                     submitAction(
                       pendingAction,
@@ -199,29 +196,29 @@ export default function TaskDetailPage() {
                   }
                 >
                   {pendingAction.label}
-                </button>
-                <button type="button" className={secondary} onClick={() => setPendingAction(null)}>
+                </Button>
+                <Button variant="secondary" onClick={() => setPendingAction(null)}>
                   Cancel
-                </button>
+                </Button>
               </div>
             </div>
           )}
-        </section>
+        </Card>
       )}
 
-      <section className={card}>
-        <h2 className="font-medium text-charcoal">People on this task</h2>
-        <ul className="divide-y divide-charcoal/5 text-sm">
+      <Card className="space-y-3">
+        <h2 className="font-semibold text-fg">People on this task</h2>
+        <ul className="divide-y divide-border text-sm">
           {t.assignees.map((a) => (
             <li key={a.memberId} className="flex items-center justify-between py-2">
               <span>
-                <span className="font-medium text-charcoal">{a.fullName}</span>
-                <span className="ml-2 text-charcoal-soft">{a.role}</span>
+                <span className="font-medium text-fg">{a.fullName}</span>
+                <span className="ml-2 text-fg-muted">{a.role}</span>
               </span>
               {canManage && !closed && (
                 <button
                   type="button"
-                  className="text-alert-deep hover:underline"
+                  className="font-medium text-danger-fg underline-offset-2 hover:underline"
                   onClick={() =>
                     void run(() =>
                       hrmsFetch<HrmsTask>(`/tasks/${t.id}/assignees/${a.memberId}`, {
@@ -235,7 +232,14 @@ export default function TaskDetailPage() {
               )}
             </li>
           ))}
-          {t.assignees.length === 0 && <li className="py-2 text-charcoal-soft">Nobody yet.</li>}
+          {t.assignees.length === 0 && (
+            <li>
+              <EmptyState
+                title="No assignees yet"
+                description="Add someone from the project to assign this task."
+              />
+            </li>
+          )}
         </ul>
         {canManage && !closed && addable.length > 0 && (
           <div className="flex flex-wrap items-end gap-2">
@@ -252,10 +256,8 @@ export default function TaskDetailPage() {
                 onClear={() => setAddPick(null)}
               />
             </div>
-            <button
-              type="button"
+            <Button
               disabled={!addId}
-              className={primary}
               onClick={() =>
                 void run(
                   () =>
@@ -268,13 +270,13 @@ export default function TaskDetailPage() {
               }
             >
               Add
-            </button>
+            </Button>
           </div>
         )}
-      </section>
+      </Card>
 
-      <section className={card}>
-        <h2 className="font-medium text-charcoal">History</h2>
+      <Card className="space-y-3">
+        <h2 className="font-semibold text-fg">History</h2>
         {history.isLoading && <Skeleton className="h-24 w-full" />}
         {history.error && (
           <ErrorState
@@ -293,19 +295,19 @@ export default function TaskDetailPage() {
           <ol className="space-y-2 text-sm">
             {history.data.items.map((h) => (
               <li key={h.id}>
-                <span className="font-medium text-charcoal">
+                <span className="font-medium text-fg">
                   {h.fromStatus ? `${TASK_STATUS_LABELS[h.fromStatus]} → ` : 'Created as '}
                   {TASK_STATUS_LABELS[h.toStatus]}
                 </span>
-                <span className="ml-2 text-xs text-charcoal-soft">
+                <span className="ml-2 text-xs text-fg-muted">
                   {h.changedBy?.fullName ?? 'System'} · {formatDateTime(h.changedAt)}
                 </span>
-                {h.comment && <p className="text-charcoal">&ldquo;{h.comment}&rdquo;</p>}
+                {h.comment && <p className="text-fg">&ldquo;{h.comment}&rdquo;</p>}
               </li>
             ))}
           </ol>
         )}
-      </section>
+      </Card>
     </>
   );
 }

@@ -197,7 +197,7 @@ export function SecurityCard() {
           <p className="text-sm text-fg">
             Scan this with your authenticator app, then enter the 6-digit code it shows.
           </p>
-          <div className="inline-block rounded-card border border-border bg-white p-3">
+          <div className="inline-block rounded-card border border-border bg-surface-raised p-3">
             <QRCodeSVG value={setup.otpauthUrl} size={160} />
           </div>
           <p className="text-xs text-fg-muted">

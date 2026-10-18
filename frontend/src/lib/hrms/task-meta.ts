@@ -20,14 +20,14 @@ export const TASK_STATUS_STYLE: Record<TaskStatus, string> = {
   in_progress: 'bg-warning-soft text-warning-fg',
   in_review: 'bg-info-soft text-info-fg',
   done: 'bg-success-soft text-success-fg',
-  blocked: 'bg-alert-tint text-alert-deep',
-  cancelled: 'bg-charcoal/10 text-charcoal-soft line-through',
+  blocked: 'bg-danger-soft text-danger-fg',
+  cancelled: 'bg-surface-sunken text-fg-muted line-through',
 };
 
 export const TASK_URGENCY_STYLE: Record<TaskUrgency, string> = {
-  high: 'bg-alert-tint text-alert-deep',
-  medium: 'bg-amber-tint text-amber-deep',
-  low: 'bg-mist text-forest',
+  high: 'bg-danger-soft text-danger-fg',
+  medium: 'bg-warning-soft text-warning-fg',
+  low: 'bg-primary-soft text-primary',
 };
 
 export interface TaskAction {

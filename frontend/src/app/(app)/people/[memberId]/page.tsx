@@ -4,7 +4,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
-import { Banner, ErrorState, Skeleton } from '@/components/ui';
+import {
+  Banner,
+  Button,
+  Card,
+  ErrorState,
+  Skeleton,
+  cardClass,
+  controlClass,
+  labelClass,
+  linkClass,
+} from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { HRMS_ROLE_LABELS, type HrmsMember, type HrmsMemberRole } from '@/lib/hrms/types';
@@ -12,9 +22,6 @@ import { HRMS_ROLE_LABELS, type HrmsMember, type HrmsMemberRole } from '@/lib/hr
 function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
 }
-
-const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen disabled:bg-offwhite';
 
 export default function MemberDetailPage() {
   const { memberId } = useParams<{ memberId: string }>();
@@ -140,11 +147,11 @@ export default function MemberDetailPage() {
   return (
     <>
       <div>
-        <Link href="/people" className="text-sm text-evergreen hover:underline">
+        <Link href="/people" className={`text-sm ${linkClass}`}>
           ← People
         </Link>
-        <h1 className="mt-1 text-xl font-semibold text-charcoal">{m.fullName}</h1>
-        <p className="text-sm text-charcoal-soft">
+        <h1 className="mt-1 text-xl font-semibold text-fg">{m.fullName}</h1>
+        <p className="text-sm text-fg-muted">
           {m.email} · {HRMS_ROLE_LABELS[m.role]} · {m.status}
         </p>
       </div>
@@ -158,63 +165,59 @@ export default function MemberDetailPage() {
       <form
         key={m.id + (m.designation ?? '') + m.fullName}
         onSubmit={onProfileSubmit}
-        className="max-w-md space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4"
+        className={`max-w-md space-y-3 ${cardClass}`}
       >
-        <h2 className="font-medium text-charcoal">Profile</h2>
+        <h2 className="font-medium text-fg">Profile</h2>
         {self && (
           <>
-            <label className="block space-y-1 text-sm text-charcoal">
+            <label className={labelClass}>
               Full name
-              <input name="fullName" defaultValue={m.fullName} className={input} />
+              <input name="fullName" defaultValue={m.fullName} className={controlClass} />
             </label>
-            <label className="block space-y-1 text-sm text-charcoal">
+            <label className={labelClass}>
               Phone
-              <input name="phone" defaultValue={m.phone ?? ''} className={input} />
+              <input name="phone" defaultValue={m.phone ?? ''} className={controlClass} />
             </label>
           </>
         )}
-        <label className="block space-y-1 text-sm text-charcoal">
+        <label className={labelClass}>
           Designation
           <input
             name="designation"
             defaultValue={m.designation ?? ''}
             disabled={!canEditProfile}
-            className={input}
+            className={controlClass}
           />
         </label>
-        <label className="block space-y-1 text-sm text-charcoal">
+        <label className={labelClass}>
           Department
           <input
             name="department"
             defaultValue={m.department ?? ''}
             disabled={!canEditProfile}
-            className={input}
+            className={controlClass}
           />
         </label>
-        <label className="block space-y-1 text-sm text-charcoal">
+        <label className={labelClass}>
           Employee code
           <input
             value={m.employeeCode ?? ''}
             readOnly
             disabled
             aria-describedby="employee-code-note"
-            className={`${input} cursor-not-allowed bg-charcoal/5 text-charcoal-soft`}
+            className={`${controlClass} cursor-not-allowed`}
           />
-          <span id="employee-code-note" className="block text-xs font-normal text-charcoal-soft">
+          <span id="employee-code-note" className="block text-xs font-normal text-fg-muted">
             Assigned automatically and permanent. It cannot be changed.
           </span>
         </label>
         {canEditProfile && (
           <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={update.isPending}
-              className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60"
-            >
+            <Button type="submit" disabled={update.isPending}>
               Save
-            </button>
+            </Button>
             {saved && (
-              <span role="status" className="text-sm text-evergreen">
+              <span role="status" className="text-sm text-success-fg">
                 Saved
               </span>
             )}
@@ -223,14 +226,14 @@ export default function MemberDetailPage() {
       </form>
 
       {canChangeRole && (
-        <section className="max-w-md space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4">
-          <h2 className="font-medium text-charcoal">Role and approvals</h2>
-          <label className="block space-y-1 text-sm text-charcoal">
+        <Card className="max-w-md space-y-3">
+          <h2 className="font-medium text-fg">Role and approvals</h2>
+          <label className={labelClass}>
             Role
             <select
               value={m.role}
               onChange={(event) => update.mutate({ role: event.target.value as HrmsMemberRole })}
-              className={input}
+              className={controlClass}
             >
               {(['employee', 'manager', 'coo', 'ceo'] as const)
                 .filter((r) => session?.role === 'ceo' || r === 'employee' || r === 'manager')
@@ -243,67 +246,71 @@ export default function MemberDetailPage() {
           </label>
           {m.role === 'manager' && (
             <>
-              <label className="flex items-center gap-2 text-sm text-charcoal">
+              <label className="flex items-center gap-2 text-sm text-fg">
                 <input
                   type="checkbox"
                   checked={m.taskApprovalRequired}
                   onChange={(event) =>
                     update.mutate({ taskApprovalRequired: event.target.checked })
                   }
+                  className="size-4 accent-primary"
                 />
                 Tasks this manager creates need approval
               </label>
-              <label className="flex items-center gap-2 text-sm text-charcoal">
+              <label className="flex items-center gap-2 text-sm text-fg">
                 <input
                   type="checkbox"
                   checked={m.canViewAllProjects}
                   onChange={(event) => update.mutate({ canViewAllProjects: event.target.checked })}
+                  className="size-4 accent-primary"
                 />
                 Can see every project in the organisation
               </label>
             </>
           )}
-        </section>
+        </Card>
       )}
 
       {isAdmin &&
         m.id !== session?.activeMemberId &&
         m.role !== 'ceo' &&
         (session?.role === 'ceo' || m.role !== 'coo') && (
-          <section className="max-w-md space-y-2 rounded-2xl border border-charcoal/10 bg-white p-4">
-            <h2 className="font-medium text-charcoal">Password and authenticator</h2>
-            <p className="text-sm text-charcoal-soft">
+          <Card className="max-w-md space-y-2">
+            <h2 className="font-medium text-fg">Password and authenticator</h2>
+            <p className="text-sm text-fg-muted">
               Give them a new one-time password. It is shown once, they must choose their own at the
               next sign-in, and they are signed out everywhere.
             </p>
-            <button
+            <Button
               type="button"
+              variant="secondary"
               disabled={resetPassword.isPending}
               onClick={() => resetPassword.mutate()}
-              className="rounded-xl border border-charcoal/15 bg-white px-4 py-2 text-sm disabled:opacity-60"
             >
               Reset password
-            </button>
+            </Button>
             {tempPassword && (
-              <div role="status" className="space-y-1 rounded-xl border border-forest/30 p-3">
-                <p className="text-sm text-charcoal">New temporary password for {m.email}</p>
-                <p className="select-all font-mono text-base tabular-nums text-charcoal">
+              <div
+                role="status"
+                className="space-y-1 rounded-control border border-success/30 bg-success-soft p-3"
+              >
+                <p className="text-sm text-fg">New temporary password for {m.email}</p>
+                <p className="select-all font-mono text-base tabular-nums text-fg">
                   {tempPassword}
                 </p>
-                <p className="text-xs text-charcoal-soft">
-                  Shown only now. Give it to them yourself.
-                </p>
-                <button
+                <p className="text-xs text-fg-muted">Shown only now. Give it to them yourself.</p>
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setTempPassword(null)}
-                  className="text-sm text-forest hover:underline"
                 >
                   I have shared it
-                </button>
+                </Button>
               </div>
             )}
-            <h3 className="pt-2 text-sm font-medium text-charcoal">Authenticator</h3>
-            <p className="text-sm text-charcoal-soft">
+            <h3 className="pt-2 text-sm font-medium text-fg">Authenticator</h3>
+            <p className="text-sm text-fg-muted">
               If they lost their phone, turn their authenticator off so they can sign in with their
               password again.
             </p>
@@ -319,10 +326,10 @@ export default function MemberDetailPage() {
                 }
                 className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors disabled:cursor-not-allowed ${
                   m.mfaEnabled
-                    ? 'border-evergreen bg-evergreen'
+                    ? 'border-primary bg-primary'
                     : m.mfaSetupRequired
-                      ? 'border-amber-500 bg-amber-400'
-                      : 'border-charcoal/20 bg-charcoal/15'
+                      ? 'border-warning bg-warning'
+                      : 'border-border-strong bg-surface-sunken'
                 }`}
               >
                 <span
@@ -335,10 +342,10 @@ export default function MemberDetailPage() {
               <span
                 className={`text-sm font-medium ${
                   m.mfaEnabled
-                    ? 'text-forest'
+                    ? 'text-success-fg'
                     : m.mfaSetupRequired
-                      ? 'text-amber-700'
-                      : 'text-charcoal-soft'
+                      ? 'text-warning-fg'
+                      : 'text-fg-muted'
                 }`}
               >
                 {authenticator.isPending
@@ -350,7 +357,7 @@ export default function MemberDetailPage() {
                       : 'Off: tap to require it'}
               </span>
             </div>
-            <p className="text-xs text-charcoal-soft">
+            <p className="text-xs text-fg-muted">
               {m.mfaEnabled
                 ? 'They sign in with the 6-digit code from their app.'
                 : m.mfaSetupRequired
@@ -362,44 +369,36 @@ export default function MemberDetailPage() {
                 {notice}
               </Banner>
             )}
-          </section>
+          </Card>
         )}
 
       {isAdmin && m.status !== 'deactivated' && (
-        <section className="max-w-md space-y-2 rounded-2xl border border-alert/30 bg-alert-tint p-4">
-          <h2 className="font-medium text-alert-deep">Deactivate</h2>
-          <p className="text-sm text-charcoal">
+        <Card className="max-w-md space-y-2 border-danger/30 bg-danger-soft">
+          <h2 className="font-medium text-danger-fg">Deactivate</h2>
+          <p className="text-sm text-fg">
             They are signed out of this organisation, leave every project and open task, and their
             seat is freed. Their history is kept.
           </p>
           {confirming ? (
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
+                variant="danger"
                 disabled={deactivate.isPending}
                 onClick={() => deactivate.mutate()}
-                className="rounded-xl bg-alert px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
               >
                 Yes, deactivate
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirming(false)}
-                className="rounded-xl border border-charcoal/15 bg-white px-4 py-2 text-sm"
-              >
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setConfirming(false)}>
                 Cancel
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setConfirming(true)}
-              className="rounded-xl border border-alert px-4 py-2 text-sm text-alert-deep"
-            >
+            <Button type="button" variant="danger" onClick={() => setConfirming(true)}>
               Deactivate {m.fullName}
-            </button>
+            </Button>
           )}
-        </section>
+        </Card>
       )}
     </>
   );

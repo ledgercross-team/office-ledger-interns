@@ -12,3 +12,4 @@ export * from './overlays';
 export * from './page';
 export * from './tags';
 export * from './toast';
+export * from './styles';

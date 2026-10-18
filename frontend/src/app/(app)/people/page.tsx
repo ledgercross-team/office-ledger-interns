@@ -1,6 +1,14 @@
 'use client';
 
-import { EmptyState, ErrorState, Pagination, Skeleton } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  ErrorState,
+  Pagination,
+  Skeleton,
+  controlClass,
+} from '@/components/ui';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -17,10 +25,10 @@ import {
   type PerformanceRow,
 } from '@/lib/hrms/types';
 
-const STATUS_STYLE: Record<MemberStatus, string> = {
-  active: 'bg-mist text-forest',
-  suspended: 'bg-amber-tint text-amber-deep',
-  deactivated: 'bg-alert-tint text-alert-deep',
+const STATUS_TONE: Record<MemberStatus, 'success' | 'warning' | 'danger'> = {
+  active: 'success',
+  suspended: 'warning',
+  deactivated: 'danger',
 };
 
 export default function PeoplePage() {
@@ -58,14 +66,11 @@ export default function PeoplePage() {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-charcoal">People</h1>
+        <h1 className="text-xl font-semibold text-fg">People</h1>
         {isAdmin && (
-          <Link
-            href="/people/new"
-            className="rounded-xl bg-evergreen px-3 py-2 text-sm font-medium text-white hover:bg-evergreen-dark"
-          >
-            Add person
-          </Link>
+          <Button asChild size="sm">
+            <Link href="/people/new">Add person</Link>
+          </Button>
         )}
       </div>
 
@@ -86,7 +91,7 @@ export default function PeoplePage() {
             setQ(event.target.value);
             setPage(1);
           }}
-          className="min-h-10 min-w-0 rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 sm:flex-1"
+          className={`${controlClass} min-w-0 sm:flex-1`}
         />
         <select
           aria-label="Role"
@@ -95,7 +100,7 @@ export default function PeoplePage() {
             setRole(event.target.value);
             setPage(1);
           }}
-          className="min-h-10 rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg"
+          className={`${controlClass} sm:w-auto`}
         >
           <option value="">All roles</option>
           {(['ceo', 'coo', 'manager', 'employee'] as const).map((r) => (
@@ -111,7 +116,7 @@ export default function PeoplePage() {
             setStatus(event.target.value);
             setPage(1);
           }}
-          className="min-h-10 rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg"
+          className={`${controlClass} sm:w-auto`}
         >
           <option value="">Any status</option>
           <option value="active">Active</option>
@@ -163,11 +168,7 @@ export default function PeoplePage() {
                     <td className="px-3 py-2">{HRMS_ROLE_LABELS[m.role]}</td>
                     <td className="px-3 py-2">{m.designation ?? '—'}</td>
                     <td className="px-3 py-2">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs ${STATUS_STYLE[m.status]}`}
-                      >
-                        {m.status}
-                      </span>
+                      <Badge tone={STATUS_TONE[m.status]}>{m.status}</Badge>
                     </td>
                     {isAdmin && (
                       <td className="px-3 py-2">
@@ -211,11 +212,9 @@ export default function PeoplePage() {
                     </Link>
                     <p className="mt-1 break-all text-xs text-fg-muted">{m.email}</p>
                   </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLE[m.status]}`}
-                  >
+                  <Badge tone={STATUS_TONE[m.status]} className="shrink-0">
                     {m.status}
-                  </span>
+                  </Badge>
                 </div>
                 <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
                   <div>

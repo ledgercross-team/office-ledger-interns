@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState, type FormEvent } from 'react';
-import { Banner, Button, EmptyState } from '@/components/ui';
+import { Banner, Button, EmptyState, controlClass, labelClass } from '@/components/ui';
 import { RoleGate } from '@/components/hrms/role-gate';
 import { WorkloadChip } from '@/components/hrms/workload-chip';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
@@ -14,9 +14,6 @@ import type {
   Paginated,
   WorkloadItem,
 } from '@/lib/hrms/types';
-
-const input =
-  'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle outline-none transition-[border-color,box-shadow] focus:border-primary focus:ring-4 focus:ring-primary/10';
 
 function NewTaskForm() {
   const router = useRouter();
@@ -85,7 +82,7 @@ function NewTaskForm() {
           Create a task, set its urgency and due date, then assign the people responsible.
         </p>
       </div>
-      <label className="block space-y-1.5 text-sm font-medium text-fg">
+      <label className={labelClass}>
         Project
         <select
           value={projectId}
@@ -94,7 +91,7 @@ function NewTaskForm() {
             setProjectId(e.target.value);
             setAssigneeIds([]);
           }}
-          className={input}
+          className={controlClass}
         >
           <option value="">Choose…</option>
           {projects.data?.items.map((p) => (
@@ -104,26 +101,31 @@ function NewTaskForm() {
           ))}
         </select>
       </label>
-      <label className="block space-y-1.5 text-sm font-medium text-fg">
+      <label className={labelClass}>
         Title
-        <input name="title" required maxLength={200} className={input} />
+        <input name="title" required maxLength={200} className={controlClass} />
       </label>
-      <label className="block space-y-1.5 text-sm font-medium text-fg">
+      <label className={labelClass}>
         Description (optional)
-        <textarea name="description" rows={3} maxLength={5000} className={input} />
+        <textarea
+          name="description"
+          rows={3}
+          maxLength={5000}
+          className={`${controlClass} min-h-24 resize-y`}
+        />
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block space-y-1.5 text-sm font-medium text-fg">
+        <label className={labelClass}>
           Urgency
-          <select name="urgency" defaultValue="medium" className={input}>
+          <select name="urgency" defaultValue="medium" className={controlClass}>
             <option value="high">High</option>
             <option value="medium">Medium</option>
             <option value="low">Low</option>
           </select>
         </label>
-        <label className="block space-y-1.5 text-sm font-medium text-fg">
+        <label className={labelClass}>
           Due date
-          <input name="dueDate" type="date" required className={input} />
+          <input name="dueDate" type="date" required className={controlClass} />
         </label>
       </div>
       <fieldset className="space-y-1">

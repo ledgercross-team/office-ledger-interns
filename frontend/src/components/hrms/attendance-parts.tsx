@@ -2,7 +2,16 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { useRef, useState, type FormEvent } from 'react';
-import { Banner, Button, Dialog, Textarea } from '@/components/ui';
+import {
+  Badge,
+  Banner,
+  Button,
+  Dialog,
+  Textarea,
+  controlClass,
+  labelClass,
+  secondaryActionClass,
+} from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatTime } from '@/lib/hrms/time';
@@ -21,28 +30,29 @@ const STATUS_LABEL: Record<AttendanceDayStatus, string> = {
   weekend: 'Weekend',
 };
 
-const STATUS_CLASS: Record<AttendanceDayStatus, string> = {
-  present: 'bg-evergreen/10 text-forest',
-  late: 'bg-amber-100 text-amber-900',
-  absent: 'bg-alert-deep/10 text-alert-deep',
-  on_leave: 'bg-sky-100 text-sky-900',
-  holiday: 'bg-mist text-charcoal-soft',
-  weekend: 'bg-mist text-charcoal-soft',
+const STATUS_TONE: Record<
+  AttendanceDayStatus,
+  'success' | 'warning' | 'danger' | 'info' | 'neutral'
+> = {
+  present: 'success',
+  late: 'warning',
+  absent: 'danger',
+  on_leave: 'info',
+  holiday: 'neutral',
+  weekend: 'neutral',
 };
 
-const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
+const input = controlClass;
 
 export function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
 }
 
 export function StatusPill({ status }: { status: AttendanceDayStatus | null }) {
-  if (!status) return <span className="text-xs text-charcoal-soft">—</span>;
-  return (
-    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[status]}`}>
-      {STATUS_LABEL[status]}
-    </span>
+  return status ? (
+    <Badge tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Badge>
+  ) : (
+    <span className="text-xs text-fg-muted">—</span>
   );
 }
 
@@ -209,7 +219,7 @@ export function MonthTable({
 function TimeField({ name, label }: { name: string; label: string }) {
   const ref = useRef<HTMLInputElement>(null);
   return (
-    <div className="space-y-1 text-sm text-charcoal">
+    <div className={labelClass}>
       <label htmlFor={`correction-${name}`}>{label}</label>
       <div className="flex gap-2">
         <input
@@ -228,7 +238,7 @@ function TimeField({ name, label }: { name: string; label: string }) {
         <button
           type="button"
           onClick={() => ref.current?.blur()}
-          className="shrink-0 rounded-xl border border-charcoal/15 px-3 py-2 text-sm font-medium hover:bg-mist/60"
+          className={`${secondaryActionClass} shrink-0`}
         >
           OK
         </button>

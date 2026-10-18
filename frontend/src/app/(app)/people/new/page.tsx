@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/hrms/role-gate';
-import { Banner } from '@/components/ui';
+import { Banner, Button, Card, Input, Select, cardClass, linkClass } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { HRMS_ROLE_LABELS, type CreateMemberResponse, type HrmsMemberRole } from '@/lib/hrms/types';
@@ -51,97 +51,70 @@ function NewMemberForm() {
 
   if (done?.member) {
     return (
-      <section className="space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4">
-        <p className="text-lg font-semibold text-forest">{done.member.fullName} was added</p>
+      <Card className="max-w-md space-y-3">
+        <p className="text-lg font-semibold text-success-fg">{done.member.fullName} was added</p>
         {done.temporaryPassword ? (
-          <div role="status" className="space-y-1 rounded-xl border border-forest/30 p-3">
-            <p className="text-sm text-charcoal">Temporary password for {done.member.email}</p>
-            <p className="select-all font-mono text-base tabular-nums text-charcoal">
+          <div
+            role="status"
+            className="space-y-1 rounded-control border border-success/30 bg-success-soft p-3"
+          >
+            <p className="text-sm text-fg">Temporary password for {done.member.email}</p>
+            <p className="select-all font-mono text-base tabular-nums text-fg">
               {done.temporaryPassword}
             </p>
-            <p className="text-xs text-charcoal-soft">
+            <p className="text-xs text-fg-muted">
               Give this to them yourself. It is shown only now, and they must choose their own
               password the first time they sign in.
             </p>
           </div>
         ) : (
-          <p className="text-sm text-charcoal-soft">
+          <p className="text-sm text-fg-muted">
             {done.invited
               ? 'They can set a password from the invite link.'
               : 'They already have a login, so they can use this organisation straight away.'}
           </p>
         )}
         <div className="flex gap-3 text-sm">
-          <Link href={`/people/${done.member.id}`} className="text-evergreen hover:underline">
+          <Link href={`/people/${done.member.id}`} className={linkClass}>
             Open profile
           </Link>
-          <Link href="/people" className="text-evergreen hover:underline">
+          <Link href="/people" className={linkClass}>
             Back to people
           </Link>
         </div>
-      </section>
+      </Card>
     );
   }
 
-  const input =
-    'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
   return (
-    <form
-      onSubmit={onSubmit}
-      className="max-w-md space-y-4 rounded-2xl border border-charcoal/10 bg-white p-4"
-    >
-      <h1 className="text-xl font-semibold text-charcoal">Add person</h1>
-      <label className="block space-y-1 text-sm font-medium text-charcoal">
-        Email
-        <input name="email" type="email" required className={input} />
-      </label>
-      <label className="block space-y-1 text-sm font-medium text-charcoal">
-        Full name
-        <input name="fullName" required maxLength={120} className={input} />
-      </label>
-      <label className="block space-y-1 text-sm font-medium text-charcoal">
-        Role
-        <select name="role" className={input} defaultValue="employee">
-          {roles.map((r) => (
-            <option key={r} value={r}>
-              {HRMS_ROLE_LABELS[r]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="block space-y-1 text-sm font-medium text-charcoal">
-        Designation (optional)
-        <input name="designation" maxLength={100} className={input} />
-      </label>
-      <label className="block space-y-1 text-sm font-medium text-charcoal">
-        Department (optional)
-        <input name="department" maxLength={100} className={input} />
-      </label>
-      <label className="block space-y-1 text-sm font-medium text-charcoal">
-        Employee code
-        <input
-          value="Assigned automatically"
-          readOnly
-          disabled
-          aria-describedby="new-employee-code-note"
-          className={`${input} cursor-not-allowed bg-charcoal/5 text-charcoal-soft`}
-        />
-        <span id="new-employee-code-note" className="block text-xs font-normal text-charcoal-soft">
-          A unique code (EMP-0001, EMP-0002…) is given when they are added. It is permanent.
-        </span>
-      </label>
+    <form onSubmit={onSubmit} className={`${cardClass} max-w-md space-y-4`}>
+      <h1 className="text-xl font-semibold text-fg">Add person</h1>
+      <Input label="Email" name="email" type="email" required />
+      <Input label="Full name" name="fullName" required maxLength={120} />
+      <Select label="Role" name="role" defaultValue="employee">
+        {roles.map((r) => (
+          <option key={r} value={r}>
+            {HRMS_ROLE_LABELS[r]}
+          </option>
+        ))}
+      </Select>
+      <Input label="Designation (optional)" name="designation" maxLength={100} />
+      <Input label="Department (optional)" name="department" maxLength={100} />
+      <Input
+        label="Employee code"
+        value="Assigned automatically"
+        readOnly
+        disabled
+        helperText="A unique code (EMP-0001, EMP-0002…) is given when they are added. It is permanent."
+      />
       {error && (
         <Banner tone="danger" title="Could not add person">
           {error}
         </Banner>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60"
-      >
-        {pending ? 'Adding…' : 'Add person'}
-      </button>
+      <Button type="submit" loading={pending} loadingLabel="Adding">
+        Add person
+      </Button>
     </form>
   );
 }

@@ -8,7 +8,18 @@ import { CompletionPanel } from '@/components/hrms/completion-panel';
 import { MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { ProgressBar } from '@/components/hrms/progress-bar';
 import { ProjectFlags, ProjectStatusBadge } from '@/components/hrms/project-status';
-import { Banner, ErrorState, Skeleton } from '@/components/ui';
+import {
+  Banner,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  Skeleton,
+  cardClass,
+  controlClass,
+  labelClass,
+  linkClass,
+} from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { HrmsProjectDetail, ProjectInvite } from '@/lib/hrms/types';
@@ -16,12 +27,6 @@ import type { HrmsProjectDetail, ProjectInvite } from '@/lib/hrms/types';
 function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
 }
-
-const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
-const card = 'space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4';
-const primary =
-  'rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
 
 function PeoplePicker({
   role,
@@ -63,9 +68,9 @@ function PeoplePicker({
           onClear={() => setPicked(null)}
         />
       </div>
-      <button type="submit" disabled={!picked || pending} className={primary}>
+      <Button type="submit" loading={pending} disabled={!picked}>
         {action}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -129,30 +134,27 @@ export default function ProjectDetailPage() {
   return (
     <>
       <div className="space-y-2">
-        <Link href="/projects" className="text-sm text-evergreen hover:underline">
+        <Link href="/projects" className={`text-sm ${linkClass}`}>
           ← Projects
         </Link>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-xl font-semibold text-charcoal">{p.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-fg">{p.name}</h1>
           <ProjectStatusBadge status={p.status} />
           <ProjectFlags flags={p.flags} />
         </div>
-        {p.description && <p className="text-sm text-charcoal">{p.description}</p>}
-        <p className="text-xs text-charcoal-soft">
+        {p.description && <p className="text-sm text-fg">{p.description}</p>}
+        <p className="text-xs text-fg-muted">
           {p.startDate ? `From ${p.startDate}` : ''} {p.dueDate ? `· Due ${p.dueDate}` : ''}
         </p>
         <ProgressBar progress={p.progress} />
         <p className="text-sm">
-          <Link href={`/tasks?projectId=${p.id}`} className="text-evergreen hover:underline">
+          <Link href={`/tasks?projectId=${p.id}`} className={linkClass}>
             View tasks
           </Link>
           {editable && (isCeoOrCoo || p.myRole === 'manager') && (
             <>
               {' · '}
-              <Link
-                href={`/tasks/new?projectId=${p.id}`}
-                className="text-evergreen hover:underline"
-              >
+              <Link href={`/tasks/new?projectId=${p.id}`} className={linkClass}>
                 New task
               </Link>
             </>
@@ -173,27 +175,27 @@ export default function ProjectDetailPage() {
 
       <CompletionPanel project={p} onChange={apply} />
 
-      <section className={card}>
-        <h2 className="font-medium text-charcoal">People</h2>
-        <ul className="divide-y divide-charcoal/5 text-sm">
+      <Card className="space-y-3">
+        <h2 className="font-semibold text-fg">People</h2>
+        <ul className="divide-y divide-border text-sm">
           {p.members.map((m) => (
             <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
               <span>
-                <span className="font-medium text-charcoal">{m.fullName}</span>
-                <span className="ml-2 text-charcoal-soft">{m.role}</span>
+                <span className="font-medium text-fg">{m.fullName}</span>
+                <span className="ml-2 text-fg-muted">{m.role}</span>
                 {m.isLead && (
-                  <span className="ml-2 rounded-full bg-mist px-2 py-0.5 text-xs text-forest">
+                  <span className="ml-2 rounded-full bg-primary-soft px-2 py-0.5 text-xs text-primary">
                     Project lead
                   </span>
                 )}
-                {m.ticked === true && <span className="ml-2 text-xs text-evergreen">ticked</span>}
+                {m.ticked === true && <span className="ml-2 text-xs text-success-fg">ticked</span>}
               </span>
               {editable && (
                 <span className="flex gap-3">
                   {isCeoOrCoo && m.role === 'manager' && (
                     <button
                       type="button"
-                      className="text-evergreen hover:underline"
+                      className={linkClass}
                       onClick={() =>
                         void run(
                           () =>
@@ -211,7 +213,7 @@ export default function ProjectDetailPage() {
                   {canEdit && (
                     <button
                       type="button"
-                      className="text-alert-deep hover:underline"
+                      className="font-medium text-danger-fg underline-offset-2 hover:underline"
                       onClick={() =>
                         void run(
                           () =>
@@ -230,7 +232,14 @@ export default function ProjectDetailPage() {
               )}
             </li>
           ))}
-          {p.members.length === 0 && <li className="py-2 text-charcoal-soft">Nobody yet.</li>}
+          {p.members.length === 0 && (
+            <li>
+              <EmptyState
+                title="No people yet"
+                description="Add a manager or employee to this project."
+              />
+            </li>
+          )}
         </ul>
 
         {editable && isCeoOrCoo && (
@@ -273,16 +282,16 @@ export default function ProjectDetailPage() {
           />
         )}
         {editable && p.myRole === 'manager' && !isCeoOrCoo && (
-          <p className="text-xs text-charcoal-soft">
+          <p className="text-xs text-fg-muted">
             A manager can send an invite only after an add-to-project request is approved.
           </p>
         )}
-      </section>
+      </Card>
 
       {canEdit && editable && (
         <form
           key={p.name + (p.description ?? '') + (p.dueDate ?? '')}
-          className={card}
+          className={`${cardClass} space-y-3`}
           onSubmit={(event) => {
             event.preventDefault();
             const f = new FormData(event.currentTarget);
@@ -303,51 +312,54 @@ export default function ProjectDetailPage() {
             );
           }}
         >
-          <h2 className="font-medium text-charcoal">Details</h2>
-          <label className="block space-y-1 text-sm text-charcoal">
+          <h2 className="font-semibold text-fg">Details</h2>
+          <label className={labelClass}>
             Name
-            <input name="name" defaultValue={p.name} required className={input} />
+            <input name="name" defaultValue={p.name} required className={controlClass} />
           </label>
-          <label className="block space-y-1 text-sm text-charcoal">
+          <label className={labelClass}>
             Description
             <textarea
               name="description"
               defaultValue={p.description ?? ''}
               rows={3}
-              className={input}
+              className={`${controlClass} min-h-24 resize-y`}
             />
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block space-y-1 text-sm text-charcoal">
+            <label className={labelClass}>
               Start date
               <input
                 name="startDate"
                 type="date"
                 defaultValue={p.startDate ?? ''}
-                className={input}
+                className={controlClass}
               />
             </label>
-            <label className="block space-y-1 text-sm text-charcoal">
+            <label className={labelClass}>
               Due date
-              <input name="dueDate" type="date" defaultValue={p.dueDate ?? ''} className={input} />
+              <input
+                name="dueDate"
+                type="date"
+                defaultValue={p.dueDate ?? ''}
+                className={controlClass}
+              />
             </label>
           </div>
-          <button type="submit" className={primary}>
-            Save
-          </button>
+          <Button type="submit">Save</Button>
         </form>
       )}
 
       {isCeo && p.status !== 'archived' && (
-        <section className="max-w-md space-y-2 rounded-2xl border border-alert/30 bg-alert-tint p-4">
-          <h2 className="font-medium text-alert-deep">Archive</h2>
-          <p className="text-sm text-charcoal">
+        <section className="max-w-md space-y-2 rounded-card border border-danger/30 bg-danger-soft p-5">
+          <h2 className="font-semibold text-danger-fg">Archive</h2>
+          <p className="text-sm text-fg">
             The project becomes read-only and its open tasks are cancelled automatically.
           </p>
           {confirmArchive ? (
             <div className="flex gap-2">
-              <button
-                type="button"
+              <Button
+                variant="danger"
                 onClick={() =>
                   void run(
                     () =>
@@ -358,26 +370,17 @@ export default function ProjectDetailPage() {
                     },
                   )
                 }
-                className="rounded-xl bg-alert px-4 py-2 text-sm font-medium text-white"
               >
                 Yes, archive
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmArchive(false)}
-                className="rounded-xl border border-charcoal/15 bg-white px-4 py-2 text-sm"
-              >
+              </Button>
+              <Button variant="secondary" onClick={() => setConfirmArchive(false)}>
                 Cancel
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmArchive(true)}
-              className="rounded-xl border border-alert px-4 py-2 text-sm text-alert-deep"
-            >
+            <Button variant="danger" onClick={() => setConfirmArchive(true)}>
               Archive project
-            </button>
+            </Button>
           )}
         </section>
       )}

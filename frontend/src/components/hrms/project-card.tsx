@@ -4,12 +4,20 @@ import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronDown, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
-import { AvatarStack, Button, EmptyState, ErrorState, Skeleton } from '@/components/ui';
+import {
+  AvatarStack,
+  Badge,
+  Button,
+  EmptyState,
+  ErrorState,
+  Skeleton,
+  StatusPill,
+} from '@/components/ui';
 import { ProjectFlags, ProjectStatusBadge } from '@/components/hrms/project-status';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { cn } from '@/lib/cn';
-import { TASK_STATUS_LABELS, TASK_STATUS_STYLE } from '@/lib/hrms/task-meta';
+import { TASK_STATUSES } from '@/lib/hrms/status-vocabulary';
 import type { HrmsProject, HrmsTask, Paginated, TaskStatus } from '@/lib/hrms/types';
 
 const CHIP_STATUSES: TaskStatus[] = ['todo', 'in_progress', 'in_review', 'done'];
@@ -79,9 +87,8 @@ export function StatusChips({
           key={s}
           active={value === s}
           onClick={() => onChange(value === s && !anyLabel ? '' : s)}
-          className={TASK_STATUS_STYLE[s]}
         >
-          {TASK_STATUS_LABELS[s]}
+          <StatusPill status={TASK_STATUSES[s]} />
         </Chip>
       ))}
     </div>
@@ -96,7 +103,7 @@ function Chip({
 }: {
   active: boolean;
   onClick: () => void;
-  className: string;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -138,14 +145,7 @@ export function TaskRow({ task, showProject = false }: { task: HrmsTask; showPro
           {showProject && <span className="ml-2 text-xs text-fg-subtle">{task.projectName}</span>}
         </span>
         {!done && task.status !== 'todo' && (
-          <span
-            className={cn(
-              'hidden rounded-full px-2 py-0.5 text-xs sm:inline',
-              TASK_STATUS_STYLE[task.status],
-            )}
-          >
-            {TASK_STATUS_LABELS[task.status]}
-          </span>
+          <StatusPill status={TASK_STATUSES[task.status]} className="hidden sm:inline-flex" />
         )}
         {task.assignees.length > 0 && (
           <AvatarStack people={task.assignees.map((a) => ({ name: a.fullName }))} max={2} />
@@ -183,11 +183,7 @@ export function ProjectCard({ project: p }: { project: HrmsProject }) {
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-fg-muted">
               <ProjectStatusBadge status={p.status} />
               {p.dueDate && <span>Due {p.dueDate}</span>}
-              {p.iAmLead && (
-                <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs text-primary">
-                  Lead
-                </span>
-              )}
+              {p.iAmLead && <Badge tone="primary">Lead</Badge>}
               <ProjectFlags flags={p.flags} />
             </div>
           </div>

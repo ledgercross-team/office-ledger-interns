@@ -3,7 +3,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Banner, EmptyState, ErrorState, Skeleton, useToast } from '@/components/ui';
+import {
+  Banner,
+  Button,
+  EmptyState,
+  ErrorState,
+  Skeleton,
+  cardClass,
+  controlClass,
+  labelClass,
+  useToast,
+} from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { InviteStatus, ProjectInvite } from '@/lib/hrms/types';
@@ -21,13 +31,6 @@ const STATUS_TEXT: Record<InviteStatus, string> = {
   overruled: 'Your decline was overruled. You are on the project.',
   expired: 'Expired',
 };
-
-const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
-const primary =
-  'rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
-const secondary =
-  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
 
 function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
@@ -57,61 +60,54 @@ function ReceivedItem({ invite, onDone }: { invite: ProjectInvite; onDone: () =>
   });
 
   return (
-    <li className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-4">
+    <li className={`${cardClass} space-y-2`}>
       <p className="text-sm">
-        <span className="font-medium text-charcoal">{invite.invitedBy.fullName}</span> invited you
-        to{' '}
+        <span className="font-medium text-fg">{invite.invitedBy.fullName}</span> invited you to{' '}
         <Link
           href={`/projects/${invite.project.id}`}
-          className="font-medium text-forest hover:underline"
+          className="font-medium text-primary underline-offset-2 hover:underline"
         >
           {invite.project.name}
         </Link>
       </p>
-      <p className="text-xs text-charcoal-soft">{STATUS_TEXT[invite.status]}</p>
+      <p className="text-xs text-fg-muted">{STATUS_TEXT[invite.status]}</p>
       {invite.reviewReason && (
-        <p className="text-sm text-charcoal">
+        <p className="text-sm text-fg">
           Reason from {invite.invitedBy.fullName}: &ldquo;{invite.reviewReason}&rdquo;
         </p>
       )}
       {invite.status === 'pending' && !declining && (
         <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={accept.isPending}
-            onClick={() => accept.mutate()}
-            className={primary}
-          >
+          <Button loading={accept.isPending} onClick={() => accept.mutate()}>
             Accept
-          </button>
-          <button type="button" onClick={() => setDeclining(true)} className={secondary}>
+          </Button>
+          <Button variant="secondary" onClick={() => setDeclining(true)}>
             Decline
-          </button>
+          </Button>
         </div>
       )}
       {declining && (
         <div className="space-y-2">
-          <label className="block space-y-1 text-sm text-charcoal">
+          <label className={labelClass}>
             Why are you declining? (required)
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={2}
-              className={input}
+              className={`${controlClass} min-h-24 resize-y`}
             />
           </label>
           <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={reason.trim().length === 0 || decline.isPending}
+            <Button
+              disabled={reason.trim().length === 0}
+              loading={decline.isPending}
               onClick={() => decline.mutate()}
-              className={primary}
             >
               Send decline
-            </button>
-            <button type="button" onClick={() => setDeclining(false)} className={secondary}>
+            </Button>
+            <Button variant="secondary" onClick={() => setDeclining(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -140,56 +136,50 @@ function ReviewItem({ invite, onDone }: { invite: ProjectInvite; onDone: () => v
   });
 
   return (
-    <li className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-4">
+    <li className={`${cardClass} space-y-2`}>
       <p className="text-sm">
-        <span className="font-medium text-charcoal">{invite.invitee.fullName}</span> declined your
-        invite to{' '}
+        <span className="font-medium text-fg">{invite.invitee.fullName}</span> declined your invite
+        to{' '}
         <Link
           href={`/projects/${invite.project.id}`}
-          className="font-medium text-forest hover:underline"
+          className="font-medium text-primary underline-offset-2 hover:underline"
         >
           {invite.project.name}
         </Link>
       </p>
-      <p className="text-sm text-charcoal">&ldquo;{invite.declineReason}&rdquo;</p>
+      <p className="text-sm text-fg">&ldquo;{invite.declineReason}&rdquo;</p>
       {!overruling && (
         <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={review.isPending}
-            onClick={() => review.mutate({ decision: 'accept' })}
-            className={primary}
-          >
+          <Button loading={review.isPending} onClick={() => review.mutate({ decision: 'accept' })}>
             Accept the decline
-          </button>
-          <button type="button" onClick={() => setOverruling(true)} className={secondary}>
+          </Button>
+          <Button variant="secondary" onClick={() => setOverruling(true)}>
             Overrule
-          </button>
+          </Button>
         </div>
       )}
       {overruling && (
         <div className="space-y-2">
-          <label className="block space-y-1 text-sm text-charcoal">
+          <label className={labelClass}>
             Reason for overruling (they will see it)
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={2}
-              className={input}
+              className={`${controlClass} min-h-24 resize-y`}
             />
           </label>
           <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={reason.trim().length === 0 || review.isPending}
+            <Button
+              disabled={reason.trim().length === 0}
+              loading={review.isPending}
               onClick={() => review.mutate({ decision: 'overrule', reason: reason.trim() })}
-              className={primary}
             >
               Overrule and add to the project
-            </button>
-            <button type="button" onClick={() => setOverruling(false)} className={secondary}>
+            </Button>
+            <Button variant="secondary" onClick={() => setOverruling(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -226,7 +216,7 @@ export default function InvitesPage() {
 
   return (
     <>
-      <h1 className="text-xl font-semibold text-charcoal">Invites</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-fg">Invites</h1>
       {invites.isLoading && (
         <div className="space-y-3" aria-label="Loading invites">
           {[1, 2, 3].map((item) => (
@@ -244,7 +234,7 @@ export default function InvitesPage() {
 
       {toReview.length > 0 && (
         <section className="space-y-2">
-          <h2 className="font-medium text-charcoal">Declines waiting for your review</h2>
+          <h2 className="font-semibold text-fg">Declines waiting for your review</h2>
           <ul className="space-y-3">
             {toReview.map((i) => (
               <ReviewItem key={i.id} invite={i} onDone={done} />
@@ -255,7 +245,7 @@ export default function InvitesPage() {
 
       {session?.role !== 'ceo' && session?.role !== 'coo' && (
         <section className="space-y-2">
-          <h2 className="font-medium text-charcoal">Invites to you</h2>
+          <h2 className="font-semibold text-fg">Invites to you</h2>
           {invites.data && received.length === 0 && (
             <EmptyState
               title="No invites"

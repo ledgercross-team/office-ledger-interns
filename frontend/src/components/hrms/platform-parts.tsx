@@ -2,19 +2,25 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
-import { Banner, ErrorState, Skeleton } from '@/components/ui';
+import {
+  Banner,
+  ErrorState,
+  Skeleton,
+  cardClass,
+  controlClass,
+  labelClass,
+  primaryActionClass,
+  secondaryActionClass,
+} from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { PersonManager } from '@/components/hrms/platform-people';
 import type { PlatformGameMaster, PlatformOrg, PlatformRequest } from '@/lib/hrms/types';
 
-const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
-const primary =
-  'rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
-const secondary =
-  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
-const card = 'space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4';
+const input = controlClass;
+const primary = primaryActionClass;
+const secondary = secondaryActionClass;
+const card = `space-y-3 ${cardClass}`;
 
 function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
@@ -76,10 +82,10 @@ function CeoPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
           )}
           <ul className="space-y-2">
             {list.data?.items.map((c) => (
-              <li key={c.memberId} className="space-y-2 rounded-xl border border-charcoal/10 p-3">
-                <p className="text-sm text-charcoal">
+              <li key={c.memberId} className="space-y-2 rounded-control border border-border p-3">
+                <p className="text-sm text-fg">
                   {c.fullName}{' '}
-                  <span className="text-xs text-charcoal-soft">
+                  <span className="text-xs text-fg-muted">
                     {c.email} · {c.status}
                   </span>
                 </p>
@@ -98,7 +104,7 @@ function CeoPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
             ))}
           </ul>
           {activeCount === 1 && (
-            <p className="text-xs text-charcoal-soft">
+            <p className="text-xs text-fg-muted">
               This is the organisation&apos;s only active CEO, so it cannot be removed here. Use a
               last-CEO removal request.
             </p>
@@ -114,15 +120,15 @@ function OrgRow({ org, plans, onDone }: { org: PlatformOrg; plans: string[]; onD
   const [reason, setReason] = useState('');
   const { mutation, error } = useAction(onDone);
   return (
-    <li className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-3">
-      <p className="text-sm text-charcoal">
+    <li className="space-y-2 rounded-card border border-border bg-surface p-3">
+      <p className="text-sm text-fg">
         <span className="font-medium">{org.name}</span> · {org.status} · {org.planCode} · seats{' '}
         {org.seatsUsed}/{org.seatLimit}
       </p>
-      <p className="text-xs text-charcoal-soft">
+      <p className="text-xs text-fg-muted">
         {org.ceoCount} CEO, {org.cooCount} COO
         {org.overThreshold && (
-          <span className="ml-2 text-alert-deep">More than 25 CEOs and COOs</span>
+          <span className="ml-2 text-danger-fg">More than 25 CEOs and COOs</span>
         )}
       </p>
       <CeoPanel orgId={org.id} orgName={org.name} />
@@ -228,16 +234,16 @@ export function Orgs() {
 
   return (
     <section className="space-y-3">
-      <h2 className="font-medium text-charcoal">Organisations</h2>
-      <p className="text-xs text-charcoal-soft">Counts only. No organisation data is shown here.</p>
+      <h2 className="font-medium text-fg">Organisations</h2>
+      <p className="text-xs text-fg-muted">Counts only. No organisation data is shown here.</p>
       <ul className="space-y-2">
         {orgs.data?.items.map((o) => (
           <OrgRow key={o.id} org={o} plans={planCodes} onDone={refresh} />
         ))}
       </ul>
       <form onSubmit={onCreate} className={`${card} max-w-lg`}>
-        <h3 className="text-sm font-medium text-charcoal">New organisation</h3>
-        <label htmlFor="new-org-name" className="block space-y-1 text-sm text-charcoal">
+        <h3 className="text-sm font-medium text-fg">New organisation</h3>
+        <label htmlFor="new-org-name" className={labelClass}>
           Organisation name
           <input
             id="new-org-name"
@@ -247,7 +253,7 @@ export function Orgs() {
             className={input}
           />
         </label>
-        <label htmlFor="new-org-plan" className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="new-org-plan" className={labelClass}>
           Plan
           <select id="new-org-plan" name="plan" required className={input}>
             {planCodes.map((p) => (
@@ -257,7 +263,7 @@ export function Orgs() {
             ))}
           </select>
         </label>
-        <label htmlFor="new-org-ceo-name" className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="new-org-ceo-name" className={labelClass}>
           CEO full name
           <input
             id="new-org-ceo-name"
@@ -267,7 +273,7 @@ export function Orgs() {
             className={input}
           />
         </label>
-        <label htmlFor="new-org-email" className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="new-org-email" className={labelClass}>
           CEO email
           <input
             id="new-org-email"
@@ -298,23 +304,23 @@ export function Requests() {
   );
   return (
     <section className="space-y-3">
-      <h2 className="font-medium text-charcoal">Recovery and CEO removal</h2>
-      <p className="text-xs text-charcoal-soft">
+      <h2 className="font-medium text-fg">Recovery and CEO removal</h2>
+      <p className="text-xs text-fg-muted">
         Check the person offline before verifying. A verified recovery sends a one-time link to the
         new address.
       </p>
       {list.data && list.data.items.length === 0 && (
-        <p className="text-sm text-charcoal-soft">No requests.</p>
+        <p className="text-sm text-fg-muted">No requests.</p>
       )}
       <ul className="space-y-2">
         {list.data?.items.map((r) => (
-          <li key={r.id} className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-3">
-            <p className="text-sm text-charcoal">
+          <li key={r.id} className="space-y-2 rounded-card border border-border bg-surface p-3">
+            <p className="text-sm text-fg">
               {r.orgName}:{' '}
               {r.type === 'ceo_recovery'
                 ? `recover CEO access to ${r.newEmail}`
                 : 'replace the last CEO'}{' '}
-              <span className="text-xs text-charcoal-soft">({r.status})</span>
+              <span className="text-xs text-fg-muted">({r.status})</span>
             </p>
             <div className="flex gap-2">
               {r.status === 'pending' && (
@@ -378,16 +384,16 @@ export function GameMasters() {
 
   return (
     <section className="space-y-3">
-      <h2 className="font-medium text-charcoal">GameMasters</h2>
+      <h2 className="font-medium text-fg">GameMasters</h2>
       <ul className="space-y-2">
         {list.data?.items.map((g) => (
           <li
             key={g.userId}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-charcoal/10 bg-white p-3"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-border bg-surface p-3"
           >
-            <span className="text-sm text-charcoal">
+            <span className="text-sm text-fg">
               {g.fullName}{' '}
-              <span className="text-xs text-charcoal-soft">
+              <span className="text-xs text-fg-muted">
                 {g.email} · {g.status.replace('_', ' ')}
               </span>
             </span>
@@ -420,14 +426,10 @@ export function GameMasters() {
         ))}
       </ul>
       {issued && (
-        <div role="status" className={`${card} max-w-lg border-forest/30`}>
-          <h3 className="text-sm font-medium text-charcoal">
-            Temporary password for {issued.email}
-          </h3>
-          <p className="font-mono text-base tabular-nums text-charcoal select-all">
-            {issued.password}
-          </p>
-          <p className="text-xs text-charcoal-soft">
+        <div role="status" className={`${card} max-w-lg border-success/30 bg-success-soft`}>
+          <h3 className="text-sm font-medium text-fg">Temporary password for {issued.email}</h3>
+          <p className="select-all font-mono text-base tabular-nums text-fg">{issued.password}</p>
+          <p className="text-xs text-fg-muted">
             Give this to them yourself. It is shown only now. They must choose their own password
             the first time they sign in, after another gameMaster confirms them.
           </p>
@@ -437,11 +439,11 @@ export function GameMasters() {
         </div>
       )}
       <form onSubmit={onCreate} className={`${card} max-w-lg`}>
-        <h3 className="text-sm font-medium text-charcoal">Add a gameMaster</h3>
-        <p className="text-xs text-charcoal-soft">
+        <h3 className="text-sm font-medium text-fg">Add a gameMaster</h3>
+        <p className="text-xs text-fg-muted">
           An active gameMaster other than them must confirm them before they can sign in.
         </p>
-        <label htmlFor="new-gamemaster-name" className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="new-gamemaster-name" className={labelClass}>
           Full name
           <input
             id="new-gamemaster-name"
@@ -451,7 +453,7 @@ export function GameMasters() {
             className={input}
           />
         </label>
-        <label htmlFor="new-gamemaster-email" className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="new-gamemaster-email" className={labelClass}>
           Email
           <input
             id="new-gamemaster-email"
