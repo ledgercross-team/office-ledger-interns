@@ -80,6 +80,7 @@ describe('role navigation', () => {
       '/leave',
       '/calendar',
       '/ratings',
+      '/performance',
     ]);
     expect(navItemsFor('manager').map((i) => i.href)).toContain('/people');
     expect(navItemsFor('manager').map((i) => i.href)).toContain('/ratings');

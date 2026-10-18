@@ -4,7 +4,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/hrms/role-gate';
 import { SeatBar } from '@/components/hrms/seat-bar';
-import { ConfirmDialog, TimezoneSelect } from '@/components/ui';
+import {
+  Banner,
+  Button,
+  Card,
+  ConfirmDialog,
+  ErrorState,
+  PageHeader,
+  Skeleton,
+  TimezoneSelect,
+} from '@/components/ui';
 import { MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
@@ -21,10 +30,10 @@ const DAYS = [
 ] as const;
 
 const input =
-  'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen disabled:bg-offwhite';
-const card = 'space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4';
-const button =
-  'rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
+  'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-fg-subtle';
+const card = 'space-y-4 rounded-card border border-border bg-surface p-5 text-fg';
+const inlineButton =
+  'inline-flex min-h-9 items-center justify-center rounded-full border border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50';
 
 function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
@@ -36,20 +45,27 @@ function Num({
   value,
   disabled,
   step,
+  min,
+  max,
 }: {
   name: string;
   label: string;
   value: number;
   disabled: boolean;
   step?: string;
+  min?: number;
+  max?: number;
 }) {
   return (
-    <label className="block space-y-1 text-sm text-charcoal">
+    <label htmlFor={`org-${name}`} className="block space-y-1.5 text-sm font-medium text-fg">
       {label}
       <input
+        id={`org-${name}`}
         name={name}
         type="number"
         step={step ?? '1'}
+        min={min}
+        max={max}
         defaultValue={value}
         disabled={disabled}
         className={input}
@@ -62,6 +78,13 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [weightTotal, setWeightTotal] = useState(
+    settings.weightAttendance +
+      settings.weightRating +
+      settings.weightOntime +
+      settings.weightLeave,
+  );
+  const [weightError, setWeightError] = useState<string | null>(null);
 
   const save = useMutation({
     mutationFn: (body: Record<string, unknown>) =>
@@ -77,11 +100,42 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
     },
   });
 
+  function readWeights(form: HTMLFormElement) {
+    const values = ['weightAttendance', 'weightRating', 'weightOntime', 'weightLeave'].map((key) =>
+      Number(new FormData(form).get(key) ?? 0),
+    );
+    return { values, total: values.reduce((sum, value) => sum + value, 0) };
+  }
+
+  function onChange(event: FormEvent<HTMLFormElement>) {
+    const { values, total } = readWeights(event.currentTarget);
+    setWeightTotal(total);
+    setSaved(false);
+    setWeightError(
+      values.some((value) => value < 0)
+        ? 'Weights cannot be negative.'
+        : total === 100
+          ? null
+          : `Weights must add up to 100%. Current total: ${total}%.`,
+    );
+  }
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const f = new FormData(event.currentTarget);
     const n = (key: string) => Number(f.get(key));
+    const weights = readWeights(event.currentTarget);
+    if (weights.values.some((value) => value < 0) || weights.total !== 100) {
+      setWeightTotal(weights.total);
+      setWeightError(
+        weights.values.some((value) => value < 0)
+          ? 'Weights cannot be negative.'
+          : `Weights must add up to 100%. Current total: ${weights.total}%.`,
+      );
+      return;
+    }
     setSaved(false);
+    setWeightError(null);
     save.mutate({
       timezone: String(f.get('timezone')),
       workStartTime: String(f.get('workStartTime')),
@@ -100,8 +154,13 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
 
   const disabled = !canEdit;
   return (
-    <form onSubmit={onSubmit} className={card}>
-      <h2 className="font-medium text-charcoal">Working time</h2>
+    <form onSubmit={onSubmit} onChange={onChange} className={card}>
+      <div>
+        <h2 className="text-lg font-semibold text-fg">Working time</h2>
+        <p className="mt-1 text-sm text-fg-muted">
+          Set the office clock used for attendance, late check-ins, and weekend calculations.
+        </p>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <TimezoneSelect
@@ -113,7 +172,7 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
             disabled={disabled}
           />
         </div>
-        <label htmlFor="work-start-time" className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="work-start-time" className="block space-y-1.5 text-sm font-medium text-fg">
           Work starts
           <input
             id="work-start-time"
@@ -132,10 +191,10 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
         />
       </div>
       <fieldset className="space-y-1">
-        <legend className="text-sm text-charcoal">Weekend days</legend>
+        <legend className="text-sm font-medium text-fg">Weekend days</legend>
         <div className="flex flex-wrap gap-3">
           {DAYS.map(([d, label]) => (
-            <label key={d} className="flex items-center gap-1 text-sm text-charcoal">
+            <label key={d} className="flex items-center gap-1 text-sm text-fg">
               <input
                 type="checkbox"
                 name={`day${d}`}
@@ -148,7 +207,12 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
         </div>
       </fieldset>
 
-      <h2 className="pt-2 font-medium text-charcoal">Workload colours</h2>
+      <div className="border-t border-border pt-5">
+        <h2 className="text-lg font-semibold text-fg">Workload colours</h2>
+        <p className="mt-1 text-sm text-fg-muted">
+          Thresholds control when the workload badges change from healthy to busy or overloaded.
+        </p>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <Num
           name="workloadAmberTasks"
@@ -176,43 +240,85 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
         />
       </div>
 
-      <h2 className="pt-2 font-medium text-charcoal">
-        Performance score weights (must add up to 100)
-      </h2>
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="border-t border-border pt-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-fg">Performance score weights</h2>
+            <p className="mt-1 max-w-2xl text-sm text-fg-muted">
+              These weights are used by the nightly score calculation. They must total exactly 100%.
+            </p>
+          </div>
+          <span
+            role="status"
+            aria-live="polite"
+            className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+              weightTotal === 100
+                ? 'border-success/30 bg-success-soft text-success-fg'
+                : 'border-danger/30 bg-danger-soft text-danger-fg'
+            }`}
+          >
+            {weightTotal}% total
+          </span>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Num
           name="weightAttendance"
           label="Attendance"
           value={settings.weightAttendance}
           disabled={disabled}
+          min={0}
+          max={100}
         />
         <Num
           name="weightRating"
           label="Ratings"
           value={settings.weightRating}
           disabled={disabled}
+          min={0}
+          max={100}
         />
         <Num
           name="weightOntime"
           label="On-time tasks"
           value={settings.weightOntime}
           disabled={disabled}
+          min={0}
+          max={100}
         />
-        <Num name="weightLeave" label="Leave" value={settings.weightLeave} disabled={disabled} />
+        <Num
+          name="weightLeave"
+          label="Leave"
+          value={settings.weightLeave}
+          disabled={disabled}
+          min={0}
+          max={100}
+        />
       </div>
 
+      {weightError && (
+        <p role="alert" className="text-sm text-danger-fg">
+          {weightError}
+        </p>
+      )}
+
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {error}
         </p>
       )}
       {canEdit && (
         <div className="flex items-center gap-3">
-          <button type="submit" disabled={save.isPending} className={button}>
+          <Button
+            type="submit"
+            loading={save.isPending}
+            disabled={weightTotal !== 100 || weightError !== null}
+            loadingLabel="Saving"
+          >
             Save settings
-          </button>
+          </Button>
           {saved && (
-            <span role="status" className="text-sm text-evergreen">
+            <span role="status" className="text-sm font-medium text-success-fg">
               Saved
             </span>
           )}
@@ -248,21 +354,24 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
 
   return (
     <section className={card}>
-      <h2 className="font-medium text-charcoal">Office IP addresses</h2>
-      <p className="text-sm text-charcoal-soft">
-        Check-in is accepted only from these addresses. Add at least one before anyone can check in.
-      </p>
+      <div>
+        <h2 className="text-lg font-semibold text-fg">Office IP addresses</h2>
+        <p className="mt-1 text-sm text-fg-muted">
+          Check-in is accepted only from these addresses. Add at least one before anyone can check
+          in.
+        </p>
+      </div>
       <ul className="space-y-1 text-sm">
         {list.data?.items.map((n) => (
           <li key={n.id} className="flex items-center justify-between gap-2">
             <span>
               <span className="font-mono">{n.network}</span>
-              {n.label && <span className="ml-2 text-charcoal-soft">{n.label}</span>}
+              {n.label && <span className="ml-2 text-fg-muted">{n.label}</span>}
             </span>
             {canEdit && (
               <ConfirmDialog
                 trigger={
-                  <button type="button" className="text-alert-deep hover:underline">
+                  <button type="button" className="text-sm text-danger-fg hover:underline">
                     Remove
                   </button>
                 }
@@ -276,7 +385,7 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
           </li>
         ))}
         {list.data?.items.length === 0 && (
-          <li className="text-charcoal-soft">None set: check-in is currently disabled.</li>
+          <li className="text-sm text-fg-muted">None set: check-in is currently disabled.</li>
         )}
       </ul>
       {canEdit && (
@@ -309,13 +418,13 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
             placeholder="Label (optional)"
             className={`${input} max-w-48`}
           />
-          <button type="submit" className={button}>
+          <button type="submit" className={inlineButton}>
             Add
           </button>
         </form>
       )}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {error}
         </p>
       )}
@@ -348,17 +457,22 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
 
   return (
     <section className={card}>
-      <h2 className="font-medium text-charcoal">Holidays</h2>
+      <div>
+        <h2 className="text-lg font-semibold text-fg">Holidays</h2>
+        <p className="mt-1 text-sm text-fg-muted">
+          Dates excluded from working-day attendance calculations.
+        </p>
+      </div>
       <ul className="space-y-1 text-sm">
         {list.data?.items.map((h) => (
           <li key={h.date} className="flex items-center justify-between gap-2">
             <span>
-              {h.date} <span className="ml-2 text-charcoal-soft">{h.name}</span>
+              {h.date} <span className="ml-2 text-fg-muted">{h.name}</span>
             </span>
             {canEdit && (
               <ConfirmDialog
                 trigger={
-                  <button type="button" className="text-alert-deep hover:underline">
+                  <button type="button" className="text-sm text-danger-fg hover:underline">
                     Remove
                   </button>
                 }
@@ -371,7 +485,7 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
             )}
           </li>
         ))}
-        {list.data?.items.length === 0 && <li className="text-charcoal-soft">None yet.</li>}
+        {list.data?.items.length === 0 && <li className="text-sm text-fg-muted">None yet.</li>}
       </ul>
       {canEdit && (
         <form
@@ -403,13 +517,13 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
             placeholder="Name"
             className={`${input} max-w-48`}
           />
-          <button type="submit" className={button}>
+          <button type="submit" className={inlineButton}>
             Add
           </button>
         </form>
       )}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {error}
         </p>
       )}
@@ -447,16 +561,21 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
 
   return (
     <section className={card}>
-      <h2 className="font-medium text-charcoal">Leave types and yearly allowances</h2>
+      <div>
+        <h2 className="text-lg font-semibold text-fg">Leave types and yearly allowances</h2>
+        <p className="mt-1 text-sm text-fg-muted">
+          Maintain the leave options and yearly allowance available to people.
+        </p>
+      </div>
       <ul className="space-y-2 text-sm">
         {list.data?.items.map((t) => (
           <li key={t.id} className="flex flex-wrap items-center gap-3">
             <span
-              className={`min-w-24 font-medium ${t.isActive ? '' : 'text-charcoal-soft line-through'}`}
+              className={`min-w-24 font-medium ${t.isActive ? '' : 'text-fg-muted line-through'}`}
             >
               {t.name}
             </span>
-            <span className="text-charcoal-soft">{t.isPaid ? 'paid' : 'unpaid'}</span>
+            <span className="text-fg-muted">{t.isPaid ? 'paid' : 'unpaid'}</span>
             <label className="flex items-center gap-1">
               <input
                 type="number"
@@ -479,7 +598,7 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
               (t.isActive ? (
                 <ConfirmDialog
                   trigger={
-                    <button type="button" className="text-evergreen hover:underline">
+                    <button type="button" className="text-sm text-primary hover:underline">
                       Disable
                     </button>
                   }
@@ -493,7 +612,7 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
                 <button
                   type="button"
                   onClick={() => patch.mutate({ id: t.id, body: { isActive: true } })}
-                  className="text-evergreen hover:underline"
+                  className="text-sm text-primary hover:underline"
                   disabled={patch.isPending}
                 >
                   Enable
@@ -551,13 +670,13 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
           <label className="flex items-center gap-1 text-sm">
             <input id="leave-type-paid" type="checkbox" name="paid" defaultChecked /> Paid
           </label>
-          <button type="submit" className={button}>
+          <button type="submit" className={inlineButton}>
             Add type
           </button>
         </form>
       )}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {error}
         </p>
       )}
@@ -598,10 +717,10 @@ function RecoveryCard({ role }: { role: 'ceo' | 'coo' }) {
 
   return (
     <form onSubmit={onSubmit} className={card}>
-      <h2 className="font-medium text-charcoal">
+      <h2 className="text-lg font-semibold text-fg">
         {role === 'coo' ? "Recover a CEO's access" : 'Hand over as CEO'}
       </h2>
-      <p className="text-sm text-charcoal-soft">
+      <p className="text-sm text-fg-muted">
         {role === 'coo'
           ? 'The platform team checks the person offline, then sends a one-time link to the new address.'
           : 'Choose who takes over. The platform team verifies the request, then you are replaced.'}
@@ -616,7 +735,7 @@ function RecoveryCard({ role }: { role: 'ceo' | 'coo' }) {
         onClear={() => setPerson(null)}
       />
       {role === 'coo' && (
-        <label htmlFor="recovery-email" className="block space-y-1 text-sm text-charcoal">
+        <label htmlFor="recovery-email" className="block space-y-1.5 text-sm font-medium text-fg">
           New verified email
           <input
             id="recovery-email"
@@ -629,12 +748,12 @@ function RecoveryCard({ role }: { role: 'ceo' | 'coo' }) {
         </label>
       )}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {error}
         </p>
       )}
-      {done && <p className="text-sm text-forest">Request sent to the platform team.</p>}
-      <button type="submit" className={button}>
+      {done && <p className="text-sm text-success-fg">Request sent to the platform team.</p>}
+      <button type="submit" className={inlineButton}>
         Send request
       </button>
     </form>
@@ -667,16 +786,21 @@ function ExportCard() {
 
   return (
     <section className={card}>
-      <h2 className="font-medium text-charcoal">Export all data</h2>
-      <p className="text-sm text-charcoal-soft">
+      <h2 className="text-lg font-semibold text-fg">Export all data</h2>
+      <p className="text-sm text-fg-muted">
         Downloads everything the organisation holds. It stays available for 15 days after a
         suspension.
       </p>
-      <button type="button" disabled={pending} onClick={() => void download()} className={button}>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => void download()}
+        className={inlineButton}
+      >
         {pending ? 'Preparing…' : 'Download export'}
       </button>
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <p role="alert" className="text-sm text-danger-fg">
           {error}
         </p>
       )}
@@ -687,36 +811,81 @@ function ExportCard() {
 function SettingsContent() {
   const { session } = useHrmsAuth();
   const canEdit = session?.role === 'ceo';
+  const canManageNetworks = session?.role === 'ceo' || session?.role === 'coo';
   const org = useQuery({
     queryKey: ['hrms', 'org', session?.activeMemberId],
     queryFn: () => hrmsFetch<HrmsOrg>('/org'),
   });
 
   return (
-    <>
-      <h1 className="text-xl font-semibold text-charcoal">Organisation settings</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Organisation settings"
+        description="Keep working rules, check-in networks, leave policy, and account controls in one place."
+      />
+
       {!canEdit && (
-        <p className="text-sm text-charcoal-soft">Only the CEO can change these settings.</p>
+        <Banner tone="info" title="Limited settings access">
+          CEO controls organisation-wide rules, leave policy, and exports. CEOs and COOs can manage
+          office check-in networks.
+        </Banner>
       )}
-      {org.data?.seats && (
-        <section className={card}>
-          <SeatBar seats={org.data.seats} />
-          <p className="text-sm text-charcoal-soft">Plan: {org.data.seats.planCode}</p>
-        </section>
+
+      {org.isLoading && (
+        <div className="space-y-4" aria-label="Loading organisation settings">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-72" />
+          <div className="grid gap-5 xl:grid-cols-2">
+            <Skeleton className="h-52" />
+            <Skeleton className="h-52" />
+          </div>
+        </div>
       )}
-      {org.data && (
-        <SettingsForm
-          key={JSON.stringify(org.data.settings)}
-          settings={org.data.settings}
-          canEdit={canEdit}
+
+      {org.error && (
+        <ErrorState
+          title="Could not load organisation settings"
+          message={(org.error as Error).message}
+          onRetry={() => void org.refetch()}
         />
       )}
-      <NetworksCard canEdit={session?.role === 'ceo' || session?.role === 'coo'} />
-      <HolidaysCard canEdit={canEdit} />
-      <LeaveTypesCard canEdit={canEdit} />
-      {session?.role === 'ceo' && <ExportCard />}
-      {(session?.role === 'ceo' || session?.role === 'coo') && <RecoveryCard role={session.role} />}
-    </>
+
+      {org.data && (
+        <>
+          {org.data.seats && (
+            <Card className="space-y-3">
+              <div>
+                <h2 className="font-semibold text-fg">Plan and seats</h2>
+                <p className="mt-1 text-sm text-fg-muted">
+                  Current organisation capacity and usage.
+                </p>
+              </div>
+              <SeatBar seats={org.data.seats} />
+              <p className="text-sm text-fg-muted">Plan: {org.data.seats.planCode}</p>
+            </Card>
+          )}
+
+          <SettingsForm
+            key={JSON.stringify(org.data.settings)}
+            settings={org.data.settings}
+            canEdit={canEdit}
+          />
+
+          <div className="grid gap-5 xl:grid-cols-2">
+            <NetworksCard canEdit={canManageNetworks} />
+            <HolidaysCard canEdit={canEdit} />
+            <LeaveTypesCard canEdit={canEdit} />
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-2">
+            {(session?.role === 'ceo' || session?.role === 'coo') && (
+              <RecoveryCard role={session.role} />
+            )}
+            {session?.role === 'ceo' && <ExportCard />}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
