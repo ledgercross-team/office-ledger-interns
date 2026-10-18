@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronDown, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
-import { AvatarStack, Button } from '@/components/ui';
+import { AvatarStack, Button, EmptyState, ErrorState, Skeleton } from '@/components/ui';
 import { ProjectFlags, ProjectStatusBadge } from '@/components/hrms/project-status';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
@@ -220,16 +220,28 @@ export function ProjectCard({ project: p }: { project: HrmsProject }) {
           <div className="overflow-hidden">
             <div className="mt-4 space-y-3 border-t border-border pt-4">
               <StatusChips value={status} onChange={setStatus} />
-              {tasks.isLoading && <p className="px-3 text-sm text-fg-muted">Loading tasks…</p>}
+              {tasks.isLoading && (
+                <div className="space-y-2 px-3" aria-label="Loading project tasks">
+                  <Skeleton className="h-9" />
+                  <Skeleton className="h-9" />
+                </div>
+              )}
               {tasks.error && (
-                <p role="alert" className="px-3 text-sm text-danger-fg">
-                  Could not load tasks.
-                </p>
+                <ErrorState
+                  title="Could not load tasks"
+                  message="The project tasks could not be loaded."
+                  onRetry={() => void tasks.refetch()}
+                />
               )}
               {tasks.data && shown.length === 0 && (
-                <p className="px-3 text-sm text-fg-muted">
-                  {tasks.data.items.length === 0 ? 'No tasks yet.' : 'No tasks with this status.'}
-                </p>
+                <EmptyState
+                  title={tasks.data.items.length === 0 ? 'No tasks yet' : 'No matching tasks'}
+                  description={
+                    tasks.data.items.length === 0
+                      ? 'Add a task to start tracking work on this project.'
+                      : 'Try another status filter.'
+                  }
+                />
               )}
               <ul className="-mx-1">
                 {shown.map((t) => (

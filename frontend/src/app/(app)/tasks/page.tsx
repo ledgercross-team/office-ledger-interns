@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { Button, Pagination } from '@/components/ui';
+import { Button, EmptyState, ErrorState, Pagination, Skeleton } from '@/components/ui';
 import { StatusChips, TaskRow } from '@/components/hrms/project-card';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -130,11 +130,19 @@ function TasksList() {
         statuses={['todo', 'in_progress', 'in_review', 'done', 'blocked', 'cancelled']}
       />
 
-      {tasks.isLoading && <p className="text-sm text-fg-muted">Loading…</p>}
+      {tasks.isLoading && (
+        <div className="space-y-2" aria-label="Loading tasks">
+          {[1, 2, 3, 4].map((item) => (
+            <Skeleton key={item} className="h-12" />
+          ))}
+        </div>
+      )}
       {tasks.error && (
-        <p role="alert" className="text-sm text-danger-fg">
-          {(tasks.error as Error).message}
-        </p>
+        <ErrorState
+          title="Could not load tasks"
+          message={(tasks.error as Error).message}
+          onRetry={() => void tasks.refetch()}
+        />
       )}
 
       {tasks.data && tasks.data.items.length > 0 && (
@@ -144,7 +152,19 @@ function TasksList() {
           ))}
         </ul>
       )}
-      {tasks.data?.items.length === 0 && <p className="text-sm text-fg-muted">No tasks match.</p>}
+      {tasks.data?.items.length === 0 && (
+        <EmptyState
+          title="No tasks match"
+          description="Try changing the filters or create a new task."
+          action={
+            canCreate ? (
+              <Button asChild>
+                <Link href="/tasks/new">New task</Link>
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
 
       {tasks.data && (
         <Pagination

@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { SecurityCard } from '@/components/hrms/security-card';
-import { Avatar, Card } from '@/components/ui';
+import { Avatar, Card, ErrorState, Skeleton } from '@/components/ui';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatDate, formatDateTime } from '@/lib/hrms/time';
@@ -25,6 +25,15 @@ export default function ProfilePage() {
     enabled: Boolean(session?.activeMemberId),
   });
   if (!session) return null;
+  if (member.isLoading) {
+    return (
+      <div className="mx-auto max-w-[768px] space-y-4" aria-label="Loading profile">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
   const m = member.data;
   return (
     <div className="mx-auto max-w-[768px] space-y-6">
@@ -57,9 +66,13 @@ export default function ProfilePage() {
           <Field label="Status" value={m ? m.status[0].toUpperCase() + m.status.slice(1) : null} />
         </dl>
         {member.error && (
-          <p role="alert" className="mt-4 text-sm text-danger-fg">
-            Could not load all profile details.
-          </p>
+          <div className="mt-4">
+            <ErrorState
+              title="Could not load profile details"
+              message="Some profile information is unavailable."
+              onRetry={() => void member.refetch()}
+            />
+          </div>
         )}
       </Card>
       <SecurityCard />

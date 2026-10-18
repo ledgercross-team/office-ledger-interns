@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
-import { Button } from '@/components/ui';
+import { Banner, Button, EmptyState, ErrorState, Skeleton, useToast } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { HrmsLeave, LeaveBalance, RequestStatus } from '@/lib/hrms/types';
@@ -150,9 +150,9 @@ function LeaveItem({
         </div>
       )}
       {error && (
-        <p role="alert" className="text-sm text-danger-fg">
+        <Banner tone="danger" title="Leave action failed">
           {error}
-        </p>
+        </Banner>
       )}
     </li>
   );
@@ -161,6 +161,7 @@ function LeaveItem({
 export default function LeavePage() {
   const { session } = useHrmsAuth();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const enabled = Boolean(session?.activeMemberId);
   const canDecide =
     session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
@@ -213,6 +214,11 @@ export default function LeavePage() {
       });
       form.reset();
       changed();
+      toast({
+        title: 'Leave request sent',
+        description: 'Your request is waiting for a decision.',
+        tone: 'success',
+      });
     } catch (err) {
       setError(message(err));
     } finally {
@@ -228,6 +234,24 @@ export default function LeavePage() {
   return (
     <>
       <h1 className="text-2xl font-bold text-fg">Leave</h1>
+
+      {balance.isLoading && (
+        <div
+          className="grid gap-3 sm:grid-cols-2 md:grid-cols-3"
+          aria-label="Loading leave balance"
+        >
+          {[1, 2, 3].map((item) => (
+            <Skeleton key={item} className="h-24" />
+          ))}
+        </div>
+      )}
+      {balance.error && (
+        <ErrorState
+          title="Could not load leave balance"
+          message={message(balance.error)}
+          onRetry={() => void balance.refetch()}
+        />
+      )}
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
         {balance.data?.items.map((b) => (
@@ -298,9 +322,9 @@ export default function LeavePage() {
             Weekends and holidays are not counted. Your project lead or the COO decides.
           </p>
           {error && (
-            <p role="alert" className="text-sm text-danger-fg">
+            <Banner tone="danger" title="Could not send leave request">
               {error}
-            </p>
+            </Banner>
           )}
           <Button
             type="submit"
@@ -316,8 +340,18 @@ export default function LeavePage() {
           {canDecide && (
             <section className="space-y-3">
               <h2 className="font-bold text-fg">To decide</h2>
+              {toDecide.error && (
+                <ErrorState
+                  title="Could not load requests to decide"
+                  message={message(toDecide.error)}
+                  onRetry={() => void toDecide.refetch()}
+                />
+              )}
               {toDecide.data && toDecide.data.items.length === 0 && (
-                <p className="text-sm text-fg-muted">Nothing is waiting for you.</p>
+                <EmptyState
+                  title="Nothing to decide"
+                  description="New leave requests will appear here."
+                />
               )}
               <ul className="space-y-3">
                 {toDecide.data?.items.map((l) => (
@@ -329,8 +363,18 @@ export default function LeavePage() {
 
           <section className="space-y-3">
             <h2 className="font-bold text-fg">My leave</h2>
+            {mine.error && (
+              <ErrorState
+                title="Could not load your leave"
+                message={message(mine.error)}
+                onRetry={() => void mine.refetch()}
+              />
+            )}
             {mine.data && mine.data.items.length === 0 && (
-              <p className="text-sm text-fg-muted">No leave requests yet.</p>
+              <EmptyState
+                title="No leave requests yet"
+                description="Your submitted requests will appear here."
+              />
             )}
             <ul className="space-y-3">
               {mine.data?.items.map((l) => (

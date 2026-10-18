@@ -10,6 +10,7 @@ import {
   StatusPill,
   time,
 } from '@/components/hrms/attendance-parts';
+import { Banner, EmptyState, ErrorState, PageHeader, Skeleton } from '@/components/ui';
 import { HoldButton } from '@/components/hrms/hold-button';
 import { useReadOnly } from '@/components/hrms/read-only';
 import { hrmsFetch } from '@/lib/hrms/api-client';
@@ -48,14 +49,20 @@ export default function AttendancePage() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-semibold text-charcoal">Attendance</h1>
-        {canSeeTeam && (
-          <Link href="/attendance/team" className="text-sm text-forest hover:underline">
-            Team attendance
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        title="Attendance"
+        description="Check in from an approved office network and review your working-day history."
+        secondaryActions={
+          canSeeTeam ? (
+            <Link
+              href="/attendance/team"
+              className="inline-flex min-h-10 items-center rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium text-fg hover:bg-surface-sunken"
+            >
+              Team attendance
+            </Link>
+          ) : undefined
+        }
+      />
 
       <section className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -92,9 +99,9 @@ export default function AttendancePage() {
           a CEO or COO.
         </p>
         {error && (
-          <p role="alert" className="text-sm text-alert-deep">
+          <Banner tone="danger" title="Attendance action failed">
             {error}
-          </p>
+          </Banner>
         )}
       </section>
 
@@ -107,13 +114,28 @@ export default function AttendancePage() {
           className="block rounded-xl border border-charcoal/15 px-3 py-2 text-sm"
         />
       </label>
-      {data.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
-      {data.error && (
-        <p role="alert" className="text-sm text-alert-deep">
-          {message(data.error)}
-        </p>
+      {data.isLoading && (
+        <div className="space-y-2" aria-label="Loading attendance">
+          <Skeleton className="h-8 w-32" />
+          {[1, 2, 3, 4].map((item) => (
+            <Skeleton key={item} className="h-20" />
+          ))}
+        </div>
       )}
-      {data.data && (
+      {data.error && (
+        <ErrorState
+          title="Could not load attendance"
+          message={message(data.error)}
+          onRetry={() => void data.refetch()}
+        />
+      )}
+      {data.data && data.data.days.length === 0 && (
+        <EmptyState
+          title="No attendance days yet"
+          description="Your attendance history will appear here after the first working day is recorded."
+        />
+      )}
+      {data.data && data.data.days.length > 0 && (
         <MonthTable
           days={data.data.days}
           corrections={data.data.corrections}

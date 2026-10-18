@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/hrms/role-gate';
+import { Banner } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { HRMS_ROLE_LABELS, type CreateMemberResponse, type HrmsMemberRole } from '@/lib/hrms/types';
@@ -130,9 +131,9 @@ function NewMemberForm() {
         </span>
       </label>
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Could not add person">
           {error}
-        </p>
+        </Banner>
       )}
       <button
         type="submit"

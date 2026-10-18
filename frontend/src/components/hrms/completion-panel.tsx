@@ -2,6 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Banner } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { HrmsProjectDetail } from '@/lib/hrms/types';
@@ -12,7 +13,8 @@ function message(error: unknown): string {
 
 const primary =
   'rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
-const secondary = 'rounded-xl border border-charcoal/15 px-4 py-2 text-sm hover:bg-mist/60 disabled:opacity-60';
+const secondary =
+  'rounded-xl border border-charcoal/15 px-4 py-2 text-sm hover:bg-mist/60 disabled:opacity-60';
 
 // Plan section 5: every manager ticks, then a lead approves (CEO or COO when there is no lead).
 // The database decides who may do what; this panel shows the next step and passes its message on.
@@ -71,7 +73,9 @@ export function CompletionPanel({
         <>
           <p className="text-sm text-charcoal-soft">
             All managers have ticked. Waiting for{' '}
-            {completion.approver === 'lead' ? 'a project lead' : 'the CEO or COO (no lead is tagged)'}{' '}
+            {completion.approver === 'lead'
+              ? 'a project lead'
+              : 'the CEO or COO (no lead is tagged)'}{' '}
             to approve.
           </p>
           <div className="flex flex-wrap gap-2">
@@ -119,9 +123,9 @@ export function CompletionPanel({
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Could not update completion">
           {error}
-        </p>
+        </Banner>
       )}
     </section>
   );

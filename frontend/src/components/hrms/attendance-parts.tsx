@@ -2,7 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { useRef, useState, type FormEvent } from 'react';
-import { Button, Dialog, Textarea } from '@/components/ui';
+import { Banner, Button, Dialog, Textarea } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatTime } from '@/lib/hrms/time';
@@ -301,9 +301,9 @@ export function CorrectionDialog({
           maxLength={1000}
         />
         {error && (
-          <p role="alert" className="text-sm text-alert-deep">
+          <Banner tone="danger" title="Could not submit correction">
             {error}
-          </p>
+          </Banner>
         )}
         <div className="flex gap-2">
           <Button type="submit" loading={file.isPending}>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { ConfirmDialog } from '@/components/ui';
+import { Banner, ConfirmDialog } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 
 const input =
@@ -185,14 +185,14 @@ export function PersonManager({
         </div>
       )}
       {notice && (
-        <p role="status" className="text-sm text-forest">
+        <Banner tone="success" title="Person updated">
           {notice}
-        </p>
+        </Banner>
       )}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Could not update person">
           {error}
-        </p>
+        </Banner>
       )}
     </div>
   );

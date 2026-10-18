@@ -1,6 +1,14 @@
 'use client';
 
-import { Pagination } from '@/components/ui';
+import {
+  Banner,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  Pagination,
+  Skeleton,
+  useToast,
+} from '@/components/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { RoleGate } from '@/components/hrms/role-gate';
@@ -16,6 +24,7 @@ const secondary =
 
 function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +34,11 @@ function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
     onSuccess: () => {
       setNote('');
       void queryClient.invalidateQueries({ queryKey: ['hrms', 'audit'] });
+      toast({
+        title: 'Note added',
+        description: 'The history entry was updated with your note.',
+        tone: 'success',
+      });
     },
     onError: (e) => setError(e instanceof HrmsApiError ? e.message : 'Something went wrong.'),
   });
@@ -84,9 +98,9 @@ function Entry({ entry, canNote }: { entry: AuditEntry; canNote: boolean }) {
         </div>
       )}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Could not add note">
           {error}
-        </p>
+        </Banner>
       )}
     </li>
   );
@@ -106,8 +120,11 @@ function History() {
   });
 
   return (
-    <>
-      <h1 className="text-xl font-semibold text-charcoal">History</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="History"
+        description="Review organisation changes and add context without changing the original record."
+      />
       <div className="flex flex-wrap gap-2">
         <label htmlFor="history-table" className="sr-only">
           Filter by table
@@ -133,12 +150,33 @@ function History() {
           className={`${input} sm:w-48`}
         />
       </div>
-      {data.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
-      <ul className="space-y-3">
-        {data.data?.items.map((e) => (
-          <Entry key={e.id} entry={e} canNote={session?.role === 'ceo'} />
-        ))}
-      </ul>
+      {data.isLoading && (
+        <div className="space-y-3" aria-label="Loading history">
+          {[1, 2, 3].map((item) => (
+            <Skeleton key={item} className="h-28" />
+          ))}
+        </div>
+      )}
+      {data.error && (
+        <ErrorState
+          title="Could not load history"
+          message={data.error instanceof Error ? data.error.message : 'Please try again.'}
+          onRetry={() => void data.refetch()}
+        />
+      )}
+      {data.data && data.data.items.length === 0 && (
+        <EmptyState
+          title="No history entries"
+          description="Changes to organisation records will appear here."
+        />
+      )}
+      {data.data && data.data.items.length > 0 && (
+        <ul className="space-y-3">
+          {data.data.items.map((e) => (
+            <Entry key={e.id} entry={e} canNote={session?.role === 'ceo'} />
+          ))}
+        </ul>
+      )}
       {data.data && (
         <Pagination
           page={page}
@@ -147,7 +185,7 @@ function History() {
           onPage={setPage}
         />
       )}
-    </>
+    </div>
   );
 }
 

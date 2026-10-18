@@ -1,6 +1,6 @@
 'use client';
 
-import { Pagination } from '@/components/ui';
+import { EmptyState, ErrorState, Pagination, Skeleton } from '@/components/ui';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -120,11 +120,19 @@ export default function PeoplePage() {
         </select>
       </form>
 
-      {members.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
+      {members.isLoading && (
+        <div className="space-y-3" aria-label="Loading people">
+          {[1, 2, 3, 4].map((item) => (
+            <Skeleton key={item} className="h-24" />
+          ))}
+        </div>
+      )}
       {members.error && (
-        <p role="alert" className="text-sm text-alert-deep">
-          {(members.error as Error).message}
-        </p>
+        <ErrorState
+          title="Could not load people"
+          message={(members.error as Error).message}
+          onRetry={() => void members.refetch()}
+        />
       )}
 
       {members.data && (
@@ -176,8 +184,11 @@ export default function PeoplePage() {
                 ))}
                 {members.data.items.length === 0 && (
                   <tr>
-                    <td colSpan={isAdmin ? 5 : 4} className="px-3 py-6 text-center text-fg-muted">
-                      No people match.
+                    <td colSpan={isAdmin ? 5 : 4} className="p-3">
+                      <EmptyState
+                        title="No people match"
+                        description="Try changing the search or filters."
+                      />
                     </td>
                   </tr>
                 )}
@@ -231,9 +242,10 @@ export default function PeoplePage() {
               </article>
             ))}
             {members.data.items.length === 0 && (
-              <div className="rounded-card border border-dashed border-border p-6 text-center text-sm text-fg-muted">
-                No people match.
-              </div>
+              <EmptyState
+                title="No people match"
+                description="Try changing the search or filters."
+              />
             )}
           </div>
         </>

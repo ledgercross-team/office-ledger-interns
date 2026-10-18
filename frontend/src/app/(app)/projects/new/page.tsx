@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { MemberChips, MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { RoleGate } from '@/components/hrms/role-gate';
+import { Banner } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import type { HrmsProjectDetail } from '@/lib/hrms/types';
 
@@ -39,7 +40,9 @@ function NewProjectForm() {
       void queryClient.invalidateQueries({ queryKey: ['hrms', 'projects'] });
       router.replace(`/projects/${created.id}`);
     } catch (err) {
-      setError(err instanceof HrmsApiError ? err.message : 'Something went wrong. Please try again.');
+      setError(
+        err instanceof HrmsApiError ? err.message : 'Something went wrong. Please try again.',
+      );
       setPending(false);
     }
   }
@@ -87,9 +90,9 @@ function NewProjectForm() {
         />
       </fieldset>
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Could not create project">
           {error}
-        </p>
+        </Banner>
       )}
       <button
         type="submit"

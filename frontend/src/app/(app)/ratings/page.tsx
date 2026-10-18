@@ -3,6 +3,15 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/hrms/role-gate';
+import {
+  Banner,
+  Button,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  Skeleton,
+  useToast,
+} from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { formatDate } from '@/lib/hrms/time';
 import type { RatingsDueProject } from '@/lib/hrms/types';
@@ -93,42 +102,65 @@ function ProjectRatings({ project, onDone }: { project: RatingsDueProject; onDon
         </fieldset>
       ))}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Could not submit ratings">
           {error}
-        </p>
+        </Banner>
       )}
-      <button
-        type="submit"
-        disabled={!complete || pending}
-        className="rounded-xl bg-evergreen px-4 py-2 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60"
-      >
-        {pending ? 'Sending…' : 'Submit ratings'}
-      </button>
+      <Button type="submit" disabled={!complete} loading={pending} loadingLabel="Sending">
+        Submit ratings
+      </Button>
     </form>
   );
 }
 
 function Ratings() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const due = useQuery({
     queryKey: ['hrms', 'ratings-due'],
     queryFn: () => hrmsFetch<{ items: RatingsDueProject[] }>('/me/ratings-due'),
   });
   return (
-    <>
-      <h1 className="text-xl font-semibold text-charcoal">Ratings</h1>
-      {due.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
+    <div className="space-y-6">
+      <PageHeader
+        title="Ratings"
+        description="Give thoughtful, anonymous feedback on recently completed projects."
+      />
+      {due.isLoading && (
+        <div className="space-y-3" aria-label="Loading ratings">
+          {[1, 2].map((item) => (
+            <Skeleton key={item} className="h-64" />
+          ))}
+        </div>
+      )}
+      {due.error && (
+        <ErrorState
+          title="Could not load ratings"
+          message={due.error instanceof Error ? due.error.message : 'Please try again.'}
+          onRetry={() => void due.refetch()}
+        />
+      )}
       {due.data && due.data.items.length === 0 && (
-        <p className="text-sm text-charcoal-soft">No ratings are waiting for you.</p>
+        <EmptyState
+          title="You are all caught up"
+          description="There are no completed projects waiting for your rating."
+        />
       )}
       {due.data?.items.map((p) => (
         <ProjectRatings
           key={p.projectId}
           project={p}
-          onDone={() => void queryClient.invalidateQueries({ queryKey: ['hrms', 'ratings-due'] })}
+          onDone={() => {
+            void queryClient.invalidateQueries({ queryKey: ['hrms', 'ratings-due'] });
+            toast({
+              title: 'Ratings submitted',
+              description: 'Your feedback was recorded anonymously.',
+              tone: 'success',
+            });
+          }}
         />
       ))}
-    </>
+    </div>
   );
 }
 

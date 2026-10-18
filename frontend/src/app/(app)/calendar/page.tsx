@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
-import { Button, Dialog } from '@/components/ui';
+import { Banner, Button, Dialog, ErrorState, Skeleton, useToast } from '@/components/ui';
 import { MemberChips, MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { meetingProblem } from '@/lib/hrms/meeting';
@@ -208,9 +208,9 @@ function MeetingDialog({
           </>
         )}
         {error && (
-          <p role="alert" className="text-sm text-danger-fg">
+          <Banner tone="danger" title="Meeting action failed">
             {error}
-          </p>
+          </Banner>
         )}
       </div>
     </Dialog>
@@ -224,6 +224,7 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const { session } = useHrmsAuth();
+  const toast = useToast();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -260,6 +261,11 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
       form.reset();
       setChosen([]);
       onDone();
+      toast({
+        title: 'Meeting created',
+        description: 'Invitees have been notified.',
+        tone: 'success',
+      });
     } catch (err) {
       setError(message(err));
     } finally {
@@ -360,9 +366,9 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
         />
       </fieldset>
       {error && (
-        <p role="alert" className="text-sm text-danger-fg">
+        <Banner tone="danger" title="Could not create meeting">
           {error}
-        </p>
+        </Banner>
       )}
       <button type="submit" disabled={pending || invitees.length === 0} className={primary}>
         {pending ? 'Saving…' : 'Create meeting'}
@@ -464,15 +470,19 @@ export default function CalendarPage() {
       </div>
       {feed.data && <p className="text-sm text-fg-muted">Times are in {feed.data.timezone}.</p>}
       {feed.error && (
-        <p role="alert" className="text-sm text-danger-fg">
-          {message(feed.error)}
-        </p>
+        <ErrorState
+          title="Could not load calendar"
+          message={message(feed.error)}
+          onRetry={() => void feed.refetch()}
+        />
       )}
 
       {feed.isLoading && (
-        <p className="text-sm text-fg-muted" role="status">
-          Loading calendar…
-        </p>
+        <div className="grid gap-2 sm:grid-cols-7" aria-label="Loading calendar">
+          {Array.from({ length: 14 }, (_, index) => (
+            <Skeleton key={index} className="h-24" />
+          ))}
+        </div>
       )}
 
       {view === 'month' ? (

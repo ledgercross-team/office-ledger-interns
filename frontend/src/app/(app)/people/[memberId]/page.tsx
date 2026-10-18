@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { Banner, ErrorState, Skeleton } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { HRMS_ROLE_LABELS, type HrmsMember, type HrmsMemberRole } from '@/lib/hrms/types';
@@ -97,12 +98,22 @@ export default function MemberDetailPage() {
 
   const authenticator = { isPending: resetMfa.isPending || requireMfa.isPending };
 
-  if (member.isLoading) return <p className="text-sm text-charcoal-soft">Loading…</p>;
+  if (member.isLoading) {
+    return (
+      <div className="max-w-md space-y-3" aria-label="Loading member profile">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-10 w-2/3" />
+        <Skeleton className="h-56 w-full" />
+      </div>
+    );
+  }
   if (member.error || !member.data) {
     return (
-      <p role="alert" className="text-sm text-alert-deep">
-        {member.error ? message(member.error) : 'Member not found.'}
-      </p>
+      <ErrorState
+        title="Could not load member"
+        message={member.error ? message(member.error) : 'Member not found.'}
+        onRetry={() => void member.refetch()}
+      />
     );
   }
 
@@ -139,9 +150,9 @@ export default function MemberDetailPage() {
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Could not save changes">
           {error}
-        </p>
+        </Banner>
       )}
 
       <form
@@ -347,9 +358,9 @@ export default function MemberDetailPage() {
                   : 'Requiring it makes them set it up at their next sign-in. Only their phone can hold the secret, so you never see it.'}
             </p>
             {notice && (
-              <p role="status" className="text-sm text-forest">
+              <Banner tone="success" title="Authenticator updated">
                 {notice}
-              </p>
+              </Banner>
             )}
           </section>
         )}

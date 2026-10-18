@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   ConfirmDialog,
+  EmptyState,
   ErrorState,
   PageHeader,
   Skeleton,
@@ -297,15 +298,15 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
       </div>
 
       {weightError && (
-        <p role="alert" className="text-sm text-danger-fg">
+        <Banner tone="warning" title="Weight total must be 100%">
           {weightError}
-        </p>
+        </Banner>
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-danger-fg">
+        <Banner tone="danger" title="Could not save settings">
           {error}
-        </p>
+        </Banner>
       )}
       {canEdit && (
         <div className="flex items-center gap-3">
@@ -424,9 +425,9 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
         </form>
       )}
       {error && (
-        <p role="alert" className="text-sm text-danger-fg">
+        <Banner tone="danger" title="Could not update office networks">
           {error}
-        </p>
+        </Banner>
       )}
     </section>
   );
@@ -485,7 +486,14 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
             )}
           </li>
         ))}
-        {list.data?.items.length === 0 && <li className="text-sm text-fg-muted">None yet.</li>}
+        {list.data?.items.length === 0 && (
+          <li>
+            <EmptyState
+              title="No holidays yet"
+              description="Add a holiday to exclude it from attendance calculations."
+            />
+          </li>
+        )}
       </ul>
       {canEdit && (
         <form
@@ -523,9 +531,9 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
         </form>
       )}
       {error && (
-        <p role="alert" className="text-sm text-danger-fg">
+        <Banner tone="danger" title="Could not update holidays">
           {error}
-        </p>
+        </Banner>
       )}
     </section>
   );
@@ -676,9 +684,9 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
         </form>
       )}
       {error && (
-        <p role="alert" className="text-sm text-danger-fg">
+        <Banner tone="danger" title="Could not update leave types">
           {error}
-        </p>
+        </Banner>
       )}
     </section>
   );
@@ -748,11 +756,15 @@ function RecoveryCard({ role }: { role: 'ceo' | 'coo' }) {
         </label>
       )}
       {error && (
-        <p role="alert" className="text-sm text-danger-fg">
+        <Banner tone="danger" title="Could not send recovery request">
           {error}
-        </p>
+        </Banner>
       )}
-      {done && <p className="text-sm text-success-fg">Request sent to the platform team.</p>}
+      {done && (
+        <Banner tone="success" title="Recovery request sent">
+          The platform team will review it.
+        </Banner>
+      )}
       <button type="submit" className={inlineButton}>
         Send request
       </button>
@@ -800,9 +812,9 @@ function ExportCard() {
         {pending ? 'Preparing…' : 'Download export'}
       </button>
       {error && (
-        <p role="alert" className="text-sm text-danger-fg">
+        <Banner tone="danger" title="Could not export data">
           {error}
-        </p>
+        </Banner>
       )}
     </section>
   );

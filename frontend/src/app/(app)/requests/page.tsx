@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { MemberSearch, type MemberOption } from '@/components/hrms/member-search';
-import { Pagination } from '@/components/ui';
+import { Banner, EmptyState, ErrorState, PageHeader, Pagination, Skeleton } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatDate } from '@/lib/hrms/time';
@@ -124,9 +124,9 @@ function FollowUp({ request, onDone }: { request: HrmsRequest; onDone: () => voi
         </button>
       )}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Request action failed">
           {error}
-        </p>
+        </Banner>
       )}
     </div>
   );
@@ -259,9 +259,9 @@ function RequestRow({
         </button>
       )}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Request update failed">
           {error}
-        </p>
+        </Banner>
       )}
     </li>
   );
@@ -452,9 +452,9 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
         />
       </label>
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Could not send request">
           {error}
-        </p>
+        </Banner>
       )}
       {note && <p className="text-sm text-forest">{note}</p>}
       <button type="submit" disabled={pending} className={primary}>
@@ -533,8 +533,15 @@ export default function RequestsPage() {
   const decidable = items.filter((r) => r.canDecide);
 
   return (
-    <>
-      <h1 className="text-xl font-semibold text-charcoal">Requests</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Requests"
+        description={
+          scope === 'decide'
+            ? 'Review and decide requests assigned to you.'
+            : 'Track requests you have submitted.'
+        }
+      />
 
       <div className="flex flex-wrap gap-2" role="tablist">
         {(canDecide ? (['decide', 'mine'] as const) : (['mine'] as const)).map((s) => (
@@ -634,25 +641,42 @@ export default function RequestsPage() {
               Reject selected
             </button>
           </div>
-          {bulkNote && <p className="text-sm text-forest">{bulkNote}</p>}
+          {bulkNote && (
+            <Banner tone="success" title="Requests updated">
+              {bulkNote}
+            </Banner>
+          )}
           {bulkError && (
-            <p role="alert" className="text-sm text-alert-deep">
+            <Banner tone="danger" title="Some requests could not be updated">
               {bulkError}
-            </p>
+            </Banner>
           )}
         </div>
       )}
 
-      {list.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
+      {list.isLoading && (
+        <div className="space-y-3" aria-label="Loading requests">
+          {[1, 2, 3].map((item) => (
+            <Skeleton key={item} className="h-32" />
+          ))}
+        </div>
+      )}
       {list.error && (
-        <p role="alert" className="text-sm text-alert-deep">
-          {message(list.error)}
-        </p>
+        <ErrorState
+          title="Could not load requests"
+          message={message(list.error)}
+          onRetry={() => void list.refetch()}
+        />
       )}
       {list.data && items.length === 0 && (
-        <p className="text-sm text-charcoal-soft">
-          {scope === 'decide' ? 'Nothing is waiting for your decision.' : 'You have no requests.'}
-        </p>
+        <EmptyState
+          title={scope === 'decide' ? 'Nothing to decide' : 'No requests yet'}
+          description={
+            scope === 'decide'
+              ? 'Requests requiring your decision will appear here.'
+              : 'Requests you submit will appear here so you can track their progress.'
+          }
+        />
       )}
       <ul className="space-y-3">
         {items.map((r) => (
@@ -679,6 +703,6 @@ export default function RequestsPage() {
       {canFile && session?.role && (
         <NewRequestForm role={session.role as 'coo' | 'manager'} onDone={changed} />
       )}
-    </>
+    </div>
   );
 }

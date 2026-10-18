@@ -195,7 +195,11 @@ function ThreadView({ mode, id, onBack }: { mode: Mode; id: string; onBack: () =
         aria-live="polite"
         aria-label="Messages"
       >
-        {t.messages.length === 0 && <li className="text-sm text-fg-muted">No messages yet.</li>}
+        {t.messages.length === 0 && (
+          <li>
+            <EmptyState title="No messages yet" description="Start the conversation below." />
+          </li>
+        )}
         {t.messages.map((m) => (
           <div key={m.id} className="group">
             <Bubble mine={m.mine} body={m.body} at={m.sentAt} />

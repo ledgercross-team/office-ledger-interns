@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState, type FormEvent } from 'react';
-import { Button } from '@/components/ui';
+import { Banner, Button, EmptyState } from '@/components/ui';
 import { RoleGate } from '@/components/hrms/role-gate';
 import { WorkloadChip } from '@/components/hrms/workload-chip';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
@@ -148,13 +148,16 @@ function NewTaskForm() {
           </label>
         ))}
         {projectId && project.data?.members.length === 0 && (
-          <p className="text-sm text-fg-muted">Nobody is on this project yet.</p>
+          <EmptyState
+            title="No project members yet"
+            description="Add people to the project before assigning this task."
+          />
         )}
       </fieldset>
       {error && (
-        <p role="alert" className="text-sm text-danger-fg">
+        <Banner tone="danger" title="Could not create task">
           {error}
-        </p>
+        </Banner>
       )}
       <Button type="submit" loading={pending} disabled={!projectId} loadingLabel="Creating">
         Create task

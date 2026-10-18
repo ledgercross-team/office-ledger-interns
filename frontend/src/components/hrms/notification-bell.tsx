@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Bell } from 'lucide-react';
 import { Popover } from 'radix-ui';
 import { hrmsFetch } from '@/lib/hrms/api-client';
+import { EmptyState, ErrorState, Skeleton } from '@/components/ui';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatDateTime } from '@/lib/hrms/time';
 import { cn } from '@/lib/cn';
@@ -78,8 +79,24 @@ export function NotificationBell() {
             </button>
           </div>
           <ul className="max-h-[min(24rem,60vh)] divide-y divide-border overflow-y-auto slim-scroll">
-            {items.length === 0 && (
-              <li className="px-4 py-6 text-center text-sm text-fg-muted">Nothing yet.</li>
+            {data.isLoading && (
+              <li className="p-4">
+                <Skeleton className="h-12 w-full" />
+              </li>
+            )}
+            {data.error && (
+              <li className="p-3">
+                <ErrorState
+                  title="Could not load notifications"
+                  message="Try again to refresh this list."
+                  onRetry={() => void data.refetch()}
+                />
+              </li>
+            )}
+            {!data.isLoading && !data.error && items.length === 0 && (
+              <li>
+                <EmptyState title="No notifications" description="You are all caught up." />
+              </li>
             )}
             {items.map((n) => {
               const href = (n.entityTable && LINKS[n.entityTable]) || '/notifications';

@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { Button, Pagination } from '@/components/ui';
+import { Button, EmptyState, ErrorState, PageHeader, Pagination, Skeleton } from '@/components/ui';
 import { ProjectCard } from '@/components/hrms/project-card';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -34,17 +34,20 @@ export default function ProjectsPage() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Projects</h1>
-        {session?.role === 'ceo' && (
-          <Button asChild>
-            <Link href="/projects/new">
-              <Plus aria-hidden className="size-4" />
-              New project
-            </Link>
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Projects"
+        description="Track project progress, people, tasks, and completion decisions."
+        primaryAction={
+          session?.role === 'ceo' ? (
+            <Button asChild>
+              <Link href="/projects/new">
+                <Plus aria-hidden className="size-4" />
+                New project
+              </Link>
+            </Button>
+          ) : undefined
+        }
+      />
 
       {due.data && due.data.items.length > 0 && (
         <Link
@@ -89,20 +92,44 @@ export default function ProjectsPage() {
         />
       </div>
 
-      {projects.isLoading && <p className="text-sm text-fg-muted">Loading…</p>}
+      {projects.isLoading && (
+        <div className="grid gap-4 lg:grid-cols-2" aria-label="Loading projects">
+          {[1, 2, 3, 4].map((item) => (
+            <Skeleton key={item} className="h-56" />
+          ))}
+        </div>
+      )}
       {projects.error && (
-        <p role="alert" className="text-sm text-danger-fg">
-          {(projects.error as Error).message}
-        </p>
+        <ErrorState
+          title="Could not load projects"
+          message={(projects.error as Error).message}
+          onRetry={() => void projects.refetch()}
+        />
       )}
 
-      <ul className="grid items-start gap-4 lg:grid-cols-2">
-        {projects.data?.items.map((p) => (
-          <ProjectCard key={p.id} project={p} />
-        ))}
-      </ul>
       {projects.data?.items.length === 0 && (
-        <p className="text-sm text-fg-muted">No projects to show.</p>
+        <EmptyState
+          title="No projects found"
+          description={
+            q || status
+              ? 'Try changing the filters or search terms.'
+              : 'Create a project to start organising work.'
+          }
+          action={
+            session?.role === 'ceo' ? (
+              <Button asChild>
+                <Link href="/projects/new">New project</Link>
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
+      {projects.data && projects.data.items.length > 0 && (
+        <ul className="grid items-start gap-4 lg:grid-cols-2">
+          {projects.data.items.map((p) => (
+            <ProjectCard key={p.id} project={p} />
+          ))}
+        </ul>
       )}
 
       {projects.data && (

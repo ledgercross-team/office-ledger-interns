@@ -1,7 +1,15 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Badge, Drawer, ErrorState, ProgressBar, Skeleton, StatusPill } from '@/components/ui';
+import {
+  Badge,
+  Drawer,
+  EmptyState,
+  ErrorState,
+  ProgressBar,
+  Skeleton,
+  StatusPill,
+} from '@/components/ui';
 import { PERFORMANCE_BANDS } from '@/lib/hrms/status-vocabulary';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import type { PerformanceBand, PerformanceBreakdown, PerformanceRow } from '@/lib/hrms/types';
@@ -161,7 +169,10 @@ export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClo
           <div>
             <p className="text-sm font-semibold text-fg">Recent history</p>
             {d.history.length === 0 ? (
-              <p className="mt-2 text-sm text-fg-muted">No previous score snapshots yet.</p>
+              <EmptyState
+                title="No previous snapshots"
+                description="Earlier calculated scores will appear here."
+              />
             ) : (
               <ul className="mt-2 divide-y divide-border rounded-control border border-border bg-surface">
                 {d.history.map((h) => (

@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { TaskFlags, TaskStatusBadge, UrgencyBadge } from '@/components/hrms/task-badges';
+import { Banner, EmptyState, ErrorState, Skeleton } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { actionsFrom, TASK_STATUS_LABELS, type TaskAction } from '@/lib/hrms/task-meta';
@@ -21,7 +22,8 @@ const input =
 const card = 'space-y-3 rounded-2xl border border-charcoal/10 bg-white p-4';
 const primary =
   'rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
-const secondary = 'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+const secondary =
+  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
 
 export default function TaskDetailPage() {
   const { taskId } = useParams<{ taskId: string }>();
@@ -64,17 +66,28 @@ export default function TaskDetailPage() {
     }
   }
 
-  if (task.isLoading) return <p className="text-sm text-charcoal-soft">Loading…</p>;
+  if (task.isLoading) {
+    return (
+      <div className="space-y-4" aria-label="Loading task">
+        <Skeleton className="h-8 w-2/3" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
   if (task.error || !task.data) {
     return (
-      <p role="alert" className="text-sm text-alert-deep">
-        {task.error ? message(task.error) : 'Task not found.'}
-      </p>
+      <ErrorState
+        title="Could not load task"
+        message={task.error ? message(task.error) : 'Task not found.'}
+        onRetry={() => void task.refetch()}
+      />
     );
   }
 
   const t = task.data;
-  const canManage = session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
+  const canManage =
+    session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
   const closed = t.status === 'done' || t.status === 'cancelled';
   const actions = actionsFrom(t.status);
   const assigneeIds = t.assignees.map((a) => a.memberId);
@@ -113,7 +126,9 @@ export default function TaskDetailPage() {
           </Link>{' '}
           · Due {formatDateTime(t.dueAt)}
         </p>
-        {t.description && <p className="whitespace-pre-wrap text-sm text-charcoal">{t.description}</p>}
+        {t.description && (
+          <p className="whitespace-pre-wrap text-sm text-charcoal">{t.description}</p>
+        )}
         {t.blockedReason && t.status === 'blocked' && (
           <p className="text-sm text-alert-deep">Blocked: {t.blockedReason}</p>
         )}
@@ -123,9 +138,9 @@ export default function TaskDetailPage() {
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Could not update task">
           {error}
-        </p>
+        </Banner>
       )}
 
       {actions.length > 0 && (
@@ -162,7 +177,12 @@ export default function TaskDetailPage() {
                 {pendingAction.needs === 'reason'
                   ? `Reason for “${pendingAction.label}” (required)`
                   : `Comment for “${pendingAction.label}” (required)`}
-                <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} className={input} />
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  rows={2}
+                  className={input}
+                />
               </label>
               <div className="flex gap-2">
                 <button
@@ -172,7 +192,9 @@ export default function TaskDetailPage() {
                   onClick={() =>
                     submitAction(
                       pendingAction,
-                      pendingAction.needs === 'reason' ? { reason: text.trim() } : { comment: text.trim() },
+                      pendingAction.needs === 'reason'
+                        ? { reason: text.trim() }
+                        : { comment: text.trim() },
                     )
                   }
                 >
@@ -202,7 +224,9 @@ export default function TaskDetailPage() {
                   className="text-alert-deep hover:underline"
                   onClick={() =>
                     void run(() =>
-                      hrmsFetch<HrmsTask>(`/tasks/${t.id}/assignees/${a.memberId}`, { method: 'DELETE' }),
+                      hrmsFetch<HrmsTask>(`/tasks/${t.id}/assignees/${a.memberId}`, {
+                        method: 'DELETE',
+                      }),
                     )
                   }
                 >
@@ -218,7 +242,11 @@ export default function TaskDetailPage() {
             <div className="min-w-64 flex-1">
               <MemberSearch
                 label="Add someone from the project"
-                localOptions={addable.map((m) => ({ id: m.memberId, fullName: m.fullName, role: m.role }))}
+                localOptions={addable.map((m) => ({
+                  id: m.memberId,
+                  fullName: m.fullName,
+                  role: m.role,
+                }))}
                 selected={addPick}
                 onSelect={setAddPick}
                 onClear={() => setAddPick(null)}
@@ -247,20 +275,36 @@ export default function TaskDetailPage() {
 
       <section className={card}>
         <h2 className="font-medium text-charcoal">History</h2>
-        <ol className="space-y-2 text-sm">
-          {history.data?.items.map((h) => (
-            <li key={h.id}>
-              <span className="font-medium text-charcoal">
-                {h.fromStatus ? `${TASK_STATUS_LABELS[h.fromStatus]} → ` : 'Created as '}
-                {TASK_STATUS_LABELS[h.toStatus]}
-              </span>
-              <span className="ml-2 text-xs text-charcoal-soft">
-                {h.changedBy?.fullName ?? 'System'} · {formatDateTime(h.changedAt)}
-              </span>
-              {h.comment && <p className="text-charcoal">&ldquo;{h.comment}&rdquo;</p>}
-            </li>
-          ))}
-        </ol>
+        {history.isLoading && <Skeleton className="h-24 w-full" />}
+        {history.error && (
+          <ErrorState
+            title="Could not load task history"
+            message={message(history.error)}
+            onRetry={() => void history.refetch()}
+          />
+        )}
+        {history.data && history.data.items.length === 0 && (
+          <EmptyState
+            title="No history yet"
+            description="Task status changes and comments will appear here."
+          />
+        )}
+        {history.data && history.data.items.length > 0 && (
+          <ol className="space-y-2 text-sm">
+            {history.data.items.map((h) => (
+              <li key={h.id}>
+                <span className="font-medium text-charcoal">
+                  {h.fromStatus ? `${TASK_STATUS_LABELS[h.fromStatus]} → ` : 'Created as '}
+                  {TASK_STATUS_LABELS[h.toStatus]}
+                </span>
+                <span className="ml-2 text-xs text-charcoal-soft">
+                  {h.changedBy?.fullName ?? 'System'} · {formatDateTime(h.changedAt)}
+                </span>
+                {h.comment && <p className="text-charcoal">&ldquo;{h.comment}&rdquo;</p>}
+              </li>
+            ))}
+          </ol>
+        )}
       </section>
     </>
   );

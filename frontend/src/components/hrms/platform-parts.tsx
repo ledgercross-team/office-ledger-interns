@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { Banner, ErrorState, Skeleton } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { PersonManager } from '@/components/hrms/platform-people';
@@ -35,9 +36,9 @@ function useAction(onDone: () => void) {
 
 function Error({ text }: { text: string | null }) {
   return text ? (
-    <p role="alert" className="text-sm text-alert-deep">
+    <Banner tone="danger" title="Action failed">
       {text}
-    </p>
+    </Banner>
   ) : null;
 }
 
@@ -65,11 +66,13 @@ function CeoPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
       </button>
       {open && (
         <div className="space-y-2" role="region" aria-label={`CEOs of ${orgName}`}>
-          {list.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
+          {list.isLoading && <Skeleton className="h-10 w-full" />}
           {list.error && (
-            <p role="alert" className="text-sm text-alert-deep">
-              {message(list.error)}
-            </p>
+            <ErrorState
+              title="Could not load CEOs"
+              message={message(list.error)}
+              onRetry={() => void list.refetch()}
+            />
           )}
           <ul className="space-y-2">
             {list.data?.items.map((c) => (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Banner } from '@/components/ui';
 import { HrmsApiError } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { HRMS_ROLE_LABELS } from '@/lib/hrms/types';
@@ -48,9 +49,9 @@ export function OrgSwitcher() {
         ))}
       </select>
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Could not switch organisation">
           {error}
-        </p>
+        </Banner>
       )}
     </div>
   );

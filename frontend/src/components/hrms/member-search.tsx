@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { hrmsFetch } from '@/lib/hrms/api-client';
+import { EmptyState, ErrorState, Skeleton } from '@/components/ui';
 import type { HrmsRole, Paginated } from '@/lib/hrms/types';
 
 export interface MemberOption {
@@ -197,13 +198,30 @@ export function MemberSearch({
           aria-label={`${label} results`}
           className="absolute left-0 right-0 z-30 mt-1 max-h-72 overflow-y-auto rounded-card border border-border bg-surface-raised p-1 shadow-float"
         >
-          {loading && <li className="px-3 py-2 text-fg-muted">Searching…</li>}
+          {loading && (
+            <li className="p-2">
+              <Skeleton className="h-9 w-full" />
+            </li>
+          )}
           {remote.isError && !localOptions && (
-            <li className="px-3 py-2 text-danger-fg">Could not search. Try again.</li>
+            <li className="p-2">
+              <ErrorState
+                title="Could not search"
+                message="Try again."
+                onRetry={() => void remote.refetch()}
+              />
+            </li>
           )}
           {!loading && !remote.isError && results.length === 0 && (
-            <li className="px-3 py-2 text-fg-muted">
-              {needle ? 'No one matches that search.' : 'No one to show.'}
+            <li>
+              <EmptyState
+                title={needle ? 'No matches' : 'No people to show'}
+                description={
+                  needle
+                    ? 'Try a different name or email.'
+                    : 'There are no available people to choose.'
+                }
+              />
             </li>
           )}
           {results.map((member, index) => (

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
+import { Banner, EmptyState, ErrorState, Skeleton, useToast } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { InviteStatus, ProjectInvite } from '@/lib/hrms/types';
@@ -25,7 +26,8 @@ const input =
   'w-full rounded-xl border border-charcoal/15 px-3 py-2 text-sm outline-none focus:border-evergreen';
 const primary =
   'rounded-xl bg-evergreen px-3 py-1.5 text-sm font-medium text-white hover:bg-evergreen-dark disabled:opacity-60';
-const secondary = 'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
+const secondary =
+  'rounded-xl border border-charcoal/15 px-3 py-1.5 text-sm hover:bg-mist/60 disabled:opacity-60';
 
 function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
@@ -43,7 +45,10 @@ function ReceivedItem({ invite, onDone }: { invite: ProjectInvite; onDone: () =>
   });
   const decline = useMutation({
     mutationFn: () =>
-      hrmsFetch(`/invites/${invite.id}/decline`, { method: 'POST', body: { reason: reason.trim() } }),
+      hrmsFetch(`/invites/${invite.id}/decline`, {
+        method: 'POST',
+        body: { reason: reason.trim() },
+      }),
     onSuccess: () => {
       setDeclining(false);
       onDone();
@@ -54,8 +59,12 @@ function ReceivedItem({ invite, onDone }: { invite: ProjectInvite; onDone: () =>
   return (
     <li className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-4">
       <p className="text-sm">
-        <span className="font-medium text-charcoal">{invite.invitedBy.fullName}</span> invited you to{' '}
-        <Link href={`/projects/${invite.project.id}`} className="font-medium text-forest hover:underline">
+        <span className="font-medium text-charcoal">{invite.invitedBy.fullName}</span> invited you
+        to{' '}
+        <Link
+          href={`/projects/${invite.project.id}`}
+          className="font-medium text-forest hover:underline"
+        >
           {invite.project.name}
         </Link>
       </p>
@@ -67,7 +76,12 @@ function ReceivedItem({ invite, onDone }: { invite: ProjectInvite; onDone: () =>
       )}
       {invite.status === 'pending' && !declining && (
         <div className="flex gap-2">
-          <button type="button" disabled={accept.isPending} onClick={() => accept.mutate()} className={primary}>
+          <button
+            type="button"
+            disabled={accept.isPending}
+            onClick={() => accept.mutate()}
+            className={primary}
+          >
             Accept
           </button>
           <button type="button" onClick={() => setDeclining(true)} className={secondary}>
@@ -79,7 +93,12 @@ function ReceivedItem({ invite, onDone }: { invite: ProjectInvite; onDone: () =>
         <div className="space-y-2">
           <label className="block space-y-1 text-sm text-charcoal">
             Why are you declining? (required)
-            <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className={input} />
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={2}
+              className={input}
+            />
           </label>
           <div className="flex gap-2">
             <button
@@ -97,9 +116,9 @@ function ReceivedItem({ invite, onDone }: { invite: ProjectInvite; onDone: () =>
         </div>
       )}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Invite action failed">
           {error}
-        </p>
+        </Banner>
       )}
     </li>
   );
@@ -123,9 +142,12 @@ function ReviewItem({ invite, onDone }: { invite: ProjectInvite; onDone: () => v
   return (
     <li className="space-y-2 rounded-2xl border border-charcoal/10 bg-white p-4">
       <p className="text-sm">
-        <span className="font-medium text-charcoal">{invite.invitee.fullName}</span> declined your invite
-        to{' '}
-        <Link href={`/projects/${invite.project.id}`} className="font-medium text-forest hover:underline">
+        <span className="font-medium text-charcoal">{invite.invitee.fullName}</span> declined your
+        invite to{' '}
+        <Link
+          href={`/projects/${invite.project.id}`}
+          className="font-medium text-forest hover:underline"
+        >
           {invite.project.name}
         </Link>
       </p>
@@ -149,7 +171,12 @@ function ReviewItem({ invite, onDone }: { invite: ProjectInvite; onDone: () => v
         <div className="space-y-2">
           <label className="block space-y-1 text-sm text-charcoal">
             Reason for overruling (they will see it)
-            <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className={input} />
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={2}
+              className={input}
+            />
           </label>
           <div className="flex gap-2">
             <button
@@ -167,9 +194,9 @@ function ReviewItem({ invite, onDone }: { invite: ProjectInvite; onDone: () => v
         </div>
       )}
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Invite review failed">
           {error}
-        </p>
+        </Banner>
       )}
     </li>
   );
@@ -178,6 +205,7 @@ function ReviewItem({ invite, onDone }: { invite: ProjectInvite; onDone: () => v
 export default function InvitesPage() {
   const { session } = useHrmsAuth();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const invites = useQuery({
     queryKey: ['hrms', 'invites', session?.activeMemberId],
     queryFn: () => hrmsFetch<Mine>('/me/invites'),
@@ -186,6 +214,11 @@ export default function InvitesPage() {
   const done = () => {
     void queryClient.invalidateQueries({ queryKey: ['hrms', 'invites'] });
     void queryClient.invalidateQueries({ queryKey: ['hrms', 'projects'] });
+    toast({
+      title: 'Invite updated',
+      description: 'The latest invite status is now visible.',
+      tone: 'success',
+    });
   };
 
   const received = invites.data?.received ?? [];
@@ -194,11 +227,19 @@ export default function InvitesPage() {
   return (
     <>
       <h1 className="text-xl font-semibold text-charcoal">Invites</h1>
-      {invites.isLoading && <p className="text-sm text-charcoal-soft">Loading…</p>}
+      {invites.isLoading && (
+        <div className="space-y-3" aria-label="Loading invites">
+          {[1, 2, 3].map((item) => (
+            <Skeleton key={item} className="h-28" />
+          ))}
+        </div>
+      )}
       {invites.error && (
-        <p role="alert" className="text-sm text-alert-deep">
-          {message(invites.error)}
-        </p>
+        <ErrorState
+          title="Could not load invites"
+          message={message(invites.error)}
+          onRetry={() => void invites.refetch()}
+        />
       )}
 
       {toReview.length > 0 && (
@@ -216,7 +257,10 @@ export default function InvitesPage() {
         <section className="space-y-2">
           <h2 className="font-medium text-charcoal">Invites to you</h2>
           {invites.data && received.length === 0 && (
-            <p className="text-sm text-charcoal-soft">No invites.</p>
+            <EmptyState
+              title="No invites"
+              description="Project invitations will appear here when someone adds you to a project."
+            />
           )}
           <ul className="space-y-3">
             {received.map((i) => (
@@ -226,9 +270,14 @@ export default function InvitesPage() {
         </section>
       )}
 
-      {invites.data && toReview.length === 0 && (session?.role === 'ceo' || session?.role === 'coo') && (
-        <p className="text-sm text-charcoal-soft">Nothing to review.</p>
-      )}
+      {invites.data &&
+        toReview.length === 0 &&
+        (session?.role === 'ceo' || session?.role === 'coo') && (
+          <EmptyState
+            title="Nothing to review"
+            description="Declined invitations needing your decision will appear here."
+          />
+        )}
     </>
   );
 }

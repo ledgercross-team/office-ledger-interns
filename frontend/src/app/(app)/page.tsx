@@ -23,7 +23,15 @@ import { useReadOnly } from '@/components/hrms/read-only';
 import { SeatBar } from '@/components/hrms/seat-bar';
 import { usePunch } from '@/components/hrms/use-punch';
 import { useNavCounts } from '@/components/hrms/use-nav-counts';
-import { Button, Card, ErrorState, StatusPill } from '@/components/ui';
+import {
+  Banner,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  Skeleton,
+  StatusPill,
+} from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
@@ -326,17 +334,16 @@ export default function HrmsHomePage() {
               </HoldButton>
             )}
             {error && (
-              <p
-                role="alert"
-                className="max-w-sm rounded-control bg-danger-soft px-3 py-2 text-sm text-danger-fg"
-              >
+              <Banner tone="danger" title="Attendance action failed">
                 {error}
-              </p>
+              </Banner>
             )}
             {me.error && !error && (
-              <p role="alert" className="text-sm text-danger-fg">
-                Could not load today&apos;s attendance.
-              </p>
+              <ErrorState
+                title="Could not load today's attendance"
+                message="Your attendance summary is unavailable."
+                onRetry={() => void me.refetch()}
+              />
             )}
             <dl className="flex gap-8 text-sm tabular-nums">
               <div>
@@ -388,15 +395,21 @@ export default function HrmsHomePage() {
             </Button>
           </div>
           {leave.isLoading ? (
-            <p className="text-sm text-fg-muted" role="status">
-              Loading leave balance…
-            </p>
+            <div className="space-y-3" aria-label="Loading leave balance">
+              <Skeleton className="h-10 w-2/3" />
+              <Skeleton className="h-10 w-full" />
+            </div>
           ) : leave.error ? (
-            <p className="text-sm text-danger-fg" role="alert">
-              Leave balance is unavailable right now.
-            </p>
+            <ErrorState
+              title="Could not load leave balance"
+              message="Your leave balance is unavailable right now."
+              onRetry={() => void leave.refetch()}
+            />
           ) : leaveItems.length === 0 ? (
-            <p className="text-sm text-fg-muted">No active leave types are configured.</p>
+            <EmptyState
+              title="No leave types yet"
+              description="Your organisation has not configured any active leave types."
+            />
           ) : (
             <div className="space-y-3">
               <div className="flex items-end gap-2">
@@ -438,17 +451,21 @@ export default function HrmsHomePage() {
             </Button>
           </div>
           {performance.isLoading ? (
-            <p className="text-sm text-fg-muted" role="status">
-              Loading performance…
-            </p>
+            <div className="space-y-3" aria-label="Loading performance">
+              <Skeleton className="h-20 w-20 rounded-card" />
+              <Skeleton className="h-5 w-2/3" />
+            </div>
           ) : performance.error ? (
-            <p className="text-sm text-danger-fg" role="alert">
-              Performance is unavailable right now.
-            </p>
+            <ErrorState
+              title="Could not load performance"
+              message="Your performance score is unavailable right now."
+              onRetry={() => void performance.refetch()}
+            />
           ) : !myPerformance ? (
-            <p className="text-sm text-fg-muted">
-              Your first score will appear after performance is calculated.
-            </p>
+            <EmptyState
+              title="No score yet"
+              description="Your first score will appear after performance is calculated."
+            />
           ) : (
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex size-20 items-center justify-center rounded-card bg-primary-soft text-2xl font-bold tabular-nums text-primary">

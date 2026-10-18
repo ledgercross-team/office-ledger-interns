@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { Suspense, type ReactNode } from 'react';
 import { HrmsShell } from '@/components/hrms/shell';
+import { Skeleton } from '@/components/ui';
 
 /**
  * Org pages render inside HrmsShell. /platform has its own gameMaster-only
@@ -14,7 +15,14 @@ export function HrmsAppChrome({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
   return (
-    <Suspense fallback={<p className="p-4 text-sm text-fg-muted">Loading…</p>}>
+    <Suspense
+      fallback={
+        <div className="space-y-3 p-4" aria-label="Loading application shell">
+          <Skeleton className="h-8 w-1/3" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      }
+    >
       <HrmsShell>{children}</HrmsShell>
     </Suspense>
   );

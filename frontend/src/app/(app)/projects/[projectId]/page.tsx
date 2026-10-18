@@ -8,6 +8,7 @@ import { CompletionPanel } from '@/components/hrms/completion-panel';
 import { MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { ProgressBar } from '@/components/hrms/progress-bar';
 import { ProjectFlags, ProjectStatusBadge } from '@/components/hrms/project-status';
+import { Banner, ErrorState, Skeleton } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { HrmsProjectDetail, ProjectInvite } from '@/lib/hrms/types';
@@ -99,12 +100,22 @@ export default function ProjectDetailPage() {
     }
   }
 
-  if (project.isLoading) return <p className="text-sm text-charcoal-soft">Loading…</p>;
+  if (project.isLoading) {
+    return (
+      <div className="space-y-4" aria-label="Loading project">
+        <Skeleton className="h-8 w-1/3" />
+        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
   if (project.error || !project.data) {
     return (
-      <p role="alert" className="text-sm text-alert-deep">
-        {project.error ? message(project.error) : 'Project not found.'}
-      </p>
+      <ErrorState
+        title="Could not load project"
+        message={project.error ? message(project.error) : 'Project not found.'}
+        onRetry={() => void project.refetch()}
+      />
     );
   }
 
@@ -150,14 +161,14 @@ export default function ProjectDetailPage() {
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-alert-deep">
+        <Banner tone="danger" title="Could not save project">
           {error}
-        </p>
+        </Banner>
       )}
       {notice && (
-        <p role="status" className="text-sm text-evergreen">
+        <Banner tone="success" title="Project saved">
           {notice}
-        </p>
+        </Banner>
       )}
 
       <CompletionPanel project={p} onChange={apply} />
@@ -175,9 +186,7 @@ export default function ProjectDetailPage() {
                     Project lead
                   </span>
                 )}
-                {m.ticked === true && (
-                  <span className="ml-2 text-xs text-evergreen">ticked</span>
-                )}
+                {m.ticked === true && <span className="ml-2 text-xs text-evergreen">ticked</span>}
               </span>
               {editable && (
                 <span className="flex gap-3">
@@ -256,7 +265,9 @@ export default function ProjectDetailPage() {
                     body: { memberId },
                   }),
                 (invite) =>
-                  setNotice(`Invite sent to ${invite.invitee.fullName}. They can accept or decline it.`),
+                  setNotice(
+                    `Invite sent to ${invite.invitee.fullName}. They can accept or decline it.`,
+                  ),
               )
             }
           />
@@ -299,12 +310,22 @@ export default function ProjectDetailPage() {
           </label>
           <label className="block space-y-1 text-sm text-charcoal">
             Description
-            <textarea name="description" defaultValue={p.description ?? ''} rows={3} className={input} />
+            <textarea
+              name="description"
+              defaultValue={p.description ?? ''}
+              rows={3}
+              className={input}
+            />
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block space-y-1 text-sm text-charcoal">
               Start date
-              <input name="startDate" type="date" defaultValue={p.startDate ?? ''} className={input} />
+              <input
+                name="startDate"
+                type="date"
+                defaultValue={p.startDate ?? ''}
+                className={input}
+              />
             </label>
             <label className="block space-y-1 text-sm text-charcoal">
               Due date
@@ -329,7 +350,8 @@ export default function ProjectDetailPage() {
                 type="button"
                 onClick={() =>
                   void run(
-                    () => hrmsFetch<HrmsProjectDetail>(`/projects/${p.id}/archive`, { method: 'POST' }),
+                    () =>
+                      hrmsFetch<HrmsProjectDetail>(`/projects/${p.id}/archive`, { method: 'POST' }),
                     (data) => {
                       setConfirmArchive(false);
                       apply(data);
