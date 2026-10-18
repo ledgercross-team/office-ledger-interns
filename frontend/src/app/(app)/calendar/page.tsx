@@ -2,7 +2,16 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
-import { Banner, Button, Dialog, ErrorState, Skeleton, useToast } from '@/components/ui';
+import {
+  Banner,
+  Button,
+  Dialog,
+  ErrorState,
+  PageHeader,
+  PageShell,
+  Skeleton,
+  useToast,
+} from '@/components/ui';
 import { MemberChips, MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { meetingProblem } from '@/lib/hrms/meeting';
@@ -425,18 +434,16 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-fg">
-            {canTeam ? 'Team calendar' : 'My calendar'}
-          </h1>
-          <p className="mt-1 text-sm text-fg-muted">
-            {canTeam
-              ? 'See work deadlines, leave, holidays, and meetings for the team.'
-              : 'See your work deadlines, leave, holidays, and meetings.'}
-          </p>
-        </div>
+    <PageShell>
+      <PageHeader
+        title={canTeam ? 'Team calendar' : 'My calendar'}
+        description={
+          canTeam
+            ? 'See work deadlines, leave, holidays, and meetings for the team.'
+            : 'See your work deadlines, leave, holidays, and meetings.'
+        }
+      />
+      <div className="flex flex-col gap-3 rounded-card border border-border bg-surface p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-full border border-border bg-surface p-1">
             <button
@@ -590,6 +597,6 @@ export default function CalendarPage() {
           onChanged={() => void queryClient.invalidateQueries({ queryKey: ['hrms', 'calendar'] })}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

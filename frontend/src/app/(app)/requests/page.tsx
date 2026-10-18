@@ -9,6 +9,7 @@ import {
   EmptyState,
   ErrorState,
   PageHeader,
+  PageShell,
   Pagination,
   Skeleton,
   cardClass,
@@ -537,7 +538,7 @@ export default function RequestsPage() {
   const decidable = items.filter((r) => r.canDecide);
 
   return (
-    <div className="space-y-6">
+    <PageShell>
       <PageHeader
         title={canDecide ? 'Approvals & requests' : 'My requests'}
         description={
@@ -709,6 +710,6 @@ export default function RequestsPage() {
       {canFile && session?.role && (
         <NewRequestForm role={session.role as 'coo' | 'manager'} onDone={changed} />
       )}
-    </div>
+    </PageShell>
   );
 }

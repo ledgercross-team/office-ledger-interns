@@ -1,7 +1,16 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { Button, EmptyState, ErrorState, Pagination, Skeleton } from '@/components/ui';
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  FilterBar,
+  PageHeader,
+  PageShell,
+  Pagination,
+  Skeleton,
+} from '@/components/ui';
 import { StatusChips, TaskRow } from '@/components/hrms/project-card';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -10,9 +19,6 @@ import { Suspense, useState } from 'react';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { HrmsProject, HrmsTask, Paginated } from '@/lib/hrms/types';
-
-const select =
-  'min-h-10 w-full min-w-0 rounded-control border border-border bg-surface px-3 py-2 text-sm';
 
 function TasksList() {
   const { session } = useHrmsAuth();
@@ -58,34 +64,34 @@ function TasksList() {
   };
 
   return (
-    <>
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{pageTitle}</h1>
-          <p className="mt-1 text-sm text-fg-muted">
-            {session?.role === 'employee'
-              ? 'Focus on the tasks assigned to you.'
-              : session?.role === 'manager'
-                ? 'Coordinate work assigned to your team.'
-                : 'Track work across the organisation.'}
-          </p>
-        </div>
-        {canCreate && (
-          <Button asChild>
-            <Link href={`/tasks/new${projectId ? `?projectId=${projectId}` : ''}`}>
-              <Plus aria-hidden className="size-4" />
-              New task
-            </Link>
-          </Button>
-        )}
-      </div>
+    <PageShell>
+      <PageHeader
+        title={pageTitle}
+        description={
+          session?.role === 'employee'
+            ? 'Focus on the tasks assigned to you.'
+            : session?.role === 'manager'
+              ? 'Coordinate work assigned to your team.'
+              : 'Track work across the organisation.'
+        }
+        primaryAction={
+          canCreate ? (
+            <Button asChild>
+              <Link href={`/tasks/new${projectId ? `?projectId=${projectId}` : ''}`}>
+                <Plus aria-hidden className="size-4" />
+                New task
+              </Link>
+            </Button>
+          ) : undefined
+        }
+      />
 
-      <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
+      <FilterBar>
         <select
           aria-label="Project"
           value={projectId}
           onChange={(e) => reset(() => setProjectId(e.target.value))}
-          className={select}
+          className="min-h-10 w-full min-w-0 rounded-control border border-border bg-surface-raised px-3 py-2 text-sm sm:w-auto sm:min-w-44"
         >
           <option value="">All projects</option>
           {projects.data?.items.map((p) => (
@@ -99,7 +105,7 @@ function TasksList() {
           aria-label="Urgency"
           value={urgency}
           onChange={(e) => reset(() => setUrgency(e.target.value))}
-          className={select}
+          className="min-h-10 w-full min-w-0 rounded-control border border-border bg-surface-raised px-3 py-2 text-sm sm:w-auto"
         >
           <option value="">Any urgency</option>
           <option value="high">High</option>
@@ -110,7 +116,7 @@ function TasksList() {
           aria-label="Flag"
           value={flag}
           onChange={(e) => reset(() => setFlag(e.target.value))}
-          className={select}
+          className="min-h-10 w-full min-w-0 rounded-control border border-border bg-surface-raised px-3 py-2 text-sm sm:w-auto"
         >
           <option value="">No flag filter</option>
           <option value="overdue">Overdue</option>
@@ -136,7 +142,7 @@ function TasksList() {
             Open only
           </label>
         </div>
-      </div>
+      </FilterBar>
 
       <StatusChips
         value={status}
@@ -189,7 +195,7 @@ function TasksList() {
           onPage={setPage}
         />
       )}
-    </>
+    </PageShell>
   );
 }
 

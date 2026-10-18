@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { MemberChips, MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { RoleGate } from '@/components/hrms/role-gate';
-import { Banner, Button, Input, Textarea, cardClass } from '@/components/ui';
+import { Banner, Button, Input, PageHeader, PageShell, Textarea, cardClass } from '@/components/ui';
 import { labelClass } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import type { HrmsProjectDetail } from '@/lib/hrms/types';
@@ -46,41 +46,46 @@ function NewProjectForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className={`${cardClass} max-w-lg space-y-4`}>
-      <h1 className="text-xl font-semibold text-fg">New project</h1>
-      <Input label="Name" name="name" required maxLength={200} />
-      <Textarea label="Description (optional)" name="description" rows={3} maxLength={5000} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Input label="Start date" name="startDate" type="date" />
-        <Input label="Due date" name="dueDate" type="date" />
-      </div>
-      <fieldset className="space-y-1">
-        <legend className={labelClass}>Managers</legend>
-        <p className="text-xs text-fg-muted">
-          A project needs at least one manager and one employee. Employees are invited from the
-          project page.
-        </p>
-        <MemberSearch
-          label="Add a manager"
-          role="manager"
-          excludeIds={managerIds}
-          onSelect={(m) => setChosen((list) => [...list, m])}
-        />
-        <MemberChips
-          members={chosen}
-          onRemove={(id) => setChosen((list) => list.filter((m) => m.id !== id))}
-          emptyText="No managers chosen yet."
-        />
-      </fieldset>
-      {error && (
-        <Banner tone="danger" title="Could not create project">
-          {error}
-        </Banner>
-      )}
-      <Button type="submit" loading={pending} loadingLabel="Creating">
-        Create project
-      </Button>
-    </form>
+    <PageShell className="max-w-2xl">
+      <PageHeader
+        title="New project"
+        description="Set the project scope, dates, and managers before inviting the wider team."
+      />
+      <form onSubmit={onSubmit} className={`${cardClass} max-w-lg space-y-4`}>
+        <Input label="Name" name="name" required maxLength={200} />
+        <Textarea label="Description (optional)" name="description" rows={3} maxLength={5000} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input label="Start date" name="startDate" type="date" />
+          <Input label="Due date" name="dueDate" type="date" />
+        </div>
+        <fieldset className="space-y-1">
+          <legend className={labelClass}>Managers</legend>
+          <p className="text-xs text-fg-muted">
+            A project needs at least one manager and one employee. Employees are invited from the
+            project page.
+          </p>
+          <MemberSearch
+            label="Add a manager"
+            role="manager"
+            excludeIds={managerIds}
+            onSelect={(m) => setChosen((list) => [...list, m])}
+          />
+          <MemberChips
+            members={chosen}
+            onRemove={(id) => setChosen((list) => list.filter((m) => m.id !== id))}
+            emptyText="No managers chosen yet."
+          />
+        </fieldset>
+        {error && (
+          <Banner tone="danger" title="Could not create project">
+            {error}
+          </Banner>
+        )}
+        <Button type="submit" loading={pending} loadingLabel="Creating">
+          Create project
+        </Button>
+      </form>
+    </PageShell>
   );
 }
 

@@ -2,7 +2,17 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
-import { Banner, Button, EmptyState, ErrorState, Skeleton, useToast } from '@/components/ui';
+import {
+  Banner,
+  Button,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  PageShell,
+  SectionHeading,
+  Skeleton,
+  useToast,
+} from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { HrmsLeave, LeaveBalance, RequestStatus } from '@/lib/hrms/types';
@@ -232,17 +242,15 @@ export default function LeavePage() {
   );
 
   return (
-    <>
-      <div>
-        <h1 className="text-2xl font-bold text-fg">
-          {canDecide ? 'Leave & approvals' : 'My leave'}
-        </h1>
-        <p className="mt-1 text-sm text-fg-muted">
-          {canDecide
+    <PageShell>
+      <PageHeader
+        title={canDecide ? 'Leave & approvals' : 'My leave'}
+        description={
+          canDecide
             ? 'Submit your own leave and review requests assigned to you.'
-            : 'Check your allowance and track your leave requests.'}
-        </p>
-      </div>
+            : 'Check your allowance and track your leave requests.'
+        }
+      />
 
       {balance.isLoading && (
         <div
@@ -285,7 +293,10 @@ export default function LeavePage() {
           onSubmit={onSubmit}
           className="space-y-3 rounded-card border border-border bg-surface p-4 lg:sticky lg:top-20"
         >
-          <h2 className="font-bold text-fg">Ask for leave</h2>
+          <SectionHeading
+            title="Ask for leave"
+            description="Choose the dates and explain what you need."
+          />
           <label htmlFor="leave-type" className="block space-y-1 text-sm text-fg">
             Leave type
             <select id="leave-type" name="type" required className={input}>
@@ -348,7 +359,7 @@ export default function LeavePage() {
         <div className="min-w-0 space-y-6">
           {canDecide && (
             <section className="space-y-3">
-              <h2 className="font-bold text-fg">To decide</h2>
+              <SectionHeading title="To decide" description="Requests waiting for your decision." />
               {toDecide.error && (
                 <ErrorState
                   title="Could not load requests to decide"
@@ -371,7 +382,7 @@ export default function LeavePage() {
           )}
 
           <section className="space-y-3">
-            <h2 className="font-bold text-fg">My leave</h2>
+            <SectionHeading title="My leave" description="Your submitted leave requests." />
             {mine.error && (
               <ErrorState
                 title="Could not load your leave"
@@ -394,7 +405,7 @@ export default function LeavePage() {
 
           {canDecide && teamRest.length > 0 && (
             <section className="space-y-3">
-              <h2 className="font-bold text-fg">Team leave</h2>
+              <SectionHeading title="Team leave" description="Approved leave across your team." />
               <ul className="space-y-3">
                 {teamRest.map((l) => (
                   <LeaveItem key={l.requestId} leave={l} showPerson onChanged={changed} />
@@ -404,6 +415,6 @@ export default function LeavePage() {
           )}
         </div>
       </div>
-    </>
+    </PageShell>
   );
 }

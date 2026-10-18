@@ -4,7 +4,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/hrms/role-gate';
-import { Banner, Button, Card, Input, Select, cardClass, linkClass } from '@/components/ui';
+import {
+  Banner,
+  Button,
+  Card,
+  Input,
+  PageHeader,
+  PageShell,
+  Select,
+  cardClass,
+  linkClass,
+} from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { HRMS_ROLE_LABELS, type CreateMemberResponse, type HrmsMemberRole } from '@/lib/hrms/types';
@@ -51,71 +61,79 @@ function NewMemberForm() {
 
   if (done?.member) {
     return (
-      <Card className="max-w-md space-y-3">
-        <p className="text-lg font-semibold text-success-fg">{done.member.fullName} was added</p>
-        {done.temporaryPassword ? (
-          <div
-            role="status"
-            className="space-y-1 rounded-control border border-success/30 bg-success-soft p-3"
-          >
-            <p className="text-sm text-fg">Temporary password for {done.member.email}</p>
-            <p className="select-all font-mono text-base tabular-nums text-fg">
-              {done.temporaryPassword}
+      <PageShell className="max-w-2xl">
+        <PageHeader title="Person added" description="Share the next sign-in step securely." />
+        <Card className="max-w-md space-y-3">
+          <p className="text-lg font-semibold text-success-fg">{done.member.fullName} was added</p>
+          {done.temporaryPassword ? (
+            <div
+              role="status"
+              className="space-y-1 rounded-control border border-success/30 bg-success-soft p-3"
+            >
+              <p className="text-sm text-fg">Temporary password for {done.member.email}</p>
+              <p className="select-all font-mono text-base tabular-nums text-fg">
+                {done.temporaryPassword}
+              </p>
+              <p className="text-xs text-fg-muted">
+                Give this to them yourself. It is shown only now, and they must choose their own
+                password the first time they sign in.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-fg-muted">
+              {done.invited
+                ? 'They can set a password from the invite link.'
+                : 'They already have a login, so they can use this organisation straight away.'}
             </p>
-            <p className="text-xs text-fg-muted">
-              Give this to them yourself. It is shown only now, and they must choose their own
-              password the first time they sign in.
-            </p>
+          )}
+          <div className="flex gap-3 text-sm">
+            <Link href={`/people/${done.member.id}`} className={linkClass}>
+              Open profile
+            </Link>
+            <Link href="/people" className={linkClass}>
+              Back to people
+            </Link>
           </div>
-        ) : (
-          <p className="text-sm text-fg-muted">
-            {done.invited
-              ? 'They can set a password from the invite link.'
-              : 'They already have a login, so they can use this organisation straight away.'}
-          </p>
-        )}
-        <div className="flex gap-3 text-sm">
-          <Link href={`/people/${done.member.id}`} className={linkClass}>
-            Open profile
-          </Link>
-          <Link href="/people" className={linkClass}>
-            Back to people
-          </Link>
-        </div>
-      </Card>
+        </Card>
+      </PageShell>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className={`${cardClass} max-w-md space-y-4`}>
-      <h1 className="text-xl font-semibold text-fg">Add person</h1>
-      <Input label="Email" name="email" type="email" required />
-      <Input label="Full name" name="fullName" required maxLength={120} />
-      <Select label="Role" name="role" defaultValue="employee">
-        {roles.map((r) => (
-          <option key={r} value={r}>
-            {HRMS_ROLE_LABELS[r]}
-          </option>
-        ))}
-      </Select>
-      <Input label="Designation (optional)" name="designation" maxLength={100} />
-      <Input label="Department (optional)" name="department" maxLength={100} />
-      <Input
-        label="Employee code"
-        value="Assigned automatically"
-        readOnly
-        disabled
-        helperText="A unique code (EMP-0001, EMP-0002…) is given when they are added. It is permanent."
+    <PageShell className="max-w-2xl">
+      <PageHeader
+        title="Add person"
+        description="Create an organisation member and choose the access level they need."
       />
-      {error && (
-        <Banner tone="danger" title="Could not add person">
-          {error}
-        </Banner>
-      )}
-      <Button type="submit" loading={pending} loadingLabel="Adding">
-        Add person
-      </Button>
-    </form>
+      <form onSubmit={onSubmit} className={`${cardClass} max-w-md space-y-4`}>
+        <Input label="Email" name="email" type="email" required />
+        <Input label="Full name" name="fullName" required maxLength={120} />
+        <Select label="Role" name="role" defaultValue="employee">
+          {roles.map((r) => (
+            <option key={r} value={r}>
+              {HRMS_ROLE_LABELS[r]}
+            </option>
+          ))}
+        </Select>
+        <Input label="Designation (optional)" name="designation" maxLength={100} />
+        <Input label="Department (optional)" name="department" maxLength={100} />
+        <Input
+          label="Employee code"
+          value="Assigned automatically"
+          readOnly
+          disabled
+          helperText="A unique code (EMP-0001, EMP-0002…) is given when they are added. It is permanent."
+        />
+        {error && (
+          <Banner tone="danger" title="Could not add person">
+            {error}
+          </Banner>
+        )}
+        <Button type="submit" loading={pending} loadingLabel="Adding">
+          Add person
+        </Button>
+      </form>
+    </PageShell>
   );
 }
 

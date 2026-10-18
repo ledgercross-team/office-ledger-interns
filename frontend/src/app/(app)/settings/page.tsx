@@ -12,6 +12,7 @@ import {
   EmptyState,
   ErrorState,
   PageHeader,
+  PageShell,
   Skeleton,
   TimezoneSelect,
 } from '@/components/ui';
@@ -830,7 +831,7 @@ function SettingsContent() {
   });
 
   return (
-    <div className="space-y-6">
+    <PageShell>
       <PageHeader
         title="Organisation settings"
         description="Keep working rules, check-in networks, leave policy, and account controls in one place."
@@ -897,7 +898,7 @@ function SettingsContent() {
           </div>
         </>
       )}
-    </div>
+    </PageShell>
   );
 }
 

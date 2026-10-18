@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { Button, Card, ErrorState, Input } from '@/components/ui';
+import { Button, ErrorState, Input } from '@/components/ui';
+import { AuthShell } from '@/components/hrms/auth-shell';
 import { PasswordStrengthMeter, passwordStrength } from '@/components/hrms/password-strength';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 
@@ -36,9 +37,13 @@ function AcceptInviteForm() {
       setDone(true);
     } catch (err) {
       if (err instanceof HrmsApiError && [400, 404, 410].includes(err.status)) {
-        setError('This link has expired or was already used. Ask the person who invited you — or your CEO — for a new one.');
+        setError(
+          'This link has expired or was already used. Ask the person who invited you — or your CEO — for a new one.',
+        );
       } else {
-        setError(err instanceof HrmsApiError ? err.message : 'Something went wrong. Please try again.');
+        setError(
+          err instanceof HrmsApiError ? err.message : 'Something went wrong. Please try again.',
+        );
       }
       setPending(false);
     }
@@ -46,58 +51,51 @@ function AcceptInviteForm() {
 
   if (done) {
     return (
-      <main className="flex min-h-screen flex-1 items-center justify-center bg-bg p-4">
-        <Card className="w-full max-w-[480px] space-y-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-fg">Password set</h1>
-          <p className="text-sm text-fg-muted">You can now log in with your email and password.</p>
-          <Button asChild className="w-full">
-            <Link href="/login">Go to log in</Link>
-          </Button>
-        </Card>
-      </main>
+      <AuthShell title="Password set">
+        <p className="text-sm text-fg-muted">You can now log in with your email and password.</p>
+        <Button asChild className="w-full">
+          <Link href="/login">Go to log in</Link>
+        </Button>
+      </AuthShell>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-1 items-center justify-center bg-bg p-4">
-      <Card className="w-full max-w-[480px]">
-        <p className="text-lg font-semibold text-primary">office-ledger</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-fg">Set your password</h1>
-        <form onSubmit={(event) => void onSubmit(event)} className="mt-5 space-y-4">
-          {!token && (
-            <ErrorState message="This link is incomplete. Open the link from your invite again, or ask the sender for a new one." />
-          )}
-          <div>
-            <Input
-              label="New password"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={10}
-              helperText="At least 10 characters. Longer is stronger."
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-            <div className="mt-2">
-              <PasswordStrengthMeter password={password} />
-            </div>
-          </div>
+    <AuthShell title="Set your password">
+      <form onSubmit={(event) => void onSubmit(event)} className="mt-5 space-y-4">
+        {!token && (
+          <ErrorState message="This link is incomplete. Open the link from your invite again, or ask the sender for a new one." />
+        )}
+        <div>
           <Input
-            label="Repeat the password"
+            label="New password"
             type="password"
             autoComplete="new-password"
             required
             minLength={10}
-            value={confirm}
-            onChange={(event) => setConfirm(event.target.value)}
+            helperText="At least 10 characters. Longer is stronger."
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
           />
-          {error && <ErrorState message={error} />}
-          <Button type="submit" loading={pending} disabled={!token} className="w-full">
-            Set password
-          </Button>
-        </form>
-      </Card>
-    </main>
+          <div className="mt-2">
+            <PasswordStrengthMeter password={password} />
+          </div>
+        </div>
+        <Input
+          label="Repeat the password"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={10}
+          value={confirm}
+          onChange={(event) => setConfirm(event.target.value)}
+        />
+        {error && <ErrorState message={error} />}
+        <Button type="submit" loading={pending} disabled={!token} className="w-full">
+          Set password
+        </Button>
+      </form>
+    </AuthShell>
   );
 }
 

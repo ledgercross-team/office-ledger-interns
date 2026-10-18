@@ -8,6 +8,8 @@ import {
   Button,
   EmptyState,
   ErrorState,
+  PageHeader,
+  PageShell,
   Skeleton,
   cardClass,
   controlClass,
@@ -215,17 +217,15 @@ export default function InvitesPage() {
   const toReview = invites.data?.toReview ?? [];
 
   return (
-    <>
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">
-          {session?.role === 'employee' ? 'My invites' : 'Invite reviews'}
-        </h1>
-        <p className="mt-1 text-sm text-fg-muted">
-          {session?.role === 'employee'
+    <PageShell>
+      <PageHeader
+        title={session?.role === 'employee' ? 'My invites' : 'Invite reviews'}
+        description={
+          session?.role === 'employee'
             ? 'Accept or decline invitations to join projects.'
-            : 'Review declined invitations and keep project membership moving.'}
-        </p>
-      </div>
+            : 'Review declined invitations and keep project membership moving.'
+        }
+      />
       {invites.isLoading && (
         <div className="space-y-3" aria-label="Loading invites">
           {[1, 2, 3].map((item) => (
@@ -277,6 +277,6 @@ export default function InvitesPage() {
             description="Declined invitations needing your decision will appear here."
           />
         )}
-    </>
+    </PageShell>
   );
 }

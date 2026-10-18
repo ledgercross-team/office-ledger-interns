@@ -2,10 +2,19 @@
 
 import { Dialog } from 'radix-ui';
 import { Command, Search, X } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type HTMLAttributes, type ReactNode } from 'react';
+import { cn } from '@/lib/cn';
 import { Badge } from './badge';
 import { Button } from './button';
 import { Input } from './form-fields';
+
+export function PageShell({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn('space-y-6 sm:space-y-8', className)} {...props}>
+      {children}
+    </div>
+  );
+}
 
 export function PageHeader({
   title,
@@ -21,11 +30,13 @@ export function PageHeader({
   breadcrumbs?: ReactNode;
 }) {
   return (
-    <header className="space-y-3">
+    <header className="space-y-4">
       {breadcrumbs}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-fg">{title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-[1.75rem]">
+            {title}
+          </h1>
           {description && <p className="mt-1 max-w-2xl text-sm text-fg-muted">{description}</p>}
         </div>
         {(primaryAction || secondaryActions) && (
@@ -36,6 +47,28 @@ export function PageHeader({
         )}
       </div>
     </header>
+  );
+}
+
+export function SectionHeading({
+  title,
+  description,
+  action,
+  className,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn('flex items-end justify-between gap-3', className)}>
+      <div className="min-w-0">
+        <h2 className="text-lg font-semibold tracking-tight text-fg">{title}</h2>
+        {description && <p className="mt-1 text-sm text-fg-muted">{description}</p>}
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
   );
 }
 

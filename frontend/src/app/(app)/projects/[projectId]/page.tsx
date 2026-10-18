@@ -14,6 +14,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  PageShell,
   Skeleton,
   cardClass,
   controlClass,
@@ -107,11 +108,11 @@ export default function ProjectDetailPage() {
 
   if (project.isLoading) {
     return (
-      <div className="space-y-4" aria-label="Loading project">
+      <PageShell aria-label="Loading project">
         <Skeleton className="h-8 w-1/3" />
         <Skeleton className="h-28 w-full" />
         <Skeleton className="h-48 w-full" />
-      </div>
+      </PageShell>
     );
   }
   if (project.error || !project.data) {
@@ -132,7 +133,7 @@ export default function ProjectDetailPage() {
   const memberIds = p.members.map((m) => m.memberId);
 
   return (
-    <>
+    <PageShell>
       <div className="space-y-2">
         <Link href="/projects" className={`text-sm ${linkClass}`}>
           ← Projects
@@ -384,6 +385,6 @@ export default function ProjectDetailPage() {
           )}
         </section>
       )}
-    </>
+    </PageShell>
   );
 }

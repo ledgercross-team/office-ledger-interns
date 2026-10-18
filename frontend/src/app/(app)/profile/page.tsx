@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { SecurityCard } from '@/components/hrms/security-card';
-import { Avatar, Card, ErrorState, Skeleton } from '@/components/ui';
+import { Avatar, Card, ErrorState, PageHeader, PageShell, Skeleton } from '@/components/ui';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatDate, formatDateTime } from '@/lib/hrms/time';
@@ -27,17 +27,20 @@ export default function ProfilePage() {
   if (!session) return null;
   if (member.isLoading) {
     return (
-      <div className="mx-auto max-w-[768px] space-y-4" aria-label="Loading profile">
+      <PageShell className="mx-auto max-w-[768px]" aria-label="Loading profile">
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-64 w-full" />
         <Skeleton className="h-40 w-full" />
-      </div>
+      </PageShell>
     );
   }
   const m = member.data;
   return (
-    <div className="mx-auto max-w-[768px] space-y-6">
-      <h1 className="text-2xl font-bold text-fg">Profile</h1>
+    <PageShell className="mx-auto max-w-[768px]">
+      <PageHeader
+        title="Profile"
+        description="Review your account details and security settings."
+      />
       <Card>
         <div className="mb-5 flex items-center gap-4">
           <Avatar name={session.user.fullName} size="lg" />
@@ -76,6 +79,6 @@ export default function ProfilePage() {
         )}
       </Card>
       <SecurityCard />
-    </div>
+    </PageShell>
   );
 }

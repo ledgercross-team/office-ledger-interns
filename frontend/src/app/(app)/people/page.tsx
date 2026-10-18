@@ -5,6 +5,9 @@ import {
   Button,
   EmptyState,
   ErrorState,
+  FilterBar,
+  PageHeader,
+  PageShell,
   Pagination,
   Skeleton,
   controlClass,
@@ -64,44 +67,33 @@ export default function PeoplePage() {
   const [drawer, setDrawer] = useState<string | null>(null);
 
   return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-fg">
-            {session?.role === 'manager' ? 'Team' : 'People'}
-          </h1>
-          <p className="mt-1 text-sm text-fg-muted">
-            {session?.role === 'manager'
-              ? 'See the people connected to your projects and work.'
-              : 'Manage people, roles, and organisation access.'}
-          </p>
-        </div>
-        {isAdmin && (
-          <Button asChild size="sm">
-            <Link href="/people/new">Add person</Link>
-          </Button>
-        )}
-      </div>
+    <PageShell>
+      <PageHeader
+        title={session?.role === 'manager' ? 'Team' : 'People'}
+        description={
+          session?.role === 'manager'
+            ? 'See the people connected to your projects and work.'
+            : 'Manage people, roles, and organisation access.'
+        }
+        primaryAction={
+          isAdmin ? (
+            <Button asChild>
+              <Link href="/people/new">Add person</Link>
+            </Button>
+          ) : undefined
+        }
+      />
 
       {isAdmin && org.data?.seats && <SeatBar seats={org.data.seats} />}
 
-      <form
-        className="grid w-full gap-2 sm:flex sm:flex-wrap"
-        onSubmit={(event) => {
-          event.preventDefault();
+      <FilterBar
+        search={q}
+        searchLabel="Search people"
+        onSearchChange={(value) => {
+          setQ(value);
           setPage(1);
         }}
       >
-        <input
-          aria-label="Search people"
-          placeholder="Search name or email"
-          value={q}
-          onChange={(event) => {
-            setQ(event.target.value);
-            setPage(1);
-          }}
-          className={`${controlClass} min-w-0 sm:flex-1`}
-        />
         <select
           aria-label="Role"
           value={role}
@@ -109,7 +101,7 @@ export default function PeoplePage() {
             setRole(event.target.value);
             setPage(1);
           }}
-          className={`${controlClass} sm:w-auto`}
+          className={`${controlClass} sm:w-auto sm:min-w-36`}
         >
           <option value="">All roles</option>
           {(['ceo', 'coo', 'manager', 'employee'] as const).map((r) => (
@@ -125,14 +117,14 @@ export default function PeoplePage() {
             setStatus(event.target.value);
             setPage(1);
           }}
-          className={`${controlClass} sm:w-auto`}
+          className={`${controlClass} sm:w-auto sm:min-w-36`}
         >
           <option value="">Any status</option>
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
           <option value="deactivated">Deactivated</option>
         </select>
-      </form>
+      </FilterBar>
 
       {members.isLoading && (
         <div className="space-y-3" aria-label="Loading people">
@@ -268,6 +260,6 @@ export default function PeoplePage() {
         />
       )}
       {drawer && <BreakdownDrawer memberId={drawer} onClose={() => setDrawer(null)} />}
-    </>
+    </PageShell>
   );
 }

@@ -5,6 +5,7 @@ import {
   EmptyState,
   ErrorState,
   PageHeader,
+  PageShell,
   Pagination,
   Skeleton,
   Button,
@@ -119,7 +120,7 @@ function History() {
   });
 
   return (
-    <div className="space-y-6">
+    <PageShell>
       <PageHeader
         title="History"
         description="Review organisation changes and add context without changing the original record."
@@ -184,7 +185,7 @@ function History() {
           onPage={setPage}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

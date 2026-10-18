@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { Button, Card, ErrorState, Input } from '@/components/ui';
+import { Button, ErrorState, Input } from '@/components/ui';
+import { AuthShell } from '@/components/hrms/auth-shell';
 import { OrgPicker } from '@/components/hrms/org-picker';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
@@ -30,18 +31,6 @@ function safeNext(next: string | null): string | null {
     return null;
   }
   return next;
-}
-
-function AuthCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <main className="flex min-h-screen flex-1 items-center justify-center bg-bg p-4">
-      <Card className="w-full max-w-[480px]">
-        <p className="text-lg font-semibold text-primary">office-ledger</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-fg">{title}</h1>
-        <div className="mt-5">{children}</div>
-      </Card>
-    </main>
-  );
 }
 
 function LoginForm() {
@@ -119,7 +108,7 @@ function LoginForm() {
   }
 
   return (
-    <AuthCard title="Log in">
+    <AuthShell title="Log in">
       <form onSubmit={(event) => void onSubmit(event)} className="space-y-4">
         <Input
           label="Email"
@@ -169,7 +158,7 @@ function LoginForm() {
           Log in
         </Button>
       </form>
-    </AuthCard>
+    </AuthShell>
   );
 }
 

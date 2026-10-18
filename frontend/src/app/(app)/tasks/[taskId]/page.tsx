@@ -12,6 +12,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  PageShell,
   Skeleton,
   controlClass,
   labelClass,
@@ -70,11 +71,11 @@ export default function TaskDetailPage() {
 
   if (task.isLoading) {
     return (
-      <div className="space-y-4" aria-label="Loading task">
+      <PageShell aria-label="Loading task">
         <Skeleton className="h-8 w-2/3" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-48 w-full" />
-      </div>
+      </PageShell>
     );
   }
   if (task.error || !task.data) {
@@ -111,7 +112,7 @@ export default function TaskDetailPage() {
   }
 
   return (
-    <>
+    <PageShell>
       <div className="space-y-2">
         <Link href="/tasks" className={`text-sm ${linkClass}`}>
           ← Tasks
@@ -308,6 +309,6 @@ export default function TaskDetailPage() {
           </ol>
         )}
       </Card>
-    </>
+    </PageShell>
   );
 }

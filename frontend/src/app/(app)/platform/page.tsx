@@ -2,12 +2,18 @@
 
 import { Orgs } from '@/components/hrms/platform-parts';
 import { RoleGate } from '@/components/hrms/role-gate';
+import { PageHeader, PageShell } from '@/components/ui';
 
 export default function PlatformOrgsPage() {
   return (
     <RoleGate allow={['gameMaster']}>
-      <h1 className="text-xl font-semibold text-fg">Organisations</h1>
-      <Orgs />
+      <PageShell>
+        <PageHeader
+          title="Organisations"
+          description="Monitor organisation access, status, and platform-level activity."
+        />
+        <Orgs />
+      </PageShell>
     </RoleGate>
   );
 }

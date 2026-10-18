@@ -9,6 +9,7 @@ import {
   EmptyState,
   ErrorState,
   PageHeader,
+  PageShell,
   Skeleton,
   cardClass,
   controlClass,
@@ -117,7 +118,7 @@ function Ratings() {
     queryFn: () => hrmsFetch<{ items: RatingsDueProject[] }>('/me/ratings-due'),
   });
   return (
-    <div className="space-y-6">
+    <PageShell>
       <PageHeader
         title="Ratings"
         description="Give thoughtful, anonymous feedback on recently completed projects."
@@ -156,7 +157,7 @@ function Ratings() {
           }}
         />
       ))}
-    </div>
+    </PageShell>
   );
 }
 

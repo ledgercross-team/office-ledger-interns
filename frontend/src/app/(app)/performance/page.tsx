@@ -11,6 +11,7 @@ import {
   EmptyState,
   ErrorState,
   PageHeader,
+  PageShell,
   Skeleton,
   StatTile,
 } from '@/components/ui';
@@ -126,7 +127,7 @@ function Performance() {
     : null;
 
   return (
-    <div className="space-y-6">
+    <PageShell>
       <PageHeader
         title={isSelfView ? 'My performance' : 'Performance'}
         description={
@@ -221,7 +222,7 @@ function Performance() {
       )}
 
       {open && <BreakdownDrawer memberId={open} onClose={() => setOpen(null)} />}
-    </div>
+    </PageShell>
   );
 }
 

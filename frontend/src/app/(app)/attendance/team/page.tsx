@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { message, MonthTable, StatusPill, time } from '@/components/hrms/attendance-parts';
 import { RoleGate } from '@/components/hrms/role-gate';
-import { EmptyState, ErrorState, Skeleton } from '@/components/ui';
+import { EmptyState, ErrorState, PageHeader, PageShell, Skeleton } from '@/components/ui';
 import { hrmsFetch, hrmsFetchText } from '@/lib/hrms/api-client';
 import type { AttendanceMonth, TeamAttendanceDay } from '@/lib/hrms/types';
 
@@ -44,13 +44,16 @@ function TeamAttendance() {
   }
 
   return (
-    <>
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">Team attendance</h1>
-        <Link href="/attendance" className="text-sm text-primary hover:underline">
-          My attendance
-        </Link>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Team attendance"
+        description="Review attendance by day and inspect each person’s monthly record."
+        secondaryActions={
+          <Link href="/attendance" className={secondary}>
+            My attendance
+          </Link>
+        }
+      />
 
       <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-end">
         <label className="space-y-1.5 text-sm font-medium text-fg">
@@ -194,7 +197,7 @@ function TeamAttendance() {
           )}
         </section>
       )}
-    </>
+    </PageShell>
   );
 }
 

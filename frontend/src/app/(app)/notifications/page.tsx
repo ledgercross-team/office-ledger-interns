@@ -1,6 +1,16 @@
 'use client';
 
-import { Banner, EmptyState, ErrorState, Pagination, Skeleton, useToast } from '@/components/ui';
+import {
+  Banner,
+  Button,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  PageShell,
+  Pagination,
+  Skeleton,
+  useToast,
+} from '@/components/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -8,9 +18,6 @@ import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { formatDateTime } from '@/lib/hrms/time';
 import type { EmailPref, NotificationsPage } from '@/lib/hrms/types';
-
-const secondary =
-  'rounded-full border border-border-strong bg-surface px-4 py-1.5 text-sm font-medium transition-[background-color,transform] hover:bg-surface-sunken active:scale-95 disabled:opacity-60';
 
 const LINKS: Record<string, string> = {
   requests: '/requests',
@@ -97,18 +104,21 @@ export default function NotificationsPage() {
   });
 
   return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold text-fg">Notifications</h1>
-        <button
-          type="button"
-          disabled={readAll.isPending || !list.data?.unread}
-          onClick={() => readAll.mutate()}
-          className={secondary}
-        >
-          Mark all read
-        </button>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Notifications"
+        description="Keep track of decisions, updates, and actions that need your attention."
+        secondaryActions={
+          <Button
+            variant="secondary"
+            disabled={readAll.isPending || !list.data?.unread}
+            loading={readAll.isPending}
+            onClick={() => readAll.mutate()}
+          >
+            Mark all read
+          </Button>
+        }
+      />
       {error && (
         <Banner tone="danger" title="Notification action failed">
           {error}
@@ -180,6 +190,6 @@ export default function NotificationsPage() {
         />
       )}
       <EmailPrefs />
-    </>
+    </PageShell>
   );
 }

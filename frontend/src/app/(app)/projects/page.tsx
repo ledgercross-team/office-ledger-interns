@@ -1,7 +1,16 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { Button, EmptyState, ErrorState, PageHeader, Pagination, Skeleton } from '@/components/ui';
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  FilterBar,
+  PageHeader,
+  PageShell,
+  Pagination,
+  Skeleton,
+} from '@/components/ui';
 import { ProjectCard } from '@/components/hrms/project-card';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -33,7 +42,7 @@ export default function ProjectsPage() {
   });
 
   return (
-    <>
+    <PageShell>
       <PageHeader
         title="Projects"
         description="Track project progress, people, tasks, and completion decisions."
@@ -59,7 +68,14 @@ export default function ProjectsPage() {
         </Link>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <FilterBar
+        search={q}
+        searchLabel="Search projects"
+        onSearchChange={(value) => {
+          setQ(value);
+          setPage(1);
+        }}
+      >
         {[
           ['', 'Current'],
           ['active', 'Active'],
@@ -75,22 +91,12 @@ export default function ProjectsPage() {
               setStatus(value);
               setPage(1);
             }}
-            className={`rounded-full border px-3 py-1 text-sm font-medium transition-[transform,background-color] duration-150 hover:-translate-y-px active:scale-95 motion-reduce:transform-none ${status === value ? 'border-fg bg-fg text-bg' : 'border-border bg-surface hover:bg-surface-sunken'}`}
+            className={`min-h-10 rounded-full border px-3 py-2 text-sm font-medium transition-[transform,background-color] duration-150 hover:-translate-y-px active:scale-95 motion-reduce:transform-none ${status === value ? 'border-fg bg-fg text-bg' : 'border-border bg-surface-raised hover:bg-surface-sunken'}`}
           >
             {label}
           </button>
         ))}
-        <input
-          aria-label="Search projects"
-          placeholder="Search by name"
-          value={q}
-          onChange={(event) => {
-            setQ(event.target.value);
-            setPage(1);
-          }}
-          className="min-w-0 flex-1 rounded-full border border-border bg-surface px-4 py-2 text-sm outline-none focus:border-primary"
-        />
-      </div>
+      </FilterBar>
 
       {projects.isLoading && (
         <div className="grid gap-4 lg:grid-cols-2" aria-label="Loading projects">
@@ -140,6 +146,6 @@ export default function ProjectsPage() {
           onPage={setPage}
         />
       )}
-    </>
+    </PageShell>
   );
 }

@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Button, Card, ErrorState, Input } from '@/components/ui';
+import { Button, ErrorState, Input } from '@/components/ui';
+import { AuthShell } from '@/components/hrms/auth-shell';
 import { PasswordStrengthMeter, passwordStrength } from '@/components/hrms/password-strength';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { HRMS_SESSION_KEY, useHrmsAuth } from '@/lib/hrms/auth-context';
@@ -50,69 +51,60 @@ export default function HrmsChangePasswordPage() {
 
   if (done) {
     return (
-      <main className="flex min-h-screen flex-1 items-center justify-center bg-bg p-4">
-        <Card className="w-full max-w-[480px] space-y-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-fg">Password changed</h1>
-          <p className="text-sm text-fg-muted">Use your new password next time you log in.</p>
-          <Button asChild variant="secondary" className="w-full">
-            <Link href="/">Back to dashboard</Link>
-          </Button>
-        </Card>
-      </main>
+      <AuthShell title="Password changed">
+        <p className="text-sm text-fg-muted">Use your new password next time you log in.</p>
+        <Button asChild variant="secondary" className="w-full">
+          <Link href="/">Back to dashboard</Link>
+        </Button>
+      </AuthShell>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-1 items-center justify-center bg-bg p-4">
-      <Card className="w-full max-w-[480px]">
-        <p className="text-lg font-semibold text-primary">office-ledger</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-fg">
-          {first ? 'Choose your own password' : 'Change password'}
-        </h1>
-        {first && (
-          <p className="mt-2 text-sm text-fg-muted">
-            You signed in with a temporary password. Enter it below as the current password, then
-            choose a new one to continue.
-          </p>
-        )}
-        <form onSubmit={(event) => void onSubmit(event)} className="mt-5 space-y-4">
+    <AuthShell title={first ? 'Choose your own password' : 'Change password'}>
+      {first && (
+        <p className="mt-2 text-sm text-fg-muted">
+          You signed in with a temporary password. Enter it below as the current password, then
+          choose a new one to continue.
+        </p>
+      )}
+      <form onSubmit={(event) => void onSubmit(event)} className="mt-5 space-y-4">
+        <Input
+          label="Current password"
+          name="currentPassword"
+          type="password"
+          autoComplete="current-password"
+          required
+        />
+        <div>
           <Input
-            label="Current password"
-            name="currentPassword"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
-          <div>
-            <Input
-              label="New password"
-              name="newPassword"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={10}
-              helperText="At least 10 characters. Longer is stronger."
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-            />
-            <div className="mt-2">
-              <PasswordStrengthMeter password={newPassword} />
-            </div>
-          </div>
-          <Input
-            label="Repeat the new password"
-            name="confirm"
+            label="New password"
+            name="newPassword"
             type="password"
             autoComplete="new-password"
             required
             minLength={10}
+            helperText="At least 10 characters. Longer is stronger."
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
           />
-          {error && <ErrorState message={error} />}
-          <Button type="submit" loading={pending} className="w-full">
-            Change password
-          </Button>
-        </form>
-      </Card>
-    </main>
+          <div className="mt-2">
+            <PasswordStrengthMeter password={newPassword} />
+          </div>
+        </div>
+        <Input
+          label="Repeat the new password"
+          name="confirm"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={10}
+        />
+        {error && <ErrorState message={error} />}
+        <Button type="submit" loading={pending} className="w-full">
+          Change password
+        </Button>
+      </form>
+    </AuthShell>
   );
 }

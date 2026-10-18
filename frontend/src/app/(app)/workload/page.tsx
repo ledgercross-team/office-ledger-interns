@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { RoleGate } from '@/components/hrms/role-gate';
 import { WorkloadChip } from '@/components/hrms/workload-chip';
-import { EmptyState, ErrorState, PageHeader, Skeleton } from '@/components/ui';
+import { EmptyState, ErrorState, PageHeader, PageShell, Skeleton } from '@/components/ui';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import type { WorkloadItem } from '@/lib/hrms/types';
 
@@ -13,7 +13,7 @@ function Workload() {
     queryFn: () => hrmsFetch<{ items: WorkloadItem[] }>('/workload'),
   });
   return (
-    <div className="space-y-6">
+    <PageShell>
       <PageHeader
         title="Workload"
         description="See who is busy, overloaded, or ready for more work across the organisation."
@@ -53,7 +53,7 @@ function Workload() {
           ))}
         </ul>
       )}
-    </div>
+    </PageShell>
   );
 }
 

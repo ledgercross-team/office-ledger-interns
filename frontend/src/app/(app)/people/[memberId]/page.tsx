@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   ErrorState,
+  PageShell,
   Skeleton,
   cardClass,
   controlClass,
@@ -107,11 +108,11 @@ export default function MemberDetailPage() {
 
   if (member.isLoading) {
     return (
-      <div className="max-w-md space-y-3" aria-label="Loading member profile">
+      <PageShell className="max-w-md" aria-label="Loading member profile">
         <Skeleton className="h-5 w-24" />
         <Skeleton className="h-10 w-2/3" />
         <Skeleton className="h-56 w-full" />
-      </div>
+      </PageShell>
     );
   }
   if (member.error || !member.data) {
@@ -145,7 +146,7 @@ export default function MemberDetailPage() {
   }
 
   return (
-    <>
+    <PageShell>
       <div>
         <Link href="/people" className={`text-sm ${linkClass}`}>
           ← People
@@ -400,6 +401,6 @@ export default function MemberDetailPage() {
           )}
         </Card>
       )}
-    </>
+    </PageShell>
   );
 }

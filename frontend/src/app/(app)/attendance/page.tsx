@@ -16,6 +16,7 @@ import {
   EmptyState,
   ErrorState,
   PageHeader,
+  PageShell,
   Skeleton,
   controlClass,
   labelClass,
@@ -58,7 +59,7 @@ export default function AttendancePage() {
     session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
 
   return (
-    <>
+    <PageShell>
       <PageHeader
         title={canSeeTeam ? 'Attendance' : 'My attendance'}
         description={
@@ -157,6 +158,6 @@ export default function AttendancePage() {
       {correcting && (
         <CorrectionDialog day={correcting} onClose={() => setCorrecting(null)} onDone={refresh} />
       )}
-    </>
+    </PageShell>
   );
 }

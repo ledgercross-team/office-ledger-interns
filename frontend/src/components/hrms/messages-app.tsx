@@ -3,7 +3,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, EyeOff, MessageSquarePlus, ShieldQuestion } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { Banner, Button, Card, EmptyState, ErrorState, Skeleton, Textarea } from '@/components/ui';
+import {
+  Banner,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  PageShell,
+  Skeleton,
+  Textarea,
+} from '@/components/ui';
 import { MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { useReadOnly } from '@/components/hrms/read-only';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
@@ -726,8 +736,15 @@ export function MessagesApp({ mode }: { mode: Mode }) {
   );
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-fg">Messages</h1>
+    <PageShell>
+      <PageHeader
+        title="Messages"
+        description={
+          mode === 'platform'
+            ? 'Coordinate platform work and review system reports.'
+            : 'Keep conversations, reports, and follow-up work in one place.'
+        }
+      />
       {tabs.length > 1 && (
         <div role="tablist" aria-label="Messages" className="flex gap-1 border-b border-border">
           {tabs.map((t) => (
@@ -754,6 +771,6 @@ export function MessagesApp({ mode }: { mode: Mode }) {
       ) : (
         <Reports asCeo={role === 'ceo'} />
       )}
-    </div>
+    </PageShell>
   );
 }
