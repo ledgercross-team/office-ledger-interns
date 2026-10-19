@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Button, ErrorState, Input } from '@/components/ui';
+import { Button, ErrorState } from '@/components/ui';
+import { PasswordInput } from '@/components/hrms/password-input';
 import { AuthShell } from '@/components/hrms/auth-shell';
 import { PasswordStrengthMeter, passwordStrength } from '@/components/hrms/password-strength';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
@@ -69,18 +70,16 @@ export default function HrmsChangePasswordPage() {
         </p>
       )}
       <form onSubmit={(event) => void onSubmit(event)} className="mt-5 space-y-4">
-        <Input
+        <PasswordInput
           label="Current password"
           name="currentPassword"
-          type="password"
           autoComplete="current-password"
           required
         />
         <div>
-          <Input
+          <PasswordInput
             label="New password"
             name="newPassword"
-            type="password"
             autoComplete="new-password"
             required
             minLength={10}
@@ -92,10 +91,9 @@ export default function HrmsChangePasswordPage() {
             <PasswordStrengthMeter password={newPassword} />
           </div>
         </div>
-        <Input
+        <PasswordInput
           label="Repeat the new password"
           name="confirm"
-          type="password"
           autoComplete="new-password"
           required
           minLength={10}

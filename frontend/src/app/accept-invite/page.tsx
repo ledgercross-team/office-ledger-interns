@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { Button, ErrorState, Input } from '@/components/ui';
+import { Button, ErrorState } from '@/components/ui';
+import { PasswordInput } from '@/components/hrms/password-input';
 import { AuthShell } from '@/components/hrms/auth-shell';
 import { PasswordStrengthMeter, passwordStrength } from '@/components/hrms/password-strength';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
@@ -67,9 +68,8 @@ function AcceptInviteForm() {
           <ErrorState message="This link is incomplete. Open the link from your invite again, or ask the sender for a new one." />
         )}
         <div>
-          <Input
+          <PasswordInput
             label="New password"
-            type="password"
             autoComplete="new-password"
             required
             minLength={10}
@@ -81,9 +81,8 @@ function AcceptInviteForm() {
             <PasswordStrengthMeter password={password} />
           </div>
         </div>
-        <Input
+        <PasswordInput
           label="Repeat the password"
-          type="password"
           autoComplete="new-password"
           required
           minLength={10}
