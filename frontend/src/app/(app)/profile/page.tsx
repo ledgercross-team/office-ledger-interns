@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { GameMasterProfile } from '@/components/hrms/game-master-profile';
 import { SecurityCard } from '@/components/hrms/security-card';
 import { Avatar, Card, ErrorState, PageHeader, PageShell, Skeleton } from '@/components/ui';
 import { hrmsFetch } from '@/lib/hrms/api-client';
@@ -25,6 +26,7 @@ export default function ProfilePage() {
     enabled: Boolean(session?.activeMemberId),
   });
   if (!session) return null;
+  if (session.isGameMaster) return <GameMasterProfile session={session} />;
   if (member.isLoading) {
     return (
       <PageShell className="mx-auto max-w-[768px]" aria-label="Loading profile">

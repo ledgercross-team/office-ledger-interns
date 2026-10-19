@@ -14,6 +14,9 @@ import type { HrmsSession } from '@/lib/hrms/types';
 function loginError(error: unknown): string {
   if (error instanceof HrmsApiError) {
     if (error.status === 401) {
+      if (error.code === 'MFA_CODE_REQUIRED' || error.message === 'The code is not correct.') {
+        return error.message;
+      }
       return 'Email or password is incorrect.';
     }
     if (error.status === 429) {
@@ -123,10 +126,15 @@ function LoginForm() {
         />
         <div className="relative">
           <Input
-            label="Password"
+            label={codeMode ? 'Authenticator code or backup code' : 'Password'}
             type={showPassword ? 'text' : 'password'}
             inputMode={codeMode ? 'numeric' : undefined}
             autoComplete={codeMode ? 'one-time-code' : 'current-password'}
+            helperText={
+              codeMode
+                ? 'Enter the 6-digit code from your app, or an unused backup code.'
+                : undefined
+            }
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}

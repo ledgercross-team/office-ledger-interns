@@ -131,7 +131,7 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
             <header className="sticky top-0 z-20 border-b border-border bg-surface">
               <div className="mx-auto flex min-h-14 w-full max-w-[1280px] items-center gap-2 px-3 sm:px-6">
                 <div className="min-w-0 flex-1" />
-                <UserMenu />
+                <UserMenu showSignOut={false} />
               </div>
             </header>
             <nav

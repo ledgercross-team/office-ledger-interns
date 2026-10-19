@@ -83,7 +83,7 @@ function CeoPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
           <ul className="space-y-2">
             {list.data?.items.map((c) => (
               <li key={c.memberId} className="space-y-2 rounded-control border border-border p-3">
-                <p className="text-sm text-fg">
+                <p className="break-words text-sm text-fg">
                   {c.fullName}{' '}
                   <span className="text-xs text-fg-muted">
                     {c.email} · {c.status}
@@ -120,19 +120,19 @@ function OrgRow({ org, plans, onDone }: { org: PlatformOrg; plans: string[]; onD
   const [reason, setReason] = useState('');
   const { mutation, error } = useAction(onDone);
   return (
-    <li className="space-y-2 rounded-card border border-border bg-surface p-3">
-      <p className="text-sm text-fg">
+    <li className="min-w-0 space-y-2 rounded-card border border-border bg-surface p-3 sm:p-4">
+      <p className="break-words text-sm leading-6 text-fg">
         <span className="font-medium">{org.name}</span> · {org.status} · {org.planCode} · seats{' '}
         {org.seatsUsed}/{org.seatLimit}
       </p>
-      <p className="text-xs text-fg-muted">
+      <p className="break-words text-xs text-fg-muted">
         {org.ceoCount} CEO, {org.cooCount} COO
         {org.overThreshold && (
           <span className="ml-2 text-danger-fg">More than 25 CEOs and COOs</span>
         )}
       </p>
       <CeoPanel orgId={org.id} orgName={org.name} />
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <label htmlFor={`org-plan-${org.id}`} className="sr-only">
           Plan for {org.name}
         </label>
@@ -233,17 +233,17 @@ export function Orgs() {
   }
 
   return (
-    <section className="space-y-3">
-      <h2 className="font-medium text-fg">Organisations</h2>
+    <section className="space-y-4 sm:space-y-5">
+      <h2 className="text-base font-semibold text-fg">Organisations</h2>
       <p className="text-xs text-fg-muted">Counts only. No organisation data is shown here.</p>
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {orgs.data?.items.map((o) => (
           <OrgRow key={o.id} org={o} plans={planCodes} onDone={refresh} />
         ))}
       </ul>
       <form onSubmit={onCreate} className={`${card} max-w-none`}>
-        <div className="flex flex-col gap-1 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div>
+        <div className="flex min-w-0 flex-col gap-1 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
             <h3 className="text-base font-semibold text-fg">New organisation</h3>
             <p className="mt-1 text-sm text-fg-muted">
               Provision the organisation and its first CEO in one step.
@@ -298,10 +298,14 @@ export function Orgs() {
         </div>
         <Error text={error} />
         <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-fg-muted">
+          <p className="min-w-0 text-xs text-fg-muted">
             The CEO receives access after the organisation is created.
           </p>
-          <button type="submit" disabled={mutation.isPending} className={primary}>
+          <button
+            type="submit"
+            disabled={mutation.isPending}
+            className={`${primary} w-full sm:w-auto`}
+          >
             Create organisation
           </button>
         </div>

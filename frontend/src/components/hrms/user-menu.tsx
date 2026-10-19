@@ -7,10 +7,10 @@ import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { HRMS_ROLE_LABELS } from '@/lib/hrms/types';
 
 /**
- * User menu (UI-SPEC §5): name, email, role in the current org, org
- * switching, Profile, Email preferences, Sign out.
+ * User menu (UI-SPEC §5): account identity, org switching, Profile, and
+ * (when enabled) Sign out.
  */
-export function UserMenu() {
+export function UserMenu({ showSignOut = true }: { showSignOut?: boolean }) {
   const { session, usableMemberships, switchOrg, logout } = useHrmsAuth();
   const toast = useToast();
   const router = useRouter();
@@ -28,6 +28,34 @@ export function UserMenu() {
     );
   }
 
+  const items = [
+    {
+      label: `${session.user.fullName} · ${session.user.email}${roleLabel ? ` · ${roleLabel}` : ''}`,
+      disabled: true,
+    },
+    ...(usableMemberships.length > 1
+      ? usableMemberships
+          .filter((m) => m.memberId !== session.activeMemberId)
+          .map((m) => ({
+            label: `Switch to ${m.orgName} (${HRMS_ROLE_LABELS[m.role]})`,
+            onSelect: () => switchTo(m.memberId, m.orgName),
+          }))
+      : []),
+    {
+      label: 'Profile',
+      onSelect: () => router.push(session.isGameMaster ? '/platform/profile' : '/profile'),
+    },
+    ...(showSignOut
+      ? [
+          {
+            label: 'Sign out',
+            icon: <LogOut aria-hidden className="size-4" />,
+            onSelect: () => void logout(),
+          },
+        ]
+      : []),
+  ];
+
   return (
     <DropdownMenu
       label="Account"
@@ -40,28 +68,7 @@ export function UserMenu() {
           <Avatar name={session.user.fullName} size="sm" />
         </button>
       }
-      items={[
-        {
-          label: `${session.user.fullName} · ${session.user.email}${roleLabel ? ` · ${roleLabel}` : ''}`,
-          disabled: true,
-        },
-        ...(usableMemberships.length > 1
-          ? usableMemberships
-              .filter((m) => m.memberId !== session.activeMemberId)
-              .map((m) => ({
-                label: `Switch to ${m.orgName} (${HRMS_ROLE_LABELS[m.role]})`,
-                onSelect: () => switchTo(m.memberId, m.orgName),
-              }))
-          : []),
-        { label: 'Profile', onSelect: () => router.push('/profile') },
-        { label: 'Change password', onSelect: () => router.push('/change-password') },
-        { label: 'Email preferences', onSelect: () => router.push('/notifications') },
-        {
-          label: 'Sign out',
-          icon: <LogOut aria-hidden className="size-4" />,
-          onSelect: () => void logout(),
-        },
-      ]}
+      items={items}
     />
   );
 }
