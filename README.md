@@ -1,4 +1,4 @@
-# office-ledger
+# office-ledger.
 
 A multi-organisation HRMS: projects, tasks, requests and approvals, attendance, leave, calendar,
 ratings and performance, with five roles (gameMaster, CEO, COO, manager, employee). Next.js
