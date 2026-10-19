@@ -9,7 +9,7 @@ import type { HrmsMembership, HrmsSession } from './types';
 
 export const HRMS_SESSION_KEY = ['hrms', 'session'] as const;
 
-const PUBLIC_AUTH_PATHS = new Set(['/login', '/accept-invite', '/forgot-password']);
+const PUBLIC_AUTH_PATHS = new Set(['/landing', '/login', '/accept-invite', '/forgot-password']);
 
 interface HrmsAuthValue {
   session: HrmsSession | null;

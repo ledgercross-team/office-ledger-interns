@@ -157,6 +157,12 @@ function LoginForm() {
         <Button type="submit" loading={pending} className="w-full">
           Log in
         </Button>
+        <p className="text-center text-sm text-fg-muted">
+          New to Office Ledger?{' '}
+          <Link href="/landing" className="font-medium text-primary hover:underline">
+            See how it works
+          </Link>
+        </p>
       </form>
     </AuthShell>
   );

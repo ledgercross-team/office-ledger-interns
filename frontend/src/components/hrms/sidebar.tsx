@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button, Drawer } from '@/components/ui';
+import { BrandMark } from './brand';
 import { bottomTabsFor, navItemsFor, navLabelFor, type NavItem } from './app-nav';
 import type { NavCounts } from './use-nav-counts';
 import type { HrmsRole } from '@/lib/hrms/types';
@@ -92,23 +93,20 @@ export function Sidebar({
     <nav
       aria-label="Main"
       className={cn(
-        'hidden h-full flex-col gap-5 rounded-card bg-rail p-4 text-rail-fg shadow-[0_12px_28px_rgb(15_41_49_/_0.12)] lg:flex',
+        'hidden h-full flex-col gap-5 rounded-card border border-white/10 bg-rail p-4 text-rail-fg shadow-[0_12px_28px_rgb(15_41_49_/_0.12)] lg:flex',
         collapsed ? 'w-16' : 'w-60',
       )}
     >
       <div className={cn('flex items-center gap-2 px-2', collapsed && 'justify-center')}>
-        <span
-          aria-hidden
-          className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary font-bold text-primary-fg shadow-sm"
-        >
-          O
-        </span>
+        <BrandMark />
         {!collapsed && (
           <span className="min-w-0">
             <span className="block truncate text-sm font-bold tracking-tight text-rail-fg">
-              office-ledger
+              Office Ledger
             </span>
-            <span className="mt-0.5 block truncate text-xs text-rail-fg/65">{orgName}</span>
+            <span className="mt-0.5 block truncate text-xs text-rail-fg/65">
+              {orgName || 'Workspace'}
+            </span>
           </span>
         )}
       </div>

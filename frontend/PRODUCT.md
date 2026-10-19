@@ -25,8 +25,8 @@ Multi-tenant SaaS: each organisation has its own members and roles; a person may
 - Existing design-system components live in `src/components/ui/`.
 
 ## Brand Commitments
-- Owner/brand: **LedgerCross**, a SaaS startup. Preserve the name.
-- Logo: `/home/mah1uz/Downloads/ledgercross-logo.webp` (not yet in the repo). It is a teal isometric cube built from concentric squares on each face, with corner brackets framing it, on a transparent background.
+- Owner/brand: **Office Ledger**, a SaaS startup. Preserve the name.
+- Logo: the existing teal isometric cube asset (currently referenced at `/home/mah1uz/Downloads/ledgercross-logo.webp`, not yet in the repo). It is built from concentric squares on each face, with corner brackets framing it, on a transparent background.
 - No committed brand voice, palette or typography beyond the logo.
 
 ## Evidence on Hand

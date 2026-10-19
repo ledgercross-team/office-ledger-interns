@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-10-18T00:00:00Z",
-  "title": "Design System: LedgerCross Modern Operations Desk",
+  "title": "Design System: Office Ledger Modern Operations Desk",
   "extensions": {
     "colorMeta": {
       "teal": { "role": "primary", "displayName": "Teal Action", "canonical": "#087f7b" },
@@ -78,7 +78,7 @@
   ],
   "narrative": {
     "northStar": "The Modern Operations Desk",
-    "overview": "LedgerCross is a confident, high-contrast operations workspace for running a working day across people, work and approvals.",
+    "overview": "Office Ledger is a confident, high-contrast operations workspace for running a working day across people, work and approvals.",
     "keyCharacteristics": [
       "A cool white workspace with a deep navy navigation rail.",
       "Teal marks primary action, focus and selected work without becoming decoration.",

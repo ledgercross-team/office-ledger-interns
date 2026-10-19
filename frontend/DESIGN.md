@@ -1,5 +1,5 @@
 ---
-name: LedgerCross
+name: Office Ledger
 description: A confident, modern operations workspace for a multi-organisation HRMS.
 colors:
   mist: "#f3f6f8"
@@ -73,13 +73,13 @@ components:
     rounded: "{rounded.capsule}"
 ---
 
-# Design System: LedgerCross
+# Design System: Office Ledger
 
 ## Overview
 
 **Creative North Star: "The Modern Operations Desk"**
 
-LedgerCross reads like a decisive operations desk: a deep navy rail establishes orientation, a cool white workspace keeps long sessions calm, and teal marks the next action. The interface should feel like a product people trust to run a working day, with high-contrast hierarchy, compact controls, and calm status colour. There are no gradients, grain or glass; colour is applied flat and its job is always functional.
+Office Ledger reads like a decisive operations desk: a deep navy rail establishes orientation, a cool white workspace keeps long sessions calm, and teal marks the next action. The interface should feel like a product people trust to run a working day, with high-contrast hierarchy, compact controls, and calm status colour. There are no gradients, grain or glass; colour is applied flat and its job is always functional.
 
 The world lends type, palette, density and the capsule/chip signature only. Navigation, tables, forms and dialogs stay standard so work is never harder to do. The system is for long daytime sessions on bright office screens; it is light-only.
 

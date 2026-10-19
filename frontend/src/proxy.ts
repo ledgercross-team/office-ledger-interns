@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 const LOGIN = '/login';
-const PUBLIC_PATHS = [LOGIN, '/accept-invite', '/forgot-password'];
+const PUBLIC_PATHS = ['/landing', LOGIN, '/accept-invite', '/forgot-password'];
 const PAGE_ROOTS = [
   '/',
+  '/landing',
   '/login',
   '/accept-invite',
   '/forgot-password',

@@ -16,8 +16,8 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'office-ledger',
-  description: 'Attendance, tasks and subscriptions for companies',
+  title: 'Office Ledger',
+  description: 'A calmer workspace for people, work, and approvals.',
 };
 
 export const viewport: Viewport = {

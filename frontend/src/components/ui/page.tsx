@@ -10,7 +10,7 @@ import { Input } from './form-fields';
 
 export function PageShell({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('space-y-7 sm:space-y-9', className)} {...props}>
+    <div className={cn('space-y-8 sm:space-y-10', className)} {...props}>
       {children}
     </div>
   );
@@ -30,13 +30,15 @@ export function PageHeader({
   breadcrumbs?: ReactNode;
 }) {
   return (
-    <header className="space-y-5">
+    <header className="space-y-6">
       {breadcrumbs}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-[-0.03em] text-fg sm:text-[2rem]">{title}</h1>
+          <h1 className="text-[1.75rem] font-bold tracking-[-0.04em] text-fg sm:text-[2.1rem]">
+            {title}
+          </h1>
           {description && (
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-fg-muted">{description}</p>
+            <p className="mt-2 max-w-[68ch] text-sm leading-6 text-fg-muted">{description}</p>
           )}
         </div>
         {(primaryAction || secondaryActions) && (

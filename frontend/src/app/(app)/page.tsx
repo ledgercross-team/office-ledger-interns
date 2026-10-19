@@ -301,7 +301,7 @@ export default function HrmsHomePage() {
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-card border border-fg/10 bg-fg p-6 text-bg shadow-[0_18px_45px_rgb(15_41_49_/_0.16)] sm:p-8">
+      <section className="relative overflow-hidden rounded-card border border-rail/10 bg-rail p-6 text-bg shadow-[0_18px_45px_rgb(15_41_49_/_0.16)] sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-2xl font-bold sm:text-3xl">
