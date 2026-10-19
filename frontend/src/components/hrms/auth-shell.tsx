@@ -21,11 +21,11 @@ export function AuthShell({ title, children }: { title: string; children: ReactN
               who keep your organisation moving.
             </p>
             <div className="mt-8 grid gap-3 text-sm">
-              <div className="flex items-center gap-3 rounded-control border border-white/10 bg-rail px-3 py-3">
+              <div className="flex items-center gap-3 rounded-control border border-white/10 bg-white/5 px-3 py-3">
                 <Activity aria-hidden className="size-4 text-primary-soft" />
                 <span>See what needs attention at a glance.</span>
               </div>
-              <div className="flex items-center gap-3 rounded-control border border-white/10 bg-rail px-3 py-3">
+              <div className="flex items-center gap-3 rounded-control border border-white/10 bg-white/5 px-3 py-3">
                 <ShieldCheck aria-hidden className="size-4 text-primary-soft" />
                 <span>Role-aware access follows the organisation’s rules.</span>
               </div>
@@ -41,9 +41,11 @@ export function AuthShell({ title, children }: { title: string; children: ReactN
             <div className="mb-10 lg:hidden">
               <BrandLink href="/landing" />
             </div>
-            <div className="mb-6">
-              <p className="text-sm font-medium text-primary">Welcome back</p>
-              <h1 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-fg sm:text-[1.75rem]">
+            <div className="mb-7">
+              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-primary">
+                Office Ledger workspace
+              </p>
+              <h1 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-fg sm:text-[1.75rem]">
                 {title}
               </h1>
             </div>

@@ -4,17 +4,17 @@
  * these recipes for compact filters, table rows and legacy form layouts.
  */
 export const controlClass =
-  'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-fg-subtle';
+  'min-h-11 w-full rounded-[0.75rem] border border-border bg-surface-raised px-3.5 py-2.5 text-sm text-fg shadow-[0_1px_2px_rgb(15_41_49_/_0.04)] placeholder:text-fg-subtle outline-none transition-[border-color,box-shadow,background-color] duration-150 ease-out focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-fg-subtle';
 
-export const labelClass = 'block space-y-1.5 text-sm font-medium text-fg';
+export const labelClass = 'block space-y-1.5 text-sm font-semibold text-fg';
 
-export const cardClass = 'rounded-card border border-border bg-surface p-5 text-fg';
+export const cardClass = 'rounded-card border border-border bg-surface-raised p-5 text-fg';
 
 export const primaryActionClass =
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-primary bg-primary px-4 py-2 text-sm font-medium text-primary-fg transition-[background-color,border-color,color,opacity,transform,box-shadow] duration-150 hover:-translate-y-px hover:bg-primary-hover hover:shadow-sm active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-primary bg-primary px-4 py-2 text-sm font-semibold tracking-[-0.01em] text-primary-fg shadow-[0_1px_2px_rgb(15_41_49_/_0.12)] transition-[background-color,border-color,color,opacity,transform,box-shadow] duration-150 hover:-translate-y-px hover:bg-primary-hover hover:shadow-sm active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 export const secondaryActionClass =
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-border-strong bg-surface-raised px-4 py-2 text-sm font-medium text-fg transition-[background-color,border-color,color,opacity,transform,box-shadow] duration-150 hover:-translate-y-px hover:bg-surface-sunken hover:shadow-sm active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-border-strong bg-surface-raised px-4 py-2 text-sm font-semibold tracking-[-0.01em] text-fg shadow-[0_1px_2px_rgb(15_41_49_/_0.04)] transition-[background-color,border-color,color,opacity,transform,box-shadow] duration-150 hover:-translate-y-px hover:bg-surface-sunken hover:shadow-sm active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 export const dangerActionClass =
   'inline-flex min-h-10 items-center justify-center gap-2 rounded-control border border-danger bg-danger px-4 py-2 text-sm font-medium text-primary-fg transition-[background-color,border-color,color,opacity,transform,box-shadow] duration-150 hover:-translate-y-px hover:bg-danger-fg hover:shadow-sm active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';

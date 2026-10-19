@@ -10,7 +10,7 @@ import { Input } from './form-fields';
 
 export function PageShell({ children, className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn('space-y-8 sm:space-y-10', className)} {...props}>
+    <div className={cn('space-y-8 sm:space-y-9', className)} {...props}>
       {children}
     </div>
   );
@@ -30,11 +30,11 @@ export function PageHeader({
   breadcrumbs?: ReactNode;
 }) {
   return (
-    <header className="space-y-6">
+    <header className="space-y-5 border-b border-border/80 pb-6">
       {breadcrumbs}
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-[1.75rem] font-bold tracking-[-0.04em] text-fg sm:text-[2.1rem]">
+          <h1 className="text-[1.85rem] font-bold tracking-[-0.04em] text-fg sm:text-[2.2rem]">
             {title}
           </h1>
           {description && (
@@ -95,7 +95,7 @@ export function FilterBar({
   onClear?: () => void;
 }) {
   return (
-    <div className="space-y-3 rounded-card border border-border bg-surface p-4">
+    <div className="space-y-3 rounded-card border border-border bg-surface-raised p-3 shadow-[0_1px_2px_rgb(15_41_49_/_0.03)] sm:p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-end">
         {onSearchChange && (
           <div className="min-w-56 flex-1">

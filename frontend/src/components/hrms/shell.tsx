@@ -151,7 +151,7 @@ export function HrmsShell({ children }: { children: ReactNode }) {
             Skip to content
           </a>
           <div className="flex min-h-screen">
-            <aside className="sticky top-0 hidden h-screen shrink-0 bg-transparent p-4 lg:block lg:pr-2">
+            <aside className="sticky top-0 hidden h-screen shrink-0 bg-bg p-3 lg:block lg:pr-2">
               <Sidebar
                 role={role}
                 orgName={session.org?.name ?? ''}

@@ -9,7 +9,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        'min-w-0 rounded-card border border-border bg-surface p-5 text-fg transition-[border-color,background-color,box-shadow] duration-150 ease-out',
+        'min-w-0 rounded-card border border-border bg-surface-raised p-5 text-fg transition-[border-color,background-color,box-shadow] duration-150 ease-out',
         className,
       )}
       {...props}
@@ -59,7 +59,9 @@ export function StatTile({
     <Card className="h-full">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-fg-muted">{label}</p>
+          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
+            {label}
+          </p>
           <p
             className={cn(
               'mt-1 text-2xl font-semibold tracking-tight tabular-nums text-fg',

@@ -26,6 +26,30 @@ function CountBadge({ count }: { count: number }) {
   );
 }
 
+const NAV_GROUPS = [
+  {
+    label: 'Workspace',
+    hrefs: ['/', '/requests', '/projects', '/tasks', '/messages'],
+  },
+  {
+    label: 'People & time',
+    hrefs: [
+      '/invites',
+      '/people',
+      '/attendance',
+      '/leave',
+      '/calendar',
+      '/workload',
+      '/ratings',
+      '/performance',
+    ],
+  },
+  {
+    label: 'Administration',
+    hrefs: ['/history', '/settings'],
+  },
+] as const;
+
 function NavList({
   items,
   counts,
@@ -41,37 +65,53 @@ function NavList({
   collapsed: boolean;
   onNavigate?: () => void;
 }) {
+  const groups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: items.filter((item) => group.hrefs.some((href) => href === item.href)),
+  })).filter((group) => group.items.length > 0);
+
+  const renderItem = (item: NavItem) => {
+    const active = isActive(pathname, item.href);
+    const Icon = item.icon;
+    return (
+      <li
+        key={item.href}
+        className={cn(item.parent && !collapsed && 'ml-5 border-l border-rail-fg/25 pl-2')}
+      >
+        <Link
+          href={item.href}
+          aria-current={active ? 'page' : undefined}
+          onClick={onNavigate}
+          title={collapsed ? navLabelFor(item, role) : undefined}
+          className={cn(
+            'group flex min-h-11 items-center gap-3 rounded-control px-3 py-2 text-sm font-medium transition-[background-color,color,transform,box-shadow] duration-150',
+            active
+              ? 'bg-surface text-fg font-bold shadow-sm'
+              : 'text-rail-fg/78 hover:translate-x-px hover:bg-white/10 hover:text-rail-fg',
+            collapsed && 'justify-center px-2',
+          )}
+        >
+          <Icon aria-hidden className="size-5 shrink-0" />
+          {!collapsed && <span className="min-w-0 flex-1 truncate">{navLabelFor(item, role)}</span>}
+          {!collapsed && item.badge && <CountBadge count={counts[item.badge]} />}
+        </Link>
+      </li>
+    );
+  };
+
   return (
-    <ul className="space-y-1">
-      {items.map((item) => {
-        const active = isActive(pathname, item.href);
-        const Icon = item.icon;
-        return (
-          <li
-            key={item.href}
-            className={cn(item.parent && !collapsed && 'ml-5 border-l border-rail-fg/30 pl-2')}
-          >
-            <Link
-              href={item.href}
-              aria-current={active ? 'page' : undefined}
-              onClick={onNavigate}
-              title={collapsed ? navLabelFor(item, role) : undefined}
-              className={cn(
-                'flex min-h-11 items-center gap-3 rounded-full px-3 py-2 text-sm font-medium',
-                active
-                  ? 'bg-surface text-fg font-bold shadow-sm'
-                  : 'text-rail-fg/80 hover:bg-white/10 hover:text-rail-fg',
-                collapsed && 'justify-center px-2',
-              )}
-            >
-              <Icon aria-hidden className="size-5 shrink-0" />
-              {!collapsed && <span className="flex-1">{navLabelFor(item, role)}</span>}
-              {!collapsed && item.badge && <CountBadge count={counts[item.badge]} />}
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="space-y-5">
+      {groups.map((group) => (
+        <section key={group.label} aria-label={group.label}>
+          {!collapsed && (
+            <p className="mb-2 px-3 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-rail-fg/45">
+              {group.label}
+            </p>
+          )}
+          <ul className="space-y-1">{group.items.map(renderItem)}</ul>
+        </section>
+      ))}
+    </div>
   );
 }
 
@@ -93,18 +133,18 @@ export function Sidebar({
     <nav
       aria-label="Main"
       className={cn(
-        'hidden h-full flex-col gap-5 rounded-card border border-white/10 bg-rail p-4 text-rail-fg shadow-[0_12px_28px_rgb(15_41_49_/_0.12)] lg:flex',
+        'hidden h-full min-h-0 flex-col gap-5 overflow-hidden rounded-card border border-white/10 bg-rail p-3 text-rail-fg shadow-[0_18px_45px_rgb(15_41_49_/_0.16)] lg:flex',
         collapsed ? 'w-16' : 'w-60',
       )}
     >
-      <div className={cn('flex items-center gap-2 px-2', collapsed && 'justify-center')}>
+      <div className={cn('flex items-center gap-2 px-2 py-1', collapsed && 'justify-center')}>
         <BrandMark />
         {!collapsed && (
           <span className="min-w-0">
-            <span className="block truncate text-sm font-bold tracking-tight text-rail-fg">
+            <span className="block truncate text-sm font-bold tracking-[-0.01em] text-rail-fg">
               Office Ledger
             </span>
-            <span className="mt-0.5 block truncate text-xs text-rail-fg/65">
+            <span className="mt-0.5 block truncate text-[0.7rem] text-rail-fg/55">
               {orgName || 'Workspace'}
             </span>
           </span>
@@ -125,7 +165,10 @@ export function Sidebar({
         iconOnly={collapsed}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         onClick={onToggleCollapse}
-        className={cn('text-rail-fg hover:bg-white/10 hover:text-rail-fg', collapsed && 'mx-auto')}
+        className={cn(
+          'border-white/10 bg-white/5 text-rail-fg hover:bg-white/10 hover:text-rail-fg',
+          collapsed && 'mx-auto',
+        )}
       >
         {collapsed ? (
           <PanelLeftOpen aria-hidden className="size-4" />
@@ -199,7 +242,7 @@ export function BottomTabs({ role, counts }: { role: HrmsRole; counts: NavCounts
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface-raised pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgb(15_41_49_/_0.08)] lg:hidden"
     >
       <ul
         className="mx-auto grid max-w-xl px-1 pt-1"

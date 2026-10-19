@@ -132,7 +132,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
           {session?.org && (
-            <div className="hidden max-w-48 items-center gap-2 rounded-full border border-border bg-surface-sunken/60 px-3 py-1.5 text-xs font-medium text-fg-muted lg:flex">
+            <div className="hidden max-w-52 items-center gap-2 rounded-control border border-border bg-surface-sunken/60 px-3 py-1.5 text-xs font-semibold text-fg-muted lg:flex">
               <Building2 aria-hidden className="size-3.5 shrink-0 text-primary" />
               <span className="truncate">{session.org.name}</span>
             </div>

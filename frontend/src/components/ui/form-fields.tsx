@@ -27,7 +27,7 @@ function FieldFrame({ id, label, required, helperText, error, children }: FieldF
   const descriptionId = helperText || error ? `${id}-description` : undefined;
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-fg">
+      <label htmlFor={id} className="block text-[0.8rem] font-semibold tracking-[-0.005em] text-fg">
         {label}
         {required && (
           <span className="ml-1 text-danger-fg" aria-hidden>

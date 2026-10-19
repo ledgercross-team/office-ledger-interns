@@ -15,8 +15,10 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md';
 
 const variants: Record<ButtonVariant, string> = {
-  primary: 'border-primary bg-primary text-primary-fg hover:bg-primary-hover',
-  secondary: 'border-border-strong bg-surface-raised text-fg hover:bg-surface-sunken',
+  primary:
+    'border-primary bg-primary text-primary-fg shadow-[0_1px_2px_rgb(15_41_49_/_0.12)] hover:bg-primary-hover',
+  secondary:
+    'border-border-strong bg-surface-raised text-fg shadow-[0_1px_2px_rgb(15_41_49_/_0.04)] hover:bg-surface-sunken',
   ghost: 'border-transparent bg-transparent text-fg hover:bg-surface-sunken',
   danger: 'border-danger bg-danger text-primary-fg hover:bg-danger-fg',
 };
@@ -68,6 +70,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     'relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control border font-medium transition-[background-color,border-color,color,opacity,transform,box-shadow] duration-150 ease-out enabled:hover:-translate-y-px enabled:active:translate-y-0 enabled:active:scale-[0.97] motion-reduce:transform-none',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary focus-visible:ring-4 focus-visible:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50',
     size === 'sm' ? 'min-h-8 px-3 py-1 text-xs' : 'min-h-10 px-4 py-2 text-sm',
+    'tracking-[-0.01em]',
     iconOnly && (size === 'sm' ? 'min-w-8 px-1' : 'min-w-10 px-2'),
     variants[variant],
     className,

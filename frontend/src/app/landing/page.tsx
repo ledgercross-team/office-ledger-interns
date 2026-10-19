@@ -129,7 +129,10 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen overflow-hidden bg-bg text-fg">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <nav className="flex min-h-20 items-center justify-between gap-4" aria-label="Primary">
+        <nav
+          className="flex min-h-20 items-center justify-between gap-4 border-b border-border/80"
+          aria-label="Primary"
+        >
           <BrandLink />
           <div className="hidden items-center gap-7 text-sm font-medium text-fg-muted md:flex">
             <Link href="#features" className="transition-colors hover:text-fg">
@@ -157,12 +160,12 @@ export default function LandingPage() {
           </div>
         </nav>
 
-        <section className="grid items-center gap-12 pb-20 pt-12 sm:pb-28 sm:pt-20 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,0.85fr)] lg:gap-20">
+        <section className="mt-8 grid items-center gap-10 overflow-hidden rounded-[1.5rem] border border-white/10 bg-rail p-6 text-rail-fg shadow-[0_24px_70px_rgb(4_26_33_/_0.18)] sm:mt-10 sm:p-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,0.85fr)] lg:gap-16 lg:p-14">
           <div className="max-w-2xl">
-            <h1 className="max-w-xl text-4xl font-bold leading-[1.03] tracking-[-0.055em] text-fg sm:text-6xl">
+            <h1 className="max-w-xl text-4xl font-bold leading-[1.03] tracking-[-0.055em] text-rail-fg sm:text-6xl">
               A calmer way to run the working day.
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-7 text-fg-muted sm:text-lg">
+            <p className="mt-6 max-w-xl text-base leading-7 text-rail-fg/75 sm:text-lg">
               Office Ledger brings projects, tasks, attendance, leave, people, and approvals into
               one shared workspace—so the next action is easier to see and easier to trust.
             </p>
@@ -174,21 +177,17 @@ export default function LandingPage() {
               </Button>
               <Link
                 href="#workflow"
-                className="inline-flex min-h-12 items-center justify-center rounded-control border border-border-strong bg-surface px-5 text-sm font-medium text-fg transition-colors hover:bg-surface-sunken"
+                className="inline-flex min-h-12 items-center justify-center rounded-control border border-white/20 bg-white/10 px-5 text-sm font-medium text-rail-fg transition-colors hover:bg-white/15"
               >
                 See how onboarding works
               </Link>
             </div>
-            <p className="mt-5 max-w-lg text-xs leading-5 text-fg-subtle">
+            <p className="mt-5 max-w-lg text-xs leading-5 text-rail-fg/55">
               Company setup is currently handled by a platform administrator through the protected
               organisation workflow.
             </p>
           </div>
-          <div className="relative mx-auto w-full max-w-xl rounded-[1.75rem] bg-rail p-4 sm:p-6">
-            <div
-              className="absolute -right-10 -top-10 size-32 rounded-full bg-primary/15"
-              aria-hidden
-            />
+          <div className="relative mx-auto w-full max-w-xl">
             <WorkspacePreview />
           </div>
         </section>
@@ -202,19 +201,31 @@ export default function LandingPage() {
               Each module is designed to make routine work easier to scan, act on, and hand off.
             </p>
           </div>
-          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => {
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {features.map((feature, index) => {
               const Icon = feature.icon;
               return (
                 <article
                   key={feature.title}
-                  className="group rounded-card border border-border bg-surface p-5 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-sm"
+                  className={
+                    index === 0
+                      ? 'group rounded-card border border-rail bg-rail p-6 text-rail-fg transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-float sm:col-span-2'
+                      : 'group rounded-card border border-border bg-surface-raised p-5 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-sm'
+                  }
                 >
                   <span className="flex size-10 items-center justify-center rounded-control bg-primary-soft text-primary transition-colors group-hover:bg-primary group-hover:text-primary-fg">
                     <Icon aria-hidden className="size-5" />
                   </span>
                   <h3 className="mt-5 text-base font-bold tracking-tight">{feature.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-fg-muted">{feature.description}</p>
+                  <p
+                    className={
+                      index === 0
+                        ? 'mt-2 max-w-xl text-sm leading-6 text-rail-fg/72'
+                        : 'mt-2 text-sm leading-6 text-fg-muted'
+                    }
+                  >
+                    {feature.description}
+                  </p>
                 </article>
               );
             })}

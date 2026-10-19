@@ -82,10 +82,10 @@ export function DataTable<T>({
 
   return (
     <div className="space-y-3">
-      <div className="hidden overflow-x-auto rounded-card border border-border lg:block">
+      <div className="hidden overflow-x-auto rounded-card border border-border bg-surface-raised lg:block">
         <table className="w-full min-w-[680px] border-collapse text-left text-sm">
           <caption className="sr-only">{caption}</caption>
-          <thead className="sticky top-0 bg-surface-sunken/80 text-xs uppercase tracking-wide text-fg-muted">
+          <thead className="sticky top-0 bg-surface-sunken/75 text-[0.7rem] uppercase tracking-[0.08em] text-fg-muted">
             <tr>
               {selectable && (
                 <th scope="col" className="w-12 px-4 py-3">
@@ -127,7 +127,7 @@ export function DataTable<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border bg-surface">
+          <tbody className="divide-y divide-border bg-surface-raised">
             {loading
               ? Array.from({ length: 5 }, (_, index) => (
                   <tr key={index}>
@@ -181,7 +181,7 @@ export function DataTable<T>({
               return (
                 <article
                   key={id}
-                  className="min-w-0 space-y-3 overflow-hidden rounded-card border border-border bg-surface p-4"
+                  className="min-w-0 space-y-3 overflow-hidden rounded-card border border-border bg-surface-raised p-4 shadow-[0_1px_2px_rgb(15_41_49_/_0.03)]"
                 >
                   {selectable && (
                     <Checkbox

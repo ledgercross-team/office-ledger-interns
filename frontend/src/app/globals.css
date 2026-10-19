@@ -62,20 +62,20 @@
 .theme-light,
 [data-theme='light'] {
   color-scheme: light;
-  --ds-bg: #f3f6f8;
+  --ds-bg: #f0f4f6;
   --ds-surface: #ffffff;
   --ds-surface-raised: #ffffff;
-  --ds-surface-sunken: #e8eef1;
-  --ds-border: #d7e0e5;
-  --ds-border-strong: #91a2ab;
-  --ds-fg: #14232b;
-  --ds-fg-muted: #52636d;
-  --ds-fg-subtle: #687982;
+  --ds-surface-sunken: #e5ecef;
+  --ds-border: #d3e0e4;
+  --ds-border-strong: #8fa3ac;
+  --ds-fg: #102832;
+  --ds-fg-muted: #50656f;
+  --ds-fg-subtle: #71838b;
   --ds-primary: #087f7b;
   --ds-primary-hover: #06635f;
   --ds-primary-fg: #ffffff;
   --ds-primary-soft: #d9f1ef;
-  --ds-rail: #102d36;
+  --ds-rail: #0d2a34;
   --ds-rail-fg: #e9f4f4;
   --ds-success: #087f5b;
   --ds-success-soft: #dff5ed;
@@ -95,6 +95,8 @@ html {
   scroll-behavior: smooth;
   width: 100%;
   font-size: 106.25%;
+  scrollbar-color: var(--ds-border-strong) var(--ds-bg);
+  scrollbar-width: thin;
 }
 *,
 *::before,
@@ -147,6 +149,13 @@ body {
   font-family: var(--font-rubik), ui-sans-serif, system-ui, sans-serif;
   font-size: 1rem;
   line-height: 1.5;
+}
+
+a {
+  transition:
+    color 150ms ease-out,
+    background-color 150ms ease-out,
+    border-color 150ms ease-out;
 }
 
 h1,
