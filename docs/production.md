@@ -19,8 +19,9 @@ Put both apps behind an HTTPS reverse proxy. The project itself ships no contain
 - Node from `.nvmrc` (24) and pnpm (`corepack enable`; the version is pinned in `package.json`).
 - A PostgreSQL database `office_ledger_hrms`, its owner login, and the app login `hrms_api`
   (created as in `docs/hrms/README.md`). The API must connect as `hrms_api`, never the owner.
-- Two hostnames under one parent domain, for example `app.example.com` (frontend) and
-  `api.example.com` (backend). Cookies are shared through `COOKIE_DOMAIN`.
+- Either two hostnames under one parent domain, for example `app.example.com` (frontend) and
+  `api.example.com` (backend), with cookies shared through `COOKIE_DOMAIN`, or a same-origin
+  frontend proxy such as the Vercel setup described below.
 
 ## 2. Environment
 
@@ -60,9 +61,23 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 | Variable | Production value |
 | --- | --- |
 | `NEXT_PUBLIC_API_URL` | `https://api.example.com/api` |
+| `API_ORIGIN` | `https://api.example.com` when Next.js proxies `/api` to the backend |
 
 This value is compiled into the bundle, so it must be set **when you build**, not only
 when you start.
+
+### Vercel frontend with a separately hosted API
+
+When the frontend hostname and API hostname do not share a parent domain, use the built-in
+Next.js rewrite so the browser talks to the frontend origin and receives host-only cookies:
+
+```env
+NEXT_PUBLIC_API_URL=/api
+API_ORIGIN=https://intern.tuiber.com
+```
+
+Keep `COOKIE_DOMAIN` empty in this mode. Set both variables in Vercel before building, and set
+`FRONTEND_URL` on the API to the exact Vercel origin. Do not use `.vercel.app` as a cookie domain.
 
 ## 3. Build and start
 
@@ -70,6 +85,12 @@ when you start.
 pnpm install --frozen-lockfile
 pnpm --filter backend build
 NEXT_PUBLIC_API_URL=https://api.example.com/api pnpm --filter frontend build
+```
+
+For the Vercel same-origin proxy setup, build the frontend with:
+
+```bash
+NEXT_PUBLIC_API_URL=/api API_ORIGIN=https://intern.tuiber.com pnpm --filter frontend build
 ```
 
 Do not build with `NODE_ENV=development` exported in your shell; `next build` fails with a
@@ -183,7 +204,8 @@ Copy this into the release PR or ticket and tick every line.
 
 - [ ] `NODE_ENV=production` for both apps.
 - [ ] `COOKIE_SECURE=true`.
-- [ ] `COOKIE_DOMAIN` is set to the shared parent domain (leading dot).
+- [ ] `COOKIE_DOMAIN` is set to the shared parent domain (leading dot), or is empty when using
+  the same-origin frontend proxy.
 - [ ] `TRUST_PROXY` matches the real proxy setup (`true` for one proxy, `false` for none).
   After deploying, sign in from outside the office with office IP addresses set: check-in must be
   refused. The API logs which value it started with.
