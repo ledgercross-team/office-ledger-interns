@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CalendarDays } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import {
   Banner,
@@ -9,9 +10,11 @@ import {
   ErrorState,
   PageHeader,
   PageShell,
+  SegmentedControl,
   Skeleton,
   useToast,
 } from '@/components/ui';
+import { StepperField } from '@/components/hrms/stepper-field';
 import { MemberChips, MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { meetingProblem } from '@/lib/hrms/meeting';
@@ -23,8 +26,6 @@ const input =
   'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle outline-none transition-[border-color,box-shadow] focus:border-primary focus:ring-4 focus:ring-primary/10';
 const primary =
   'inline-flex min-h-10 items-center justify-center rounded-full border border-primary bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50';
-const secondary =
-  'inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-surface px-3 py-2 text-sm font-medium text-fg hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50';
 
 const KIND_CLASS: Record<CalendarItem['kind'], string> = {
   task_due: 'bg-warning-soft text-warning-fg',
@@ -467,24 +468,24 @@ export default function CalendarPage() {
   const minDate = minMonth ? `${minMonth}-01` : null;
   const maxDate = addDays(`${maxMonth}-01`, 31).slice(0, 7) + '-01'; // first day after the last month
   const monthOf = from.slice(0, 7);
-  const minYear = minMonth ? Number(minMonth.slice(0, 4)) : Number(monthOf.slice(0, 4));
-  const years = Array.from(
-    { length: Number(maxMonth.slice(0, 4)) - minYear + 1 },
-    (_, i) => minYear + i,
-  );
-  const monthAllowed = (ym: string) => (!minMonth || ym >= minMonth) && ym <= maxMonth;
-  const goTo = (ym: string) =>
-    setAnchor(`${minMonth && ym < minMonth ? minMonth : ym > maxMonth ? maxMonth : ym}-01`);
-  const canPrev =
-    view === 'week' ? !minDate || addDays(from, -7) >= minDate : !minMonth || monthOf > minMonth;
-  const canNext = view === 'week' ? addDays(from, 7) < maxDate : monthOf < maxMonth;
-
-  const step = (n: number) => {
-    if (view === 'week') return setAnchor(addDays(anchor, 7 * n));
-    const d = new Date(`${from}T00:00:00Z`);
-    d.setUTCMonth(d.getUTCMonth() + n);
-    setAnchor(d.toISOString().slice(0, 10));
+  const shiftMonth = (ym: string, n: number) => {
+    const total = Number(ym.slice(0, 4)) * 12 + Number(ym.slice(5, 7)) - 1 + n;
+    return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`;
   };
+  const clampMonth = (ym: string) =>
+    minMonth && ym < minMonth ? minMonth : ym > maxMonth ? maxMonth : ym;
+  const goTo = (ym: string) => setAnchor(`${clampMonth(ym)}-01`);
+  const canDown = !minMonth || monthOf > minMonth;
+  const canUp = monthOf < maxMonth;
+  const canWeekDown = !minDate || addDays(from, -7) >= minDate;
+  const canWeekUp = addDays(from, 7) < maxDate;
+  const monthLabel = (ym: string) =>
+    `${MONTHS[Number(ym.slice(5, 7)) - 1].slice(0, 3)} ${ym.slice(0, 4)}`;
+  const weekLabel = new Date(`${from}T00:00:00Z`).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
 
   return (
     <PageShell className="w-full min-w-0">
@@ -498,81 +499,74 @@ export default function CalendarPage() {
       />
       <div className="flex flex-col gap-3 rounded-card border border-border bg-surface p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-full border border-border bg-surface p-1">
-            <button
-              type="button"
-              onClick={() => step(-1)}
-              disabled={!canPrev}
-              className={secondary}
-              aria-label="Previous period"
-            >
-              <span aria-hidden>‹</span>
-            </button>
-            <select
-              aria-label="Month"
-              value={monthOf.slice(5, 7)}
-              onChange={(e) => goTo(`${monthOf.slice(0, 4)}-${e.target.value}`)}
-              className="min-h-9 rounded-control border border-border bg-surface px-2 text-sm font-medium text-fg"
-            >
-              {MONTHS.map((name, i) => {
-                const mm = String(i + 1).padStart(2, '0');
-                return (
-                  <option
-                    key={mm}
-                    value={mm}
-                    disabled={!monthAllowed(`${monthOf.slice(0, 4)}-${mm}`)}
-                  >
-                    {name}
-                  </option>
-                );
-              })}
-            </select>
-            <select
-              aria-label="Year"
-              value={monthOf.slice(0, 4)}
-              onChange={(e) => goTo(`${e.target.value}-${monthOf.slice(5, 7)}`)}
-              className="min-h-9 rounded-control border border-border bg-surface px-2 text-sm font-medium tabular-nums text-fg"
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => step(1)}
-              disabled={!canNext}
-              className={secondary}
-              aria-label="Next period"
-            >
-              <span aria-hidden>›</span>
-            </button>
-          </div>
-          <button type="button" onClick={() => setAnchor(today)} className={secondary}>
-            Today
-          </button>
+          <StepperField
+            label="Month"
+            text={MONTHS[Number(monthOf.slice(5, 7)) - 1]}
+            valueNow={Number(monthOf.slice(5, 7))}
+            className="w-44"
+            canUp={canUp}
+            canDown={canDown}
+            onUp={() => goTo(shiftMonth(monthOf, 1))}
+            onDown={() => goTo(shiftMonth(monthOf, -1))}
+            onPageUp={() => canUp && goTo(shiftMonth(monthOf, 12))}
+            onPageDown={() => canDown && goTo(shiftMonth(monthOf, -12))}
+          />
+          <StepperField
+            label="Year"
+            text={monthOf.slice(0, 4)}
+            valueNow={Number(monthOf.slice(0, 4))}
+            className="w-28"
+            canUp={canUp}
+            canDown={canDown}
+            onUp={() => goTo(shiftMonth(monthOf, 12))}
+            onDown={() => goTo(shiftMonth(monthOf, -12))}
+            onPageUp={() => canUp && goTo(shiftMonth(monthOf, 12))}
+            onPageDown={() => canDown && goTo(shiftMonth(monthOf, -12))}
+            onCommit={(typed) => {
+              const year = Number.parseInt(typed, 10);
+              if (Number.isFinite(year)) goTo(`${year}-${monthOf.slice(5, 7)}`);
+            }}
+          />
           {view === 'week' && (
-            <span aria-live="polite" className="text-sm tabular-nums text-fg-muted">
-              Week of {from}
-            </span>
+            <StepperField
+              label="Week"
+              text={weekLabel}
+              className="w-32"
+              canUp={canWeekUp}
+              canDown={canWeekDown}
+              onUp={() => setAnchor(addDays(anchor, 7))}
+              onDown={() => setAnchor(addDays(anchor, -7))}
+            />
           )}
-          <button
-            type="button"
-            onClick={() => setView(view === 'month' ? 'week' : 'month')}
-            className={secondary}
-          >
-            {view === 'month' ? 'Week view' : 'Month view'}
-          </button>
+          <Button variant="secondary" onClick={() => setAnchor(today)}>
+            <CalendarDays aria-hidden className="size-4" />
+            Today
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <SegmentedControl
+            label="Calendar view"
+            options={[
+              { value: 'month', label: 'Month' },
+              { value: 'week', label: 'Week' },
+            ]}
+            value={view}
+            onValueChange={(next) => setView(next === 'week' ? 'week' : 'month')}
+          />
           {canTeam && (
-            <label className="flex min-h-10 items-center gap-2 rounded-full border border-border px-3 text-sm font-medium text-fg">
+            <label className="flex min-h-10 items-center gap-2 rounded-control border border-border px-3 text-sm font-medium text-fg">
               <input type="checkbox" checked={team} onChange={(e) => setTeam(e.target.checked)} />
               Team
             </label>
           )}
         </div>
       </div>
-      {feed.data && <p className="text-sm text-fg-muted">Times are in {feed.data.timezone}.</p>}
+      {feed.data && (
+        <p className="text-sm text-fg-muted">
+          Times are in {feed.data.timezone}.
+          {minMonth && ` You can browse from ${monthLabel(minMonth)} to ${monthLabel(maxMonth)}.`}
+        </p>
+      )}
       {feed.error && (
         <ErrorState
           title="Could not load calendar"
