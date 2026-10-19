@@ -385,9 +385,6 @@ export function GameMasters() {
   );
 
   const [issued, setIssued] = useState<{ email: string; password: string } | null>(null);
-  const [showRemoved, setShowRemoved] = useState(false);
-  const removedCount = list.data?.items.filter((g) => g.status === 'removed').length ?? 0;
-  const visible = list.data?.items.filter((g) => showRemoved || g.status !== 'removed') ?? [];
 
   function onCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -408,21 +405,9 @@ export function GameMasters() {
 
   return (
     <section className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-medium text-fg">GameMasters</h2>
-        {removedCount > 0 && (
-          <button
-            type="button"
-            aria-pressed={showRemoved}
-            onClick={() => setShowRemoved((v) => !v)}
-            className={secondary}
-          >
-            {showRemoved ? 'Hide removed' : `Show removed (${removedCount})`}
-          </button>
-        )}
-      </div>
+      <h2 className="font-medium text-fg">GameMasters</h2>
       <ul className="space-y-2">
-        {visible.map((g) => (
+        {list.data?.items.map((g) => (
           <li key={g.userId} className="space-y-3 rounded-card border border-border bg-surface p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
@@ -437,23 +422,6 @@ export function GameMasters() {
                 </span>
               )}
             </div>
-            {g.status === 'removed' && (
-              <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-                <button
-                  type="button"
-                  disabled={mutation.isPending}
-                  onClick={() =>
-                    mutation.mutate({ path: `/platform/game-masters/${g.userId}/renew` })
-                  }
-                  className={primary}
-                >
-                  Renew
-                </button>
-                <p className="text-xs text-fg-muted">
-                  Brings them back as pending. Another active gameMaster must confirm.
-                </p>
-              </div>
-            )}
             {g.status !== 'removed' && (
               <div className="flex flex-wrap items-start gap-2 border-t border-border pt-3">
                 {g.status === 'pending_confirmation' && g.userId !== session?.user.id && (

@@ -275,17 +275,6 @@ export class PlatformService {
     return { ok: true };
   }
 
-  /** Brings a removed gameMaster back as pending: another active gameMaster must confirm again. */
-  async renewGameMaster(p: HrmsPrincipal, userId: string) {
-    const r = await this.context.tx.execute(sql`
-      update game_masters
-         set status = 'pending_confirmation', removed_at = null, created_by = ${p.userId},
-             confirmed_by = null, confirmed_at = null
-       where user_id = ${userId} and status = 'removed' returning user_id`);
-    if (r.rows.length === 0) throw new NotFoundException('No removed gameMaster with that id.');
-    return { ok: true, status: 'pending_confirmation' };
-  }
-
   // ---- org side: recovery and last-CEO removal ------------------------
   async fileRecovery(p: HrmsPrincipal, dto: RecoveryRequestDto) {
     const target = await this.context.tx.execute<{ user_id: string }>(sql`
