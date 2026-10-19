@@ -172,7 +172,7 @@ export function ProjectCard({ project: p }: { project: HrmsProject }) {
   tasks.data?.items.forEach((t) => t.assignees.forEach((a) => people.set(a.memberId, a.fullName)));
 
   return (
-    <li className="rounded-[1.5rem] bg-surface-sunken p-1.5 transition-shadow duration-200 hover:shadow-float">
+    <li className="w-full min-w-0 rounded-[1.5rem] bg-surface-sunken p-1.5 transition-shadow duration-200 hover:shadow-float">
       <div className="rounded-card bg-surface-raised p-4">
         <div className="flex items-start gap-3">
           <ProgressRing done={p.progress.doneTasks} percent={p.progress.percentDone} />

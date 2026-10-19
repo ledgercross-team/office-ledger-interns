@@ -80,14 +80,14 @@ function NewTaskForm() {
   }
 
   return (
-    <PageShell className="max-w-3xl">
+    <PageShell className="w-full min-w-0">
       <PageHeader
         title="New task"
         description="Create a task, set its urgency and due date, then assign the people responsible."
       />
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-2xl space-y-5 rounded-card border border-border bg-surface p-5"
+        className="w-full min-w-0 space-y-6 rounded-card border border-border bg-surface p-5 sm:p-6"
       >
         <label className={labelClass}>
           Project
@@ -135,7 +135,7 @@ function NewTaskForm() {
             <input name="dueDate" type="date" required className={controlClass} />
           </label>
         </div>
-        <fieldset className="space-y-1">
+        <fieldset className="space-y-2">
           <legend className="text-sm font-medium text-fg">Assign to</legend>
           <p className="text-sm text-fg-muted">
             A task needs at least one manager and one employee before work can start. You can save
@@ -168,9 +168,17 @@ function NewTaskForm() {
             {error}
           </Banner>
         )}
-        <Button type="submit" loading={pending} disabled={!projectId} loadingLabel="Creating">
-          Create task
-        </Button>
+        <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
+          <Button
+            type="submit"
+            loading={pending}
+            disabled={!projectId}
+            loadingLabel="Creating"
+            className="w-full sm:w-auto"
+          >
+            Create task
+          </Button>
+        </div>
       </form>
     </PageShell>
   );

@@ -99,7 +99,7 @@ export default function ProjectsPage() {
       </FilterBar>
 
       {projects.isLoading && (
-        <div className="grid gap-4 lg:grid-cols-2" aria-label="Loading projects">
+        <div className="grid w-full gap-4" aria-label="Loading projects">
           {[1, 2, 3, 4].map((item) => (
             <Skeleton key={item} className="h-56" />
           ))}
@@ -131,7 +131,7 @@ export default function ProjectsPage() {
         />
       )}
       {projects.data && projects.data.items.length > 0 && (
-        <ul className="grid items-start gap-4 lg:grid-cols-2">
+        <ul className="grid w-full items-start gap-4">
           {projects.data.items.map((p) => (
             <ProjectCard key={p.id} project={p} />
           ))}

@@ -59,7 +59,7 @@ function PeoplePicker({
 
   return (
     <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
-      <div className="min-w-64 flex-1">
+      <div className="min-w-0 flex-1 basis-64">
         <MemberSearch
           label={label}
           role={role}
@@ -133,8 +133,8 @@ export default function ProjectDetailPage() {
   const memberIds = p.members.map((m) => m.memberId);
 
   return (
-    <PageShell>
-      <div className="space-y-2">
+    <PageShell className="w-full min-w-0">
+      <div className="w-full min-w-0 space-y-2">
         <Link href="/projects" className={`text-sm ${linkClass}`}>
           ← Projects
         </Link>
@@ -176,7 +176,7 @@ export default function ProjectDetailPage() {
 
       <CompletionPanel project={p} onChange={apply} />
 
-      <Card className="space-y-3">
+      <Card className="w-full min-w-0 space-y-3">
         <h2 className="font-semibold text-fg">People</h2>
         <ul className="divide-y divide-border text-sm">
           {p.members.map((m) => (
@@ -192,7 +192,7 @@ export default function ProjectDetailPage() {
                 {m.ticked === true && <span className="ml-2 text-xs text-success-fg">ticked</span>}
               </span>
               {editable && (
-                <span className="flex gap-3">
+                <span className="flex flex-wrap gap-x-3 gap-y-1">
                   {isCeoOrCoo && m.role === 'manager' && (
                     <button
                       type="button"
@@ -292,7 +292,7 @@ export default function ProjectDetailPage() {
       {canEdit && editable && (
         <form
           key={p.name + (p.description ?? '') + (p.dueDate ?? '')}
-          className={`${cardClass} space-y-3`}
+          className={`${cardClass} w-full min-w-0 space-y-3`}
           onSubmit={(event) => {
             event.preventDefault();
             const f = new FormData(event.currentTarget);
@@ -352,7 +352,7 @@ export default function ProjectDetailPage() {
       )}
 
       {isCeo && p.status !== 'archived' && (
-        <section className="max-w-md space-y-2 rounded-card border border-danger/30 bg-danger-soft p-5">
+        <section className="w-full space-y-2 rounded-card border border-danger/30 bg-danger-soft p-5">
           <h2 className="font-semibold text-danger-fg">Archive</h2>
           <p className="text-sm text-fg">
             The project becomes read-only and its open tasks are cancelled automatically.

@@ -46,19 +46,23 @@ function NewProjectForm() {
   }
 
   return (
-    <PageShell className="max-w-2xl">
+    <PageShell className="w-full">
       <PageHeader
         title="New project"
         description="Set the project scope, dates, and managers before inviting the wider team."
       />
-      <form onSubmit={onSubmit} className={`${cardClass} max-w-lg space-y-4`}>
-        <Input label="Name" name="name" required maxLength={200} />
-        <Textarea label="Description (optional)" name="description" rows={3} maxLength={5000} />
-        <div className="grid gap-3 sm:grid-cols-2">
+      <form onSubmit={onSubmit} className={`${cardClass} w-full space-y-6`}>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="lg:col-span-2">
+            <Input label="Name" name="name" required maxLength={200} />
+          </div>
+          <div className="lg:col-span-2">
+            <Textarea label="Description (optional)" name="description" rows={4} maxLength={5000} />
+          </div>
           <Input label="Start date" name="startDate" type="date" />
           <Input label="Due date" name="dueDate" type="date" />
         </div>
-        <fieldset className="space-y-1">
+        <fieldset className="space-y-2">
           <legend className={labelClass}>Managers</legend>
           <p className="text-xs text-fg-muted">
             A project needs at least one manager and one employee. Employees are invited from the
@@ -81,9 +85,16 @@ function NewProjectForm() {
             {error}
           </Banner>
         )}
-        <Button type="submit" loading={pending} loadingLabel="Creating">
-          Create project
-        </Button>
+        <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
+          <Button
+            type="submit"
+            loading={pending}
+            loadingLabel="Creating"
+            className="w-full sm:w-auto"
+          >
+            Create project
+          </Button>
+        </div>
       </form>
     </PageShell>
   );
