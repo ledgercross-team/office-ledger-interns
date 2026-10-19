@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import {
   Banner,
   ErrorState,
@@ -385,6 +385,12 @@ export function GameMasters() {
   );
 
   const [issued, setIssued] = useState<{ email: string; password: string } | null>(null);
+  const [showRemoved, setShowRemoved] = useState(false);
+  // Re-adding fills the ordinary "Add a game master" form; nothing is sent until it is submitted.
+  const [prefill, setPrefill] = useState<{ name: string; email: string } | null>(null);
+  const addForm = useRef<HTMLFormElement>(null);
+  const removedCount = list.data?.items.filter((g) => g.status === 'removed').length ?? 0;
+  const visible = list.data?.items.filter((g) => showRemoved || g.status !== 'removed') ?? [];
 
   function onCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -396,6 +402,7 @@ export function GameMasters() {
       {
         onSuccess: (data) => {
           form.reset();
+          setPrefill(null);
           const password = (data as { temporaryPassword?: string } | undefined)?.temporaryPassword;
           setIssued(password ? { email, password } : null);
         },
@@ -405,9 +412,21 @@ export function GameMasters() {
 
   return (
     <section className="space-y-3">
-      <h2 className="font-medium text-fg">GameMasters</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-medium text-fg">GameMasters</h2>
+        {removedCount > 0 && (
+          <button
+            type="button"
+            aria-pressed={showRemoved}
+            onClick={() => setShowRemoved((v) => !v)}
+            className={secondary}
+          >
+            {showRemoved ? 'Hide removed' : `Show removed (${removedCount})`}
+          </button>
+        )}
+      </div>
       <ul className="space-y-2">
-        {list.data?.items.map((g) => (
+        {visible.map((g) => (
           <li key={g.userId} className="space-y-3 rounded-card border border-border bg-surface p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
@@ -422,6 +441,23 @@ export function GameMasters() {
                 </span>
               )}
             </div>
+            {g.status === 'removed' && (
+              <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrefill({ name: g.fullName, email: g.email });
+                    addForm.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                  className={secondary}
+                >
+                  Re-add
+                </button>
+                <p className="text-xs text-fg-muted">
+                  Fills the form below. Another active gameMaster must confirm them again.
+                </p>
+              </div>
+            )}
             {g.status !== 'removed' && (
               <div className="flex flex-wrap items-start gap-2 border-t border-border pt-3">
                 {g.status === 'pending_confirmation' && g.userId !== session?.user.id && (
@@ -464,7 +500,12 @@ export function GameMasters() {
           </button>
         </div>
       )}
-      <form onSubmit={onCreate} className={`${card} max-w-none`}>
+      <form
+        key={prefill?.email ?? 'new'}
+        ref={addForm}
+        onSubmit={onCreate}
+        className={`${card} max-w-none`}
+      >
         <div className="flex flex-col gap-1 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div>
             <h3 className="text-base font-semibold text-fg">Add a game master</h3>
@@ -483,6 +524,7 @@ export function GameMasters() {
               id="new-gamemaster-name"
               name="name"
               required
+              defaultValue={prefill?.name}
               placeholder="Full name"
               className={input}
             />
@@ -494,6 +536,7 @@ export function GameMasters() {
               name="email"
               type="email"
               required
+              defaultValue={prefill?.email}
               placeholder="Email"
               className={input}
             />

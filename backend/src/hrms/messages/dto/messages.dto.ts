@@ -1,10 +1,11 @@
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional, IsString, IsUUID, Length, MaxLength } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, IsUUID, Length, MaxLength } from 'class-validator';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 
 export class RecipientsQueryDto {
   @IsOptional() @IsString() @MaxLength(80) q?: string;
+  @IsOptional() @IsIn(['ceo', 'coo', 'manager', 'employee', 'gameMaster']) role?: string;
 }
 
 export class StartThreadDto {

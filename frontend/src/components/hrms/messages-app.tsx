@@ -14,7 +14,7 @@ import {
   Skeleton,
   Textarea,
 } from '@/components/ui';
-import { MemberSearch, type MemberOption } from '@/components/hrms/member-search';
+import { MemberSearch, type MemberOption, type RoleFilter } from '@/components/hrms/member-search';
 import { useReadOnly } from '@/components/hrms/read-only';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
@@ -26,6 +26,21 @@ import type {
   ReportDetail,
   ReportSummary,
 } from '@/lib/hrms/types';
+
+// The roles each role may start a conversation with; the database enforces the same table.
+const CHIP = {
+  ceo: { value: 'ceo', label: 'CEO' },
+  coo: { value: 'coo', label: 'COO' },
+  manager: { value: 'manager', label: 'Managers' },
+  employee: { value: 'employee', label: 'Employees' },
+  gameMaster: { value: 'gameMaster', label: 'GameMasters' },
+};
+const ROLE_CHIPS: Record<string, RoleFilter[]> = {
+  ceo: [CHIP.coo, CHIP.manager, CHIP.gameMaster],
+  coo: [CHIP.ceo, CHIP.manager, CHIP.employee, CHIP.gameMaster],
+  manager: [CHIP.ceo, CHIP.coo, CHIP.manager, CHIP.employee],
+  employee: [CHIP.coo, CHIP.manager, CHIP.employee],
+};
 
 const ROLE_LABELS: Record<string, string> = {
   ceo: 'CEO',
@@ -259,11 +274,13 @@ function NewMessage({
   onCancel: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { session } = useHrmsAuth();
+  const roleFilters = ROLE_CHIPS[session?.role ?? ''];
   const [to, setTo] = useState<MemberOption | null>(null);
   // For a gameMaster the organisation travels with the person they picked.
   const orgByUser = useRef(new Map<string, string>());
 
-  const fetchOptions = async (q: string): Promise<MemberOption[]> => {
+  const fetchOptions = async (q: string, role?: string): Promise<MemberOption[]> => {
     if (mode === 'platform') {
       const r = await hrmsFetch<{
         items: Array<{
@@ -280,7 +297,7 @@ function NewMessage({
       });
     }
     const r = await hrmsFetch<{ items: Array<{ userId: string; fullName: string; role: string }> }>(
-      `/messages/recipients?q=${encodeURIComponent(q)}`,
+      `/messages/recipients?q=${encodeURIComponent(q)}${role ? `&role=${role}` : ''}`,
     );
     return r.items.map((c) => ({
       id: c.userId,
@@ -323,7 +340,11 @@ function NewMessage({
         onClear={() => setTo(null)}
         fetchOptions={fetchOptions}
         searchKey={`messages-${mode}`}
-        placeholder="Search a name"
+        roleFilters={mode === 'platform' ? undefined : roleFilters}
+        maxResults={8}
+        placeholder={
+          mode === 'platform' ? 'Search a name' : 'Search a name, or a role like manager or coo'
+        }
       />
       <Composer
         pending={start.isPending}

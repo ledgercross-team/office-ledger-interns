@@ -17,6 +17,11 @@ export interface MemberOption {
 // Suggestions stay short however big the organisation is; typing narrows them.
 const MAX_RESULTS = 4;
 
+export interface RoleFilter {
+  value: string;
+  label: string;
+}
+
 function useDebounced<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -45,6 +50,8 @@ export function MemberSearch({
   required = false,
   fetchOptions,
   searchKey,
+  roleFilters,
+  maxResults = MAX_RESULTS,
 }: {
   label: string;
   role?: HrmsRole;
@@ -59,9 +66,12 @@ export function MemberSearch({
   placeholder?: string;
   required?: boolean;
   /** Use another source than the members list (for example the people you may message). */
-  fetchOptions?: (q: string) => Promise<MemberOption[]>;
+  fetchOptions?: (q: string, role?: string) => Promise<MemberOption[]>;
   /** Cache key for `fetchOptions`. */
   searchKey?: string;
+  /** Chips that narrow the list to one role; `fetchOptions` receives the chosen value. */
+  roleFilters?: RoleFilter[];
+  maxResults?: number;
 }) {
   const id = useId();
   const listId = `${id}-list`;
@@ -70,12 +80,13 @@ export function MemberSearch({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const query = useDebounced(text.trim(), 250);
+  const [roleChip, setRoleChip] = useState<string | undefined>(undefined);
 
   const remote = useQuery({
-    queryKey: ['hrms', 'member-search', searchKey ?? role ?? 'any', query],
+    queryKey: ['hrms', 'member-search', searchKey ?? role ?? 'any', roleChip ?? 'all', query],
     queryFn: async () => {
       if (fetchOptions) {
-        const items = await fetchOptions(query);
+        const items = await fetchOptions(query, roleChip);
         return {
           items,
           page: 1,
@@ -85,7 +96,7 @@ export function MemberSearch({
       }
       const params = new URLSearchParams({
         status: 'active',
-        pageSize: String(MAX_RESULTS + excludeIds.length),
+        pageSize: String(maxResults + excludeIds.length),
       });
       if (role) params.set('role', role);
       if (query) params.set('q', query);
@@ -100,7 +111,7 @@ export function MemberSearch({
   const pool = localOptions
     ? localOptions.filter((m) => `${m.fullName} ${m.email ?? ''}`.toLowerCase().includes(needle))
     : (remote.data?.items ?? []);
-  const results = pool.filter((m) => !excludeIds.includes(m.id)).slice(0, MAX_RESULTS);
+  const results = pool.filter((m) => !excludeIds.includes(m.id)).slice(0, maxResults);
   const loading = !localOptions && remote.isFetching && results.length === 0;
 
   // A typed-but-unpicked value must not submit; native validation says why.
@@ -144,6 +155,33 @@ export function MemberSearch({
         )}
       </label>
       {name && <input type="hidden" name={name} value={selected?.id ?? ''} />}
+      {roleFilters && !selected && (
+        <div role="group" aria-label="Filter by role" className="flex flex-wrap gap-1.5">
+          {[{ value: '', label: 'All' }, ...roleFilters].map((f) => {
+            const on = (roleChip ?? '') === f.value;
+            return (
+              <button
+                key={f.value || 'all'}
+                type="button"
+                aria-pressed={on}
+                onClick={() => {
+                  setRoleChip(f.value || undefined);
+                  setOpen(true);
+                  setActive(0);
+                  inputRef.current?.focus();
+                }}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  on
+                    ? 'border-primary bg-primary text-primary-fg'
+                    : 'border-border bg-surface text-fg-muted hover:bg-surface-sunken hover:text-fg'
+                }`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
       {selected ? (
         <div className="flex min-h-10 items-center justify-between gap-2 rounded-control border border-border bg-surface px-3 py-1.5">
           <span className="min-w-0 truncate">
@@ -244,7 +282,7 @@ export function MemberSearch({
               </span>
             </li>
           ))}
-          {!localOptions && results.length >= MAX_RESULTS && (
+          {!localOptions && results.length >= maxResults && (
             <li className="px-3 py-2 text-xs text-fg-muted">Keep typing to narrow the list.</li>
           )}
         </ul>

@@ -10,10 +10,10 @@ import type { FileReportDto, GmStartThreadDto, StartThreadDto } from './dto/mess
 const CONTACTABLE: Record<string, string[]> = {
   ceo: ['coo', 'manager'],
   coo: ['ceo', 'manager', 'employee'],
-  manager: ['ceo', 'coo'],
-  employee: ['coo'],
+  manager: ['ceo', 'coo', 'manager', 'employee'],
+  employee: ['coo', 'manager', 'employee'],
 };
-const SUGGESTIONS = 4;
+const SUGGESTIONS = 8;
 
 function needle(q: string | undefined): string | null {
   const text = q?.trim();
@@ -52,35 +52,42 @@ export class MessagesService {
   ) {}
 
   // ---- people you may write to -------------------------------------------
-  async recipients(p: HrmsPrincipal, q?: string) {
-    const roles = CONTACTABLE[p.role ?? ''] ?? [];
-    if (roles.length === 0) return { items: [] };
+  async recipients(p: HrmsPrincipal, q?: string, role?: string) {
+    const allowed = CONTACTABLE[p.role ?? ''] ?? [];
+    if (allowed.length === 0) return { items: [] };
+    const roles = role ? allowed.filter((r) => r === role) : allowed;
     const like = needle(q);
-    const list = sql.join(
-      roles.map((r) => sql`${r}::member_role`),
-      sql`, `,
-    );
-    const people = await this.context.tx.execute<{
-      user_id: string;
-      full_name: string;
-      role: string;
-    }>(sql`
-      select m.user_id, u.full_name, m.role::text as role
-        from org_members m join users u on u.id = m.user_id
-       where m.org_id = current_org_id() and m.status = 'active' and m.role in (${list})
-         and m.user_id <> ${p.userId}
-         and (${like}::text is null or u.full_name ilike ${like} or u.email::text ilike ${like})
-       order by u.full_name limit ${SUGGESTIONS}`);
-    const items = people.rows.map((r) => ({
-      userId: r.user_id,
-      fullName: r.full_name,
-      role: r.role,
-    }));
+    // Typing a role ("manager", "coos") finds that role's people, so no name has to be remembered.
+    const word = q?.trim().toLowerCase().replace(/s$/, '') ?? '';
+    const roleLike = word.length >= 2 ? `${word.replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null;
+    const items: Array<{ userId: string; fullName: string; role: string }> = [];
 
-    if ((p.role === 'ceo' || p.role === 'coo') && items.length < SUGGESTIONS) {
+    if (roles.length > 0) {
+      const list = sql.join(
+        roles.map((r) => sql`${r}::member_role`),
+        sql`, `,
+      );
+      const people = await this.context.tx.execute<{
+        user_id: string;
+        full_name: string;
+        role: string;
+      }>(sql`
+        select m.user_id, u.full_name, m.role::text as role
+          from org_members m join users u on u.id = m.user_id
+         where m.org_id = current_org_id() and m.status = 'active' and m.role in (${list})
+           and m.user_id <> ${p.userId}
+           and (${like}::text is null or u.full_name ilike ${like} or u.email::text ilike ${like}
+                or m.role::text like ${roleLike}::text)
+         order by u.full_name limit ${SUGGESTIONS}`);
+      for (const r of people.rows)
+        items.push({ userId: r.user_id, fullName: r.full_name, role: r.role });
+    }
+
+    const wantsGms = (!role || role === 'gameMaster') && (p.role === 'ceo' || p.role === 'coo');
+    if (wantsGms && items.length < SUGGESTIONS) {
       const gms = await this.context.tx.execute<{ user_id: string; full_name: string }>(sql`
         select user_id, full_name from list_game_masters()
-         where ${like}::text is null or full_name ilike ${like}
+         where ${like}::text is null or full_name ilike ${like} or 'gamemaster' like ${roleLike}::text
          limit ${SUGGESTIONS - items.length}`);
       for (const g of gms.rows)
         items.push({ userId: g.user_id, fullName: g.full_name, role: 'gameMaster' });

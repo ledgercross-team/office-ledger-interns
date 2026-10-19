@@ -245,17 +245,28 @@ export class PlatformService {
   async createGameMaster(p: HrmsPrincipal, dto: CreateGameMasterDto) {
     const email = dto.email.trim().toLowerCase();
     const user = await this.userFor(email, dto.fullName.trim());
-    const existing = await this.context.tx.execute(
-      sql`select 1 from game_masters where user_id = ${user.id}`,
+    const existing = await this.context.tx.execute<{ status: string }>(
+      sql`select status::text as status from game_masters where user_id = ${user.id}`,
     );
-    if (existing.rows.length > 0)
+    const previous = existing.rows[0]?.status;
+    if (previous !== undefined && previous !== 'removed')
       throw new ConflictException('This person is already a gameMaster.');
-    await this.context.tx.execute(sql`
-      insert into game_masters (user_id, created_by) values (${user.id}, ${p.userId})`);
-    // A new person gets a one-time temporary password, shown only to the creating gameMaster
-    // (who hands it over). They must choose their own at first sign-in.
+    if (previous === 'removed') {
+      // Re-adding a removed gameMaster goes through the same steps as a new one: pending until
+      // another active gameMaster confirms.
+      await this.context.tx.execute(sql`
+        update game_masters
+           set status = 'pending_confirmation', removed_at = null, created_by = ${p.userId},
+               confirmed_by = null, confirmed_at = null
+         where user_id = ${user.id}`);
+    } else {
+      await this.context.tx.execute(sql`
+        insert into game_masters (user_id, created_by) values (${user.id}, ${p.userId})`);
+    }
+    // A new or re-added person gets a one-time temporary password, shown only to the creating
+    // gameMaster (who hands it over). They must choose their own at first sign-in.
     let temporaryPassword: string | undefined;
-    if (user.created) {
+    if (user.created || previous === 'removed') {
       temporaryPassword = generateTempPassword();
       const hash = await hashPassword(temporaryPassword);
       await this.context.tx.execute(sql`

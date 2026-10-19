@@ -2849,7 +2849,8 @@ CREATE FUNCTION messaging_pair_allowed(a text, b text) RETURNS boolean
 LANGUAGE sql IMMUTABLE AS $$
     SELECT (least(a COLLATE "C", b COLLATE "C"), greatest(a COLLATE "C", b COLLATE "C")) IN (
         ('ceo', 'gameMaster'), ('coo', 'gameMaster'), ('ceo', 'coo'),
-        ('ceo', 'manager'), ('coo', 'manager'), ('coo', 'employee'))
+        ('ceo', 'manager'), ('coo', 'manager'), ('coo', 'employee'),
+        ('employee', 'employee'), ('employee', 'manager'), ('manager', 'manager'))
 $$;
 
 -- A person's messaging role: gameMaster, or their active role in the org. NULL when inactive.

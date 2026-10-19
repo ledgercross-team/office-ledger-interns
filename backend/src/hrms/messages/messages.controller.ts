@@ -43,7 +43,7 @@ export class MessagesController {
   @SkipThrottle()
   @Get('recipients')
   recipients(@Req() req: HrmsAuthedRequest, @Query() q: RecipientsQueryDto) {
-    return this.messages.recipients(principalOf(req), q.q);
+    return this.messages.recipients(principalOf(req), q.q, q.role);
   }
 
   @HrmsRoles(...ORG)
