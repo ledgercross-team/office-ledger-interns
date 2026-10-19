@@ -3285,16 +3285,26 @@ BEGIN
     END LOOP;
 END $$;
 
-ALTER TABLE org_settings ADD CONSTRAINT org_settings_weights_check CHECK (
-    weight_attendance >= 0 AND weight_rating >= 0 AND weight_ontime >= 0 AND weight_leave >= 0
-    AND weight_attendance + weight_rating + weight_ontime + weight_leave = 100
-);
-
+-- Older databases used 30/50/20 before leave became the fourth matrix. Rewrite
+-- existing rows and defaults before adding the new check, otherwise a new
+-- organisation can receive weights totaling 110 and fail during bootstrap.
 UPDATE org_settings
    SET weight_attendance = 30,
        weight_rating = 10,
        weight_ontime = 50,
        weight_leave = 10;
+
+ALTER TABLE org_settings
+    ALTER COLUMN weight_attendance SET DEFAULT 30,
+    ALTER COLUMN weight_rating SET DEFAULT 10,
+    ALTER COLUMN weight_ontime SET DEFAULT 50,
+    ALTER COLUMN weight_leave SET DEFAULT 10,
+    ALTER COLUMN weight_leave SET NOT NULL;
+
+ALTER TABLE org_settings ADD CONSTRAINT org_settings_weights_check CHECK (
+    weight_attendance >= 0 AND weight_rating >= 0 AND weight_ontime >= 0 AND weight_leave >= 0
+    AND weight_attendance + weight_rating + weight_ontime + weight_leave = 100
+);
 
 DROP POLICY IF EXISTS org_isolation ON performance_scores;
 DROP POLICY IF EXISTS ceo_coo_read ON performance_scores;
