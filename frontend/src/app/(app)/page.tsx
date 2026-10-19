@@ -93,7 +93,7 @@ function Stat({
   hint?: string;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-card border border-border bg-surface-raised p-4 shadow-[0_1px_2px_rgb(15_41_49_/_0.03)]">
+    <div className="flex items-center gap-4 rounded-card border border-border bg-surface-raised p-4 shadow-[0_1px_2px_rgb(17_17_17_/_0.03)]">
       <span
         aria-hidden
         className="flex size-11 shrink-0 items-center justify-center rounded-control border border-border bg-primary-soft text-primary"
@@ -301,14 +301,14 @@ export default function HrmsHomePage() {
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[1.2rem] border border-white/10 bg-rail p-6 text-rail-fg shadow-[0_18px_45px_rgb(15_41_49_/_0.16)] sm:p-8">
+      <section className="relative overflow-hidden hero-card rounded-[1.2rem] border border-border p-6 text-fg sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold sm:text-3xl">
+            <h1 className="text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
               {greeting(now.getHours())}, {firstName}
             </h1>
-            <p className="mt-1 max-w-xl text-sm text-rail-fg/75">{roleUi.dashboardDescription}</p>
-            <p className="mt-2 text-xs text-rail-fg/55">
+            <p className="mt-1 max-w-xl text-sm text-fg-muted">{roleUi.dashboardDescription}</p>
+            <p className="mt-2 text-xs text-fg-muted">
               {now.toLocaleDateString(undefined, {
                 weekday: 'long',
                 day: 'numeric',
@@ -327,21 +327,21 @@ export default function HrmsHomePage() {
                 ? 'bg-success-soft text-success-fg'
                 : checkedOut
                   ? 'bg-info-soft text-info-fg'
-                  : 'bg-white/10 text-rail-fg',
+                  : 'bg-surface text-fg',
             )}
           >
             <span
               aria-hidden
               className={cn(
                 'size-2 rounded-full',
-                working ? 'bg-success' : checkedOut ? 'bg-info' : 'bg-rail-fg/60',
+                working ? 'bg-success' : checkedOut ? 'bg-info' : 'bg-fg-subtle',
               )}
             />
             {statusLabel}
           </span>
         </div>
         <div className="mt-6">
-          <div className="mb-1.5 flex justify-between text-xs text-rail-fg/75">
+          <div className="mb-1.5 flex justify-between text-xs text-fg-muted">
             <span>
               {checkedIn
                 ? `${Math.floor(workedMinutes / 60)}h ${String(workedMinutes % 60).padStart(2, '0')}m worked`
@@ -355,7 +355,7 @@ export default function HrmsHomePage() {
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(progress)}
-            className="h-2.5 overflow-hidden rounded-full bg-white/10"
+            className="h-2.5 overflow-hidden rounded-full bg-surface/80"
           >
             <div
               className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out motion-reduce:transition-none"

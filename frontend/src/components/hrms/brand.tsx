@@ -12,7 +12,7 @@ export function BrandMark({
     <span
       aria-label={label}
       className={cn(
-        'inline-flex size-9 shrink-0 items-center justify-center rounded-[0.8rem] bg-primary text-[0.72rem] font-bold uppercase tracking-[0.08em] text-primary-fg shadow-sm',
+        'inline-flex size-9 shrink-0 items-center justify-center rounded-[0.7rem] bg-primary text-[0.72rem] font-semibold uppercase tracking-[0.06em] text-primary-fg',
         className,
       )}
     >

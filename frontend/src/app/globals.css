@@ -43,7 +43,7 @@
   --color-alert-tint: var(--ds-danger-soft);
   --color-alert-deep: var(--ds-danger-fg);
   --color-amber-deep: var(--ds-warning-fg);
-  --font-sans: var(--font-rubik), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-roboto-mono), ui-monospace, monospace;
   --text-2xs: 0.75rem;
   --text-xs: 0.8125rem;
@@ -55,40 +55,42 @@
   --text-3xl: 1.875rem;
   --radius-control: 0.7rem;
   --radius-card: 1rem;
-  --shadow-float: 0 18px 45px rgb(15 41 49 / 0.18);
+  --shadow-float: 0 18px 45px rgb(17 17 17 / 0.16);
+  --color-accent: var(--ds-accent);
 }
 
 :root,
 .theme-light,
 [data-theme='light'] {
   color-scheme: light;
-  --ds-bg: #f0f4f6;
+  --ds-bg: #f6f5f2;
   --ds-surface: #ffffff;
   --ds-surface-raised: #ffffff;
-  --ds-surface-sunken: #e5ecef;
-  --ds-border: #d3e0e4;
-  --ds-border-strong: #8fa3ac;
-  --ds-fg: #102832;
-  --ds-fg-muted: #50656f;
-  --ds-fg-subtle: #71838b;
-  --ds-primary: #087f7b;
-  --ds-primary-hover: #06635f;
+  --ds-surface-sunken: #f0efeb;
+  --ds-border: #e6e4de;
+  --ds-border-strong: #aaa79f;
+  --ds-fg: #111111;
+  --ds-fg-muted: #57554f;
+  --ds-fg-subtle: #74726b;
+  --ds-primary: #111111;
+  --ds-primary-hover: #2b2b2a;
   --ds-primary-fg: #ffffff;
-  --ds-primary-soft: #d9f1ef;
-  --ds-rail: #0d2a34;
-  --ds-rail-fg: #e9f4f4;
-  --ds-success: #087f5b;
-  --ds-success-soft: #dff5ed;
-  --ds-success-fg: #07543f;
-  --ds-warning: #b7791f;
-  --ds-warning-soft: #fff2cc;
-  --ds-warning-fg: #7b4f0a;
-  --ds-danger: #c2413a;
-  --ds-danger-soft: #fde2df;
-  --ds-danger-fg: #8b211b;
-  --ds-info: #2563eb;
-  --ds-info-soft: #e0ecff;
-  --ds-info-fg: #1e429f;
+  --ds-primary-soft: #ebe9e4;
+  --ds-rail: #fbfaf8;
+  --ds-rail-fg: #1a1a19;
+  --ds-success: #12794d;
+  --ds-success-soft: #e3f4eb;
+  --ds-success-fg: #0d5c3a;
+  --ds-warning: #b25e09;
+  --ds-warning-soft: #fdf0dc;
+  --ds-warning-fg: #8a4906;
+  --ds-danger: #c4314b;
+  --ds-danger-soft: #fde8ec;
+  --ds-danger-fg: #9a2038;
+  --ds-info: #1f7ac9;
+  --ds-info-soft: #e5f1fb;
+  --ds-info-fg: #165f9f;
+  --ds-accent: #4aa3e8;
 }
 
 html {
@@ -146,7 +148,7 @@ body {
   overflow-x: hidden;
   background: var(--ds-bg);
   color: var(--ds-fg);
-  font-family: var(--font-rubik), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   font-size: 1rem;
   line-height: 1.5;
 }
@@ -291,4 +293,11 @@ h4 {
 }
 .slim-scroll::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* The profile-style hero card: warm paper fading into a soft blue corner. */
+.hero-card {
+  background:
+    radial-gradient(120% 140% at 100% 100%, rgb(74 163 232 / 0.55) 0%, rgb(74 163 232 / 0) 55%),
+    linear-gradient(135deg, #f3f1ec 0%, #ebe8e1 100%);
 }

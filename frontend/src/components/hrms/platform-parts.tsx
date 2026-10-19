@@ -15,14 +15,14 @@ import {
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { PersonManager } from '@/components/hrms/platform-people';
-import type { PlatformGameMaster, PlatformOrg, PlatformRequest } from '@/lib/hrms/types';
+import type { PlatformGameMaster, PlatformRequest } from '@/lib/hrms/types';
 
 const input = controlClass;
 const primary = primaryActionClass;
 const secondary = secondaryActionClass;
 const card = `space-y-3 ${cardClass}`;
 
-function message(error: unknown): string {
+export function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
 }
 
@@ -48,7 +48,7 @@ function Error({ text }: { text: string | null }) {
   ) : null;
 }
 
-function CeoPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
+export function CeoPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const list = useQuery({
@@ -112,201 +112,6 @@ function CeoPanel({ orgId, orgName }: { orgId: string; orgName: string }) {
         </div>
       )}
     </div>
-  );
-}
-
-function OrgRow({ org, plans, onDone }: { org: PlatformOrg; plans: string[]; onDone: () => void }) {
-  const [plan, setPlan] = useState(org.planCode);
-  const [reason, setReason] = useState('');
-  const { mutation, error } = useAction(onDone);
-  return (
-    <li className="space-y-2 rounded-card border border-border bg-surface p-3">
-      <p className="text-sm text-fg">
-        <span className="font-medium">{org.name}</span> · {org.status} · {org.planCode} · seats{' '}
-        {org.seatsUsed}/{org.seatLimit}
-      </p>
-      <p className="text-xs text-fg-muted">
-        {org.ceoCount} CEO, {org.cooCount} COO
-        {org.overThreshold && (
-          <span className="ml-2 text-danger-fg">More than 25 CEOs and COOs</span>
-        )}
-      </p>
-      <CeoPanel orgId={org.id} orgName={org.name} />
-      <div className="flex flex-wrap items-center gap-2">
-        <label htmlFor={`org-plan-${org.id}`} className="sr-only">
-          Plan for {org.name}
-        </label>
-        <select
-          id={`org-plan-${org.id}`}
-          value={plan}
-          onChange={(e) => setPlan(e.target.value)}
-          className={`${input} sm:w-44`}
-        >
-          {plans.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          disabled={plan === org.planCode || mutation.isPending}
-          onClick={() =>
-            mutation.mutate({ path: `/platform/orgs/${org.id}/plan`, body: { planCode: plan } })
-          }
-          className={secondary}
-        >
-          Change plan
-        </button>
-        {org.status === 'blocked' ? (
-          <button
-            type="button"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate({ path: `/platform/orgs/${org.id}/unblock` })}
-            className={secondary}
-          >
-            Unblock
-          </button>
-        ) : (
-          <>
-            <label htmlFor={`block-reason-${org.id}`} className="sr-only">
-              Reason to block {org.name}
-            </label>
-            <input
-              id={`block-reason-${org.id}`}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Reason to block"
-              className={`${input} sm:w-48`}
-            />
-            <button
-              type="button"
-              disabled={reason.trim().length === 0 || mutation.isPending}
-              onClick={() =>
-                mutation.mutate({
-                  path: `/platform/orgs/${org.id}/block`,
-                  body: { reason: reason.trim() },
-                })
-              }
-              className={secondary}
-            >
-              Block
-            </button>
-          </>
-        )}
-      </div>
-      <Error text={error} />
-    </li>
-  );
-}
-
-export function Orgs() {
-  const queryClient = useQueryClient();
-  const orgs = useQuery({
-    queryKey: ['hrms', 'platform', 'orgs'],
-    queryFn: () => hrmsFetch<{ items: PlatformOrg[] }>('/platform/orgs'),
-  });
-  const plans = useQuery({
-    queryKey: ['hrms', 'platform', 'plans'],
-    queryFn: () => hrmsFetch<{ items: Array<{ code: string }> }>('/platform/plans'),
-  });
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['hrms', 'platform'] });
-  const { mutation, error } = useAction(refresh);
-  const planCodes = plans.data?.items.map((p) => p.code) ?? [];
-
-  function onCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const f = new FormData(form);
-    mutation.mutate(
-      {
-        path: '/platform/orgs',
-        body: {
-          name: String(f.get('name')).trim(),
-          planCode: String(f.get('plan')),
-          ceoEmail: String(f.get('email')).trim(),
-          ceoFullName: String(f.get('ceoName')).trim(),
-        },
-      },
-      { onSuccess: () => form.reset() },
-    );
-  }
-
-  return (
-    <section className="space-y-3">
-      <h2 className="font-medium text-fg">Organisations</h2>
-      <p className="text-xs text-fg-muted">Counts only. No organisation data is shown here.</p>
-      <ul className="space-y-2">
-        {orgs.data?.items.map((o) => (
-          <OrgRow key={o.id} org={o} plans={planCodes} onDone={refresh} />
-        ))}
-      </ul>
-      <form onSubmit={onCreate} className={`${card} max-w-none`}>
-        <div className="flex flex-col gap-1 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div>
-            <h3 className="text-base font-semibold text-fg">New organisation</h3>
-            <p className="mt-1 text-sm text-fg-muted">
-              Provision the organisation and its first CEO in one step.
-            </p>
-          </div>
-          <span className="w-fit rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">
-            Platform setup
-          </span>
-        </div>
-        <div className="grid gap-4 pt-1 md:grid-cols-2">
-          <label htmlFor="new-org-name" className={labelClass}>
-            Organisation name
-            <input
-              id="new-org-name"
-              name="name"
-              required
-              placeholder="Organisation name"
-              className={input}
-            />
-          </label>
-          <label htmlFor="new-org-plan" className={labelClass}>
-            Plan
-            <select id="new-org-plan" name="plan" required className={input}>
-              {planCodes.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label htmlFor="new-org-ceo-name" className={labelClass}>
-            CEO full name
-            <input
-              id="new-org-ceo-name"
-              name="ceoName"
-              required
-              placeholder="CEO full name"
-              className={input}
-            />
-          </label>
-          <label htmlFor="new-org-email" className={labelClass}>
-            CEO email
-            <input
-              id="new-org-email"
-              name="email"
-              type="email"
-              required
-              placeholder="CEO email"
-              className={input}
-            />
-          </label>
-        </div>
-        <Error text={error} />
-        <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-fg-muted">
-            The CEO receives access after the organisation is created.
-          </p>
-          <button type="submit" disabled={mutation.isPending} className={primary}>
-            Create organisation
-          </button>
-        </div>
-      </form>
-    </section>
   );
 }
 

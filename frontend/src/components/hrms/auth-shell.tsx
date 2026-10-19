@@ -7,31 +7,28 @@ export function AuthShell({ title, children }: { title: string; children: ReactN
   return (
     <main className="flex min-h-screen flex-1 items-center justify-center bg-bg p-4 sm:p-6 lg:p-10">
       <div className="grid w-full max-w-6xl overflow-hidden rounded-card border border-border bg-surface shadow-float lg:grid-cols-[minmax(0,1.05fr)_minmax(380px,0.75fr)]">
-        <section className="hidden min-h-[680px] flex-col justify-between bg-rail p-10 text-rail-fg lg:flex">
-          <BrandLink href="/landing" inverse />
+        <section className="hidden min-h-[680px] flex-col justify-between hero-card p-10 text-fg lg:flex">
+          <BrandLink href="/landing" />
           <div className="max-w-md">
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-rail-fg/60">
-              The modern operations desk
-            </p>
-            <h2 className="text-4xl font-bold leading-[1.08] tracking-[-0.04em] text-rail-fg">
+            <h2 className="text-4xl font-bold leading-[1.08] tracking-[-0.04em] text-fg">
               Keep the working day moving.
             </h2>
-            <p className="mt-5 max-w-sm text-sm leading-6 text-rail-fg/72">
+            <p className="mt-5 max-w-sm text-sm leading-6 text-fg-muted">
               One calm workspace for projects, tasks, attendance, leave, requests, and the people
               who keep your organisation moving.
             </p>
             <div className="mt-8 grid gap-3 text-sm">
-              <div className="flex items-center gap-3 rounded-control border border-white/10 bg-white/5 px-3 py-3">
-                <Activity aria-hidden className="size-4 text-primary-soft" />
+              <div className="flex items-center gap-3 rounded-control border border-border bg-surface/70 px-3 py-3">
+                <Activity aria-hidden className="size-4 text-fg-muted" />
                 <span>See what needs attention at a glance.</span>
               </div>
-              <div className="flex items-center gap-3 rounded-control border border-white/10 bg-white/5 px-3 py-3">
-                <ShieldCheck aria-hidden className="size-4 text-primary-soft" />
+              <div className="flex items-center gap-3 rounded-control border border-border bg-surface/70 px-3 py-3">
+                <ShieldCheck aria-hidden className="size-4 text-fg-muted" />
                 <span>Role-aware access follows the organisation’s rules.</span>
               </div>
             </div>
           </div>
-          <p className="max-w-sm text-xs leading-5 text-rail-fg/55">
+          <p className="max-w-sm text-xs leading-5 text-fg-muted">
             Access is scoped to the organisation and role attached to your account.
           </p>
         </section>
@@ -42,10 +39,7 @@ export function AuthShell({ title, children }: { title: string; children: ReactN
               <BrandLink href="/landing" />
             </div>
             <div className="mb-7">
-              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-primary">
-                Office Ledger workspace
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-fg sm:text-[1.75rem]">
+              <h1 className="text-2xl font-bold tracking-[-0.03em] text-fg sm:text-[1.75rem]">
                 {title}
               </h1>
             </div>

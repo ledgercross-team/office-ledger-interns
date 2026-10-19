@@ -1,6 +1,6 @@
 'use client';
 
-import { Orgs } from '@/components/hrms/platform-parts';
+import { Orgs } from '@/components/hrms/platform-orgs';
 import { RoleGate } from '@/components/hrms/role-gate';
 import { PageHeader, PageShell } from '@/components/ui';
 

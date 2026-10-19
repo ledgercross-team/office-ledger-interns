@@ -7,6 +7,10 @@ export class CreateOrgDto {
   @IsString() @MinLength(1) @MaxLength(120) ceoFullName!: string;
 }
 
+export class RenameOrgDto {
+  @IsString() @MinLength(1) @MaxLength(120) name!: string;
+}
+
 export class BlockOrgDto {
   @IsString() @MinLength(1) @MaxLength(500) reason!: string;
 }

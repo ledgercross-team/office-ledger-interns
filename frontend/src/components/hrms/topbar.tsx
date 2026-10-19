@@ -106,8 +106,8 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border/80 bg-surface-raised">
-      <div className="flex min-h-14 w-full items-center gap-1.5 px-3 sm:min-h-16 sm:gap-2 sm:px-7 lg:px-10">
+    <header className="sticky top-0 z-20 border-b border-border bg-bg/95 backdrop-blur-sm">
+      <div className="flex min-h-14 w-full items-center gap-2 px-3 sm:min-h-16 sm:px-7 lg:px-10">
         <NavDrawerTrigger onOpen={onOpenNav} />
         {pathname !== '/' && (
           <Button
@@ -120,40 +120,39 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
             <ArrowLeft aria-hidden className="size-5" />
           </Button>
         )}
-        <div className="hidden min-w-0 flex-1 md:block">
-          <Breadcrumbs items={crumbs(pathname)} />
-        </div>
-        <div className="min-w-0 flex-1 md:hidden">
-          <p className="truncate text-sm font-semibold text-fg">
-            {crumbs(pathname)
-              .map((c) => c.label)
-              .join(' / ')}
-          </p>
-        </div>
+        <CommandPalette
+          items={paletteItems}
+          trigger={
+            <button
+              type="button"
+              aria-label="Search pages, people, projects and tasks"
+              className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-control border border-border bg-surface px-3.5 text-left text-sm text-fg-subtle transition-colors hover:border-border-strong sm:max-w-md"
+            >
+              <Search aria-hidden strokeWidth={1.75} className="size-4 shrink-0" />
+              <span className="min-w-0 flex-1 truncate">Search pages, people, projects…</span>
+              <kbd className="hidden rounded border border-border px-1.5 py-0.5 text-[0.7rem] font-medium text-fg-muted md:inline">
+                ⌘K
+              </kbd>
+            </button>
+          }
+        />
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
           {session?.org && (
-            <div className="hidden max-w-52 items-center gap-2 rounded-control border border-border bg-surface-sunken/60 px-3 py-1.5 text-xs font-semibold text-fg-muted lg:flex">
-              <Building2 aria-hidden className="size-3.5 shrink-0 text-primary" />
+            <div className="hidden max-w-52 items-center gap-2 rounded-control border border-border bg-surface px-3 py-1.5 text-xs font-medium text-fg-muted xl:flex">
+              <Building2 aria-hidden strokeWidth={1.75} className="size-3.5 shrink-0" />
               <span className="truncate">{session.org.name}</span>
             </div>
           )}
-          <CommandPalette
-            items={paletteItems}
-            trigger={
-              <Button variant="secondary" aria-label="Search pages, people, projects and tasks">
-                <Search aria-hidden className="size-4" />
-                <span className="hidden sm:inline">Search</span>
-                <kbd className="hidden rounded border border-border px-1.5 py-0.5 text-[0.7rem] font-medium text-fg-muted md:inline">
-                  ⌘K
-                </kbd>
-              </Button>
-            }
-          />
           <QuickCheckIn />
           <NotificationBell />
           <UserMenu />
         </div>
       </div>
+      {trail.length > 1 && (
+        <div className="hidden px-3 pb-2 sm:px-7 md:block lg:px-10">
+          <Breadcrumbs items={trail} />
+        </div>
+      )}
     </header>
   );
 }

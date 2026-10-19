@@ -19,6 +19,7 @@ import {
   CreateOrgDto,
   LastCeoRemovalDto,
   RecoveryRequestDto,
+  RenameOrgDto,
   SetPlanDto,
   UpdatePersonDto,
 } from './dto/platform.dto';
@@ -53,6 +54,12 @@ export class PlatformController {
   @Post('orgs')
   create(@Body() dto: CreateOrgDto) {
     return this.platform.createOrg(dto);
+  }
+
+  @HrmsRoles('gameMaster')
+  @Patch('orgs/:id')
+  rename(@Param('id', uuid) id: string, @Body() dto: RenameOrgDto) {
+    return this.platform.renameOrg(id, dto);
   }
 
   @HrmsRoles('gameMaster')

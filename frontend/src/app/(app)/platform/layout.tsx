@@ -6,7 +6,8 @@ import { Building2, Inbox, LogOut, MessageSquare, ShieldCheck, Users } from 'luc
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
-import { Button, Skeleton, ToastProvider } from '@/components/ui';
+import { Avatar, Button, Skeleton, ToastProvider } from '@/components/ui';
+import { BrandMark } from '@/components/hrms/brand';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import { UserMenu } from '@/components/hrms/user-menu';
@@ -71,13 +72,28 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
           Skip to content
         </a>
         <div className="flex min-h-screen">
-          <aside className="sticky top-0 hidden h-screen w-60 shrink-0 border-r border-border bg-surface p-3 md:block">
+          <aside className="sticky top-0 hidden h-screen w-64 shrink-0 bg-bg p-3 pr-2 md:block">
             <nav
               aria-label="Platform"
-              className="flex h-full flex-col rounded-card bg-rail p-3 text-rail-fg"
+              className="flex h-full flex-col gap-4 rounded-card border border-border bg-rail p-3 text-rail-fg"
             >
-              <div>
-                <p className="px-2 pb-3 text-sm font-bold text-rail-fg">Platform console</p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 px-1 pt-1">
+                  <BrandMark />
+                  <span className="truncate text-base font-semibold tracking-[-0.02em]">
+                    Office Ledger
+                  </span>
+                </div>
+                <div className="flex items-center gap-2.5 rounded-control border border-border bg-surface px-2.5 py-2">
+                  <Avatar name={session.user.fullName} size="sm" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-fg">
+                      {session.user.fullName}
+                    </span>
+                    <span className="block truncate text-xs text-fg-subtle">Platform console</span>
+                  </span>
+                </div>
+                <p className="px-3 text-xs text-fg-subtle">Console</p>
                 <ul className="space-y-1">
                   {ITEMS.map((item) => {
                     const active =
@@ -91,13 +107,17 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
                           href={item.href}
                           aria-current={active ? 'page' : undefined}
                           className={cn(
-                            'flex min-h-10 items-center gap-3 rounded-full px-3 py-2 text-sm font-medium',
+                            'flex min-h-10 items-center gap-3 rounded-control border px-3 py-2 text-sm transition-colors',
                             active
-                              ? 'bg-surface font-bold text-fg shadow-sm'
-                              : 'text-rail-fg hover:bg-surface/50',
+                              ? 'border-border bg-surface font-medium text-fg shadow-[0_1px_2px_rgb(17_17_17_/_0.06)]'
+                              : 'border-transparent text-fg-muted hover:bg-surface-sunken hover:text-fg',
                           )}
                         >
-                          <Icon aria-hidden className="size-5 shrink-0" />
+                          <Icon
+                            aria-hidden
+                            strokeWidth={1.75}
+                            className="size-[1.125rem] shrink-0"
+                          />
                           <span className="min-w-0 flex-1 truncate">{item.label}</span>
                           {item.href === '/platform/messages' && unreadCount > 0 && (
                             <span
@@ -113,13 +133,13 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
                   })}
                 </ul>
               </div>
-              <div className="mt-auto border-t border-rail-fg/20 pt-3">
-                <p className="truncate px-2 text-xs text-rail-fg/75">{session.user.email}</p>
+              <div className="mt-auto border-t border-border pt-3">
+                <p className="truncate px-2 text-xs text-fg-subtle">{session.user.email}</p>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => void logout()}
-                  className="mt-2 w-full justify-start text-rail-fg hover:bg-surface/50 hover:text-fg"
+                  className="mt-2 w-full justify-start text-fg-muted hover:text-fg"
                 >
                   <LogOut aria-hidden className="size-4" />
                   Sign out
@@ -131,6 +151,17 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
             <header className="sticky top-0 z-20 border-b border-border bg-surface">
               <div className="mx-auto flex min-h-14 w-full max-w-[1280px] items-center gap-2 px-3 sm:px-6">
                 <div className="min-w-0 flex-1" />
+                <Button variant="ghost" iconOnly aria-label="Platform messages" asChild>
+                  <Link href="/platform/messages" className="relative">
+                    <MessageSquare aria-hidden strokeWidth={1.75} className="size-[1.125rem]" />
+                    {unreadCount > 0 && (
+                      <span
+                        aria-hidden
+                        className="absolute right-1.5 top-1.5 size-2 rounded-full bg-danger"
+                      />
+                    )}
+                  </Link>
+                </Button>
                 <UserMenu />
               </div>
             </header>

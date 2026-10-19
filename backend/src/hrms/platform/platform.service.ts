@@ -18,6 +18,7 @@ import type {
   CreateOrgDto,
   LastCeoRemovalDto,
   RecoveryRequestDto,
+  RenameOrgDto,
   SetPlanDto,
   UpdatePersonDto,
 } from './dto/platform.dto';
@@ -124,6 +125,18 @@ export class PlatformService {
       });
     }
     return { id: created.rows[0].id, ceoInvited: user.created };
+  }
+
+  // There is no gm_* function for this: the name is not a rule. The org's row is visible only
+  // while app.org_id names it, so the setting is scoped to this request's transaction.
+  async renameOrg(orgId: string, dto: RenameOrgDto) {
+    const tx = this.context.tx;
+    await tx.execute(sql`select set_config('app.org_id', ${orgId}, true)`);
+    const r = await tx.execute(
+      sql`update orgs set name = ${dto.name.trim()}, updated_at = now() where id = ${orgId}::uuid returning id`,
+    );
+    if (r.rows.length === 0) throw new NotFoundException('Organisation not found.');
+    return { ok: true };
   }
 
   async setBlocked(orgId: string, blocked: boolean, reason?: string) {

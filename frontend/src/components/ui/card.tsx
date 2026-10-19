@@ -56,24 +56,26 @@ export function StatTile({
 }) {
   const match = /^(\d+)(%?)$/.exec(String(value));
   const body = (
-    <Card className="h-full">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-fg-muted">
-            {label}
-          </p>
-          <p
-            className={cn(
-              'mt-1 text-2xl font-semibold tracking-tight tabular-nums text-fg',
-              tone === 'warning' && 'text-warning-fg',
-              tone === 'danger' && 'text-danger-fg',
-            )}
-          >
-            {match ? <CountUp value={Number(match[1])} suffix={match[2]} /> : value}
-          </p>
-          {delta && <p className="mt-1 text-xs text-fg-muted">{delta}</p>}
-        </div>
-        {icon && <span className="rounded-full bg-primary-soft p-2 text-primary">{icon}</span>}
+    <Card className="h-full space-y-3">
+      <div className="flex items-center gap-2">
+        {icon && (
+          <span className="rounded-md bg-info-soft p-1.5 text-info-fg [&>svg]:size-3.5">
+            {icon}
+          </span>
+        )}
+        <p className="text-sm text-fg-muted">{label}</p>
+      </div>
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <p
+          className={cn(
+            'text-2xl font-semibold tracking-tight tabular-nums text-fg',
+            tone === 'warning' && 'text-warning-fg',
+            tone === 'danger' && 'text-danger-fg',
+          )}
+        >
+          {match ? <CountUp value={Number(match[1])} suffix={match[2]} /> : value}
+        </p>
+        {delta && <p className="text-xs text-fg-muted">{delta}</p>}
       </div>
     </Card>
   );
