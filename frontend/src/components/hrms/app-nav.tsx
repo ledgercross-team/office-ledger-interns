@@ -3,6 +3,7 @@
 import {
   CalendarCheck,
   CalendarDays,
+  ChartNoAxesCombined,
   FolderKanban,
   Gauge,
   History,
@@ -135,7 +136,7 @@ export const NAV_ITEMS: NavItem[] = [
       manager: 'My performance',
       employee: 'My performance',
     },
-    icon: Star,
+    icon: ChartNoAxesCombined,
     roles: ['ceo', 'coo', 'manager', 'employee'],
   },
   {
