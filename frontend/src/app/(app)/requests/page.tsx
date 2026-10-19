@@ -338,7 +338,7 @@ function NewRequestForm({ role, onDone }: { role: 'coo' | 'manager'; onDone: () 
   }
 
   return (
-    <form onSubmit={onSubmit} className={`max-w-lg space-y-3 ${cardClass}`}>
+    <form onSubmit={onSubmit} className={`w-full min-w-0 space-y-3 ${cardClass}`}>
       <h2 className="font-medium text-fg">New request</h2>
       <label htmlFor="request-type" className={labelClass}>
         Type

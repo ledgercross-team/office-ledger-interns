@@ -134,10 +134,9 @@ export const NAV_ITEMS: NavItem[] = [
       ceo: 'Team performance',
       coo: 'Team performance',
       manager: 'My performance',
-      employee: 'My performance',
     },
     icon: ChartNoAxesCombined,
-    roles: ['ceo', 'coo', 'manager', 'employee'],
+    roles: ['ceo', 'coo', 'manager'],
   },
   {
     href: '/history',

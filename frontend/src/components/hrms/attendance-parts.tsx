@@ -259,6 +259,7 @@ export function CorrectionDialog({
   const [error, setError] = useState<string | null>(null);
   const { session } = useHrmsAuth();
   const isCeo = session?.role === 'ceo';
+  const isCoo = session?.role === 'coo';
   const file = useMutation({
     mutationFn: (body: Record<string, string | undefined>) =>
       hrmsFetch('/attendance/corrections', { method: 'POST', body }),
@@ -296,7 +297,9 @@ export function CorrectionDialog({
       description={
         isCeo
           ? 'As CEO your correction is applied straight away. The original entry is kept.'
-          : 'This is a request. Your lead or the COO decides, and the original entry is kept.'
+          : isCoo
+            ? 'This is a request. Only the CEO can decide this attendance correction, and the original entry is kept.'
+            : 'This is a request. Your lead or the COO decides, and the original entry is kept.'
       }
     >
       <form onSubmit={onSubmit} className="space-y-3">
