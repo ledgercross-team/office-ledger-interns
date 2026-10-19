@@ -47,6 +47,7 @@ database is defined by the single consolidated `docs/hrms/hrms_schema.sql` file 
 `pnpm db:migrate`. Rebuild the database from that file when the schema changes. Never run
 `docs/hrms/hrms_rule_tests.sql` on a real database.
 
+
 For integration tests create a throwaway database (name ending `_throwaway`), load the SQL
 files, and set `HRMS_TEST_APP_URL` and `HRMS_TEST_OWNER_URL`.
 
