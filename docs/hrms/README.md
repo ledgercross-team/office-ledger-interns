@@ -20,6 +20,10 @@ ALTER ROLE hrms_api SET search_path = hrms, public;
 ```
 The app must connect as `hrms_api`, never as the owner. The owner skips row-level security.
 
+The migration runner also creates `public.hrms_migration_log`. It is owner-only bookkeeping:
+RLS is enabled with no policies and `PUBLIC` has no table privileges, so PostgREST/API roles
+cannot read or modify migration metadata.
+
 ## What the app does on every request
 Open a transaction and set:
 ```

@@ -46,6 +46,13 @@ async function main(): Promise<void> {
         sha256     text NOT NULL,
         applied_at timestamptz NOT NULL DEFAULT now()
       )`);
+    // This bookkeeping table is not application data. Keep it owner-only and make the
+    // intended deny-by-default posture explicit for Supabase/PostgREST security checks.
+    // The migration connection owns the table, so it can still read and write it.
+    await client.query(`
+      ALTER TABLE public.hrms_migration_log ENABLE ROW LEVEL SECURITY;
+      REVOKE ALL ON TABLE public.hrms_migration_log FROM PUBLIC;
+    `);
     const { rows } = await client.query<{ filename: string; sha256: string }>(
       'SELECT filename, sha256 FROM public.hrms_migration_log',
     );
