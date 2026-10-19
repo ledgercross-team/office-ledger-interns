@@ -395,6 +395,8 @@ export interface CalendarItem {
 export interface CalendarFeed {
   timezone: string;
   weekendDays: number[];
+  /** Day the organisation was created (YYYY-MM-DD); the calendar starts in this month. */
+  orgCreatedOn: string | null;
   from: string;
   to: string;
   items: CalendarItem[];

@@ -404,6 +404,21 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
   );
 }
 
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
 export default function CalendarPage() {
   const { session } = useHrmsAuth();
   const queryClient = useQueryClient();
@@ -445,6 +460,25 @@ export default function CalendarPage() {
   const lead = view === 'month' ? (new Date(`${from}T00:00:00Z`).getUTCDay() + 6) % 7 : 0;
   const weekendDays = feed.data?.weekendDays ?? [5, 6];
 
+  // The calendar runs from the month the organisation was created to two years ahead.
+  const today = new Date().toISOString().slice(0, 10);
+  const minMonth = feed.data?.orgCreatedOn?.slice(0, 7) ?? null;
+  const maxMonth = `${Number(today.slice(0, 4)) + 2}-${today.slice(5, 7)}`;
+  const minDate = minMonth ? `${minMonth}-01` : null;
+  const maxDate = addDays(`${maxMonth}-01`, 31).slice(0, 7) + '-01'; // first day after the last month
+  const monthOf = from.slice(0, 7);
+  const minYear = minMonth ? Number(minMonth.slice(0, 4)) : Number(monthOf.slice(0, 4));
+  const years = Array.from(
+    { length: Number(maxMonth.slice(0, 4)) - minYear + 1 },
+    (_, i) => minYear + i,
+  );
+  const monthAllowed = (ym: string) => (!minMonth || ym >= minMonth) && ym <= maxMonth;
+  const goTo = (ym: string) =>
+    setAnchor(`${minMonth && ym < minMonth ? minMonth : ym > maxMonth ? maxMonth : ym}-01`);
+  const canPrev =
+    view === 'week' ? !minDate || addDays(from, -7) >= minDate : !minMonth || monthOf > minMonth;
+  const canNext = view === 'week' ? addDays(from, 7) < maxDate : monthOf < maxMonth;
+
   const step = (n: number) => {
     if (view === 'week') return setAnchor(addDays(anchor, 7 * n));
     const d = new Date(`${from}T00:00:00Z`);
@@ -468,26 +502,61 @@ export default function CalendarPage() {
             <button
               type="button"
               onClick={() => step(-1)}
+              disabled={!canPrev}
               className={secondary}
               aria-label="Previous period"
             >
               <span aria-hidden>‹</span>
             </button>
-            <span
-              aria-live="polite"
-              className="min-w-28 px-2 text-center text-sm font-medium tabular-nums text-fg"
+            <select
+              aria-label="Month"
+              value={monthOf.slice(5, 7)}
+              onChange={(e) => goTo(`${monthOf.slice(0, 4)}-${e.target.value}`)}
+              className="min-h-9 rounded-control border border-border bg-surface px-2 text-sm font-medium text-fg"
             >
-              {view === 'month' ? from.slice(0, 7) : `Week of ${from}`}
-            </span>
+              {MONTHS.map((name, i) => {
+                const mm = String(i + 1).padStart(2, '0');
+                return (
+                  <option
+                    key={mm}
+                    value={mm}
+                    disabled={!monthAllowed(`${monthOf.slice(0, 4)}-${mm}`)}
+                  >
+                    {name}
+                  </option>
+                );
+              })}
+            </select>
+            <select
+              aria-label="Year"
+              value={monthOf.slice(0, 4)}
+              onChange={(e) => goTo(`${e.target.value}-${monthOf.slice(5, 7)}`)}
+              className="min-h-9 rounded-control border border-border bg-surface px-2 text-sm font-medium tabular-nums text-fg"
+            >
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               onClick={() => step(1)}
+              disabled={!canNext}
               className={secondary}
               aria-label="Next period"
             >
               <span aria-hidden>›</span>
             </button>
           </div>
+          <button type="button" onClick={() => setAnchor(today)} className={secondary}>
+            Today
+          </button>
+          {view === 'week' && (
+            <span aria-live="polite" className="text-sm tabular-nums text-fg-muted">
+              Week of {from}
+            </span>
+          )}
           <button
             type="button"
             onClick={() => setView(view === 'month' ? 'week' : 'month')}
