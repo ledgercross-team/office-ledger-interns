@@ -51,7 +51,7 @@ database is defined by the single consolidated `docs/hrms/hrms_schema.sql` file 
 For integration tests create a throwaway database (name ending `_throwaway`), load the SQL
 files, and set `HRMS_TEST_APP_URL` and `HRMS_TEST_OWNER_URL`.
 
-## Hardening and rate limits
+## Hardening and rate limits.
 
 Rate-limit counters are kept in the API process memory, so the API does not require an external cache.
 Counters reset when the process restarts and are not shared between multiple API replicas. For
