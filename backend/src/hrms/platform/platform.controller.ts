@@ -130,6 +130,13 @@ export class PlatformController {
 
   @HrmsRoles('gameMaster')
   @HttpCode(HttpStatus.OK)
+  @Post('game-masters/:userId/renew')
+  renewGameMaster(@Req() req: HrmsAuthedRequest, @Param('userId', uuid) userId: string) {
+    return this.platform.renewGameMaster(principalOf(req), userId);
+  }
+
+  @HrmsRoles('gameMaster')
+  @HttpCode(HttpStatus.OK)
   @Post('game-masters/:userId/remove')
   removeGameMaster(@Req() req: HrmsAuthedRequest, @Param('userId', uuid) userId: string) {
     return this.platform.removeGameMaster(principalOf(req), userId);
