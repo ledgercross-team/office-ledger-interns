@@ -47,6 +47,13 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  // Same-origin API: the browser talks to /api on this site, so the auth cookies belong to it.
+  async rewrites() {
+    const target = process.env.API_ORIGIN;
+    return target
+      ? [{ source: '/api/:path*', destination: `${target.replace(/\/$/, '')}/api/:path*` }]
+      : [];
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
