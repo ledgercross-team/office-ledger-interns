@@ -175,18 +175,21 @@ export default function LeavePage() {
   const enabled = Boolean(session?.activeMemberId);
   const canDecide =
     session?.role === 'ceo' || session?.role === 'coo' || session?.role === 'manager';
+  const canRequest =
+    session?.role === 'coo' || session?.role === 'manager' || session?.role === 'employee';
+  const canSeeTeam = session?.role === 'coo' || session?.role === 'manager';
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   const balance = useQuery({
     queryKey: ['hrms', 'leave', 'balance', session?.activeMemberId],
     queryFn: () => hrmsFetch<{ items: LeaveBalance[] }>('/leave/balance'),
-    enabled,
+    enabled: enabled && canRequest,
   });
   const mine = useQuery({
     queryKey: ['hrms', 'leave', 'mine', session?.activeMemberId],
     queryFn: () => hrmsFetch<{ items: HrmsLeave[] }>('/leave?scope=mine'),
-    enabled,
+    enabled: enabled && canRequest,
   });
   const toDecide = useQuery({
     queryKey: ['hrms', 'leave', 'decide', session?.activeMemberId],
@@ -196,7 +199,7 @@ export default function LeavePage() {
   const team = useQuery({
     queryKey: ['hrms', 'leave', 'team', session?.activeMemberId],
     queryFn: () => hrmsFetch<{ items: HrmsLeave[] }>('/leave?scope=team'),
-    enabled: enabled && canDecide,
+    enabled: enabled && canSeeTeam,
   });
 
   const changed = () => {
@@ -206,6 +209,7 @@ export default function LeavePage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!canRequest) return;
     const form = event.currentTarget;
     const f = new FormData(form);
     setError(null);
@@ -244,15 +248,19 @@ export default function LeavePage() {
   return (
     <PageShell>
       <PageHeader
-        title={canDecide ? 'Leave & approvals' : 'My leave'}
+        title={
+          session?.role === 'ceo' ? 'Leave approvals' : canDecide ? 'Leave & approvals' : 'My leave'
+        }
         description={
-          canDecide
-            ? 'Submit your own leave and review requests assigned to you.'
-            : 'Check your allowance and track your leave requests.'
+          session?.role === 'ceo'
+            ? 'Review leave requests assigned to you.'
+            : canDecide
+              ? 'Submit your own leave and review requests assigned to you.'
+              : 'Check your allowance and track your leave requests.'
         }
       />
 
-      {balance.isLoading && (
+      {canRequest && balance.isLoading && (
         <div
           className="grid gap-3 sm:grid-cols-2 md:grid-cols-3"
           aria-label="Loading leave balance"
@@ -262,7 +270,7 @@ export default function LeavePage() {
           ))}
         </div>
       )}
-      {balance.error && (
+      {canRequest && balance.error && (
         <ErrorState
           title="Could not load leave balance"
           message={message(balance.error)}
@@ -270,91 +278,104 @@ export default function LeavePage() {
         />
       )}
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-        {balance.data?.items.map((b) => (
-          <div
-            key={b.leaveTypeId}
-            className="min-w-0 rounded-card border border-border bg-surface p-4"
-          >
-            <p className="truncate text-sm text-fg-muted">
-              {b.name} {b.year}
-              {b.isPaid ? '' : ' (unpaid)'}
-            </p>
-            <p className="text-3xl font-bold tabular-nums text-fg">{b.remaining}</p>
-            <p className="text-xs text-fg-muted">
-              of {b.allowance} days left · {b.used} used
-            </p>
-          </div>
-        ))}
-      </section>
+      {canRequest && (
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+          {balance.data?.items.map((b) => (
+            <div
+              key={b.leaveTypeId}
+              className="min-w-0 rounded-card border border-border bg-surface p-4"
+            >
+              <p className="truncate text-sm text-fg-muted">
+                {b.name} {b.year}
+                {b.isPaid ? '' : ' (unpaid)'}
+              </p>
+              <p className="text-3xl font-bold tabular-nums text-fg">{b.remaining}</p>
+              <p className="text-xs text-fg-muted">
+                of {b.allowance} days left · {b.used} used
+              </p>
+            </div>
+          ))}
+        </section>
+      )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
-        <form
-          onSubmit={onSubmit}
-          className="space-y-3 rounded-card border border-border bg-surface p-4 lg:sticky lg:top-20"
-        >
-          <SectionHeading
-            title="Ask for leave"
-            description="Choose the dates and explain what you need."
-          />
-          <label htmlFor="leave-type" className="block space-y-1 text-sm text-fg">
-            Leave type
-            <select id="leave-type" name="type" required className={input}>
-              <option value="">Choose a leave type</option>
-              {balance.data?.items.map((b) => (
-                <option key={b.leaveTypeId} value={b.leaveTypeId}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block min-w-0 space-y-1 text-sm text-fg">
-              From
-              <input name="start" type="date" required className={input} />
-            </label>
-            <label className="block min-w-0 space-y-1 text-sm text-fg">
-              To
-              <input name="end" type="date" required className={input} />
-            </label>
-          </div>
-          <div className="space-y-2 text-sm text-fg">
-            <label className="flex items-center gap-2">
-              <input name="startHalf" type="checkbox" /> First day is a half day
-            </label>
-            <label className="flex items-center gap-2">
-              <input name="endHalf" type="checkbox" /> Last day is a half day
-            </label>
-          </div>
-          <label htmlFor="leave-reason" className="block space-y-1 text-sm text-fg">
-            Reason
-            <textarea
-              id="leave-reason"
-              name="reason"
-              required
-              rows={3}
-              maxLength={1000}
-              placeholder="Explain why you need leave"
-              className={input}
-            />
-          </label>
-          <p className="text-xs text-fg-muted">
-            Weekends and holidays are not counted. Your project lead or the COO decides.
-          </p>
-          {error && (
-            <Banner tone="danger" title="Could not send leave request">
-              {error}
-            </Banner>
-          )}
-          <Button
-            type="submit"
-            loading={pending}
-            loadingLabel="Sending…"
-            className="w-full sm:w-auto"
+      <div
+        className={
+          canRequest
+            ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]'
+            : 'space-y-6'
+        }
+      >
+        {canRequest && (
+          <form
+            onSubmit={onSubmit}
+            className="space-y-3 rounded-card border border-border bg-surface p-4 lg:sticky lg:top-20"
           >
-            Send request
-          </Button>
-        </form>
+            <SectionHeading
+              title="Ask for leave"
+              description="Choose the dates and explain what you need."
+            />
+            <label htmlFor="leave-type" className="block space-y-1 text-sm text-fg">
+              Leave type
+              <select id="leave-type" name="type" required className={input}>
+                <option value="">Choose a leave type</option>
+                {balance.data?.items.map((b) => (
+                  <option key={b.leaveTypeId} value={b.leaveTypeId}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block min-w-0 space-y-1 text-sm text-fg">
+                From
+                <input name="start" type="date" required className={input} />
+              </label>
+              <label className="block min-w-0 space-y-1 text-sm text-fg">
+                To
+                <input name="end" type="date" required className={input} />
+              </label>
+            </div>
+            <div className="space-y-2 text-sm text-fg">
+              <label className="flex items-center gap-2">
+                <input name="startHalf" type="checkbox" /> First day is a half day
+              </label>
+              <label className="flex items-center gap-2">
+                <input name="endHalf" type="checkbox" /> Last day is a half day
+              </label>
+            </div>
+            <label htmlFor="leave-reason" className="block space-y-1 text-sm text-fg">
+              Reason
+              <textarea
+                id="leave-reason"
+                name="reason"
+                required
+                rows={3}
+                maxLength={1000}
+                placeholder="Explain why you need leave"
+                className={input}
+              />
+            </label>
+            <p className="text-xs text-fg-muted">
+              Friday and Saturday plus holidays are not counted.{' '}
+              {session?.role === 'coo'
+                ? 'The CEO decides your request.'
+                : 'Your project lead or the COO decides.'}
+            </p>
+            {error && (
+              <Banner tone="danger" title="Could not send leave request">
+                {error}
+              </Banner>
+            )}
+            <Button
+              type="submit"
+              loading={pending}
+              loadingLabel="Sending…"
+              className="w-full sm:w-auto"
+            >
+              Send request
+            </Button>
+          </form>
+        )}
 
         <div className="min-w-0 space-y-6">
           {canDecide && (
@@ -381,29 +402,31 @@ export default function LeavePage() {
             </section>
           )}
 
-          <section className="space-y-3">
-            <SectionHeading title="My leave" description="Your submitted leave requests." />
-            {mine.error && (
-              <ErrorState
-                title="Could not load your leave"
-                message={message(mine.error)}
-                onRetry={() => void mine.refetch()}
-              />
-            )}
-            {mine.data && mine.data.items.length === 0 && (
-              <EmptyState
-                title="No leave requests yet"
-                description="Your submitted requests will appear here."
-              />
-            )}
-            <ul className="space-y-3">
-              {mine.data?.items.map((l) => (
-                <LeaveItem key={l.requestId} leave={l} showPerson={false} onChanged={changed} />
-              ))}
-            </ul>
-          </section>
+          {canRequest && (
+            <section className="space-y-3">
+              <SectionHeading title="My leave" description="Your submitted leave requests." />
+              {mine.error && (
+                <ErrorState
+                  title="Could not load your leave"
+                  message={message(mine.error)}
+                  onRetry={() => void mine.refetch()}
+                />
+              )}
+              {mine.data && mine.data.items.length === 0 && (
+                <EmptyState
+                  title="No leave requests yet"
+                  description="Your submitted requests will appear here."
+                />
+              )}
+              <ul className="space-y-3">
+                {mine.data?.items.map((l) => (
+                  <LeaveItem key={l.requestId} leave={l} showPerson={false} onChanged={changed} />
+                ))}
+              </ul>
+            </section>
+          )}
 
-          {canDecide && teamRest.length > 0 && (
+          {canSeeTeam && teamRest.length > 0 && (
             <section className="space-y-3">
               <SectionHeading title="Team leave" description="Approved leave across your team." />
               <ul className="space-y-3">

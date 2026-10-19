@@ -151,13 +151,13 @@ export default function PeoplePage() {
                   <th className="px-3 py-2 font-medium">Role</th>
                   <th className="px-3 py-2 font-medium">Designation</th>
                   <th className="px-3 py-2 font-medium">Status</th>
-                  {isAdmin && <th className="px-3 py-2 font-medium">Performance</th>}
+                  {isAdmin && <th className="px-3 py-2 text-right font-medium">Performance</th>}
                 </tr>
               </thead>
               <tbody>
                 {members.data.items.map((m) => (
                   <tr key={m.id} className="border-b border-border last:border-0">
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 align-middle">
                       <Link
                         href={`/people/${m.id}`}
                         className="font-medium text-primary hover:underline"
@@ -166,17 +166,17 @@ export default function PeoplePage() {
                       </Link>
                       <div className="text-fg-muted">{m.email}</div>
                     </td>
-                    <td className="px-3 py-2">{HRMS_ROLE_LABELS[m.role]}</td>
-                    <td className="px-3 py-2">{m.designation ?? '—'}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 align-middle">{HRMS_ROLE_LABELS[m.role]}</td>
+                    <td className="px-3 py-2 align-middle">{m.designation ?? '—'}</td>
+                    <td className="px-3 py-2 align-middle">
                       <Badge tone={STATUS_TONE[m.status]}>{m.status}</Badge>
                     </td>
                     {isAdmin && (
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 text-right align-middle">
                         <button
                           type="button"
                           onClick={() => setDrawer(m.id)}
-                          className="hover:underline"
+                          className="ml-auto inline-flex max-w-full rounded-control text-right hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                         >
                           <ScoreBadge row={scoreOf(m.id)} />
                         </button>
@@ -231,7 +231,7 @@ export default function PeoplePage() {
                       <button
                         type="button"
                         onClick={() => setDrawer(m.id)}
-                        className="text-left hover:underline"
+                        className="flex w-full items-center justify-between gap-3 text-left hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
                         <span className="mr-2 text-xs text-fg-muted">Performance</span>
                         <ScoreBadge row={scoreOf(m.id)} />

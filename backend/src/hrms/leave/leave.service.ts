@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { sql, type SQL } from 'drizzle-orm';
 import type { HrmsPrincipal } from '../auth/hrms-auth.types';
 import { HrmsContextService } from '../db/hrms-context';
@@ -77,6 +83,9 @@ export class LeaveService {
   ) {}
 
   async balance(p: HrmsPrincipal) {
+    if (p.role === 'ceo') {
+      throw new ForbiddenException('CEOs only decide leave requests.');
+    }
     const r = await this.context.tx.execute<{
       leave_type_id: string;
       code: string;
@@ -108,6 +117,9 @@ export class LeaveService {
 
   async list(p: HrmsPrincipal, q: ListLeaveQueryDto) {
     const scope = q.scope ?? 'mine';
+    if (p.role === 'ceo' && scope !== 'decide') {
+      throw new ForbiddenException('CEOs only decide leave requests.');
+    }
     const where: SQL[] = [sql`l.org_id = current_org_id()`];
     if (scope === 'mine') {
       where.push(sql`l.member_id = ${p.memberId}`);
@@ -136,10 +148,16 @@ export class LeaveService {
   }
 
   async create(p: HrmsPrincipal, dto: CreateLeaveDto) {
+    if (p.role === 'ceo') {
+      throw new ForbiddenException('CEOs only decide leave requests.');
+    }
     const tx = this.context.tx;
-    if (dto.endDate < dto.startDate) throw new BadRequestException('The end date is before the start date.');
+    if (dto.endDate < dto.startDate)
+      throw new BadRequestException('The end date is before the start date.');
     if (dto.startDate === dto.endDate && dto.startHalfDay && dto.endHalfDay) {
-      throw new BadRequestException('A single day cannot be half a day at both ends. Use one half day.');
+      throw new BadRequestException(
+        'A single day cannot be half a day at both ends. Use one half day.',
+      );
     }
 
     const type = await tx.execute(
@@ -165,7 +183,9 @@ export class LeaveService {
         from d`);
     const days = Number(counted.rows[0]?.days ?? 0);
     if (!(days > 0)) {
-      throw new BadRequestException('These dates have no working days (weekends and holidays are not counted).');
+      throw new BadRequestException(
+        'These dates have no working days (weekends and holidays are not counted).',
+      );
     }
 
     const bal = await tx.execute<{ remaining: string }>(sql`
@@ -181,7 +201,8 @@ export class LeaveService {
       on conflict (org_id, dedupe_key) where status = 'pending' and dedupe_key is not null do nothing
       returning id`);
     const id = created.rows[0]?.id;
-    if (!id) throw new ConflictException('You already have a pending leave request for these dates.');
+    if (!id)
+      throw new ConflictException('You already have a pending leave request for these dates.');
 
     await tx.execute(sql`
       insert into leave_requests (request_id, org_id, member_id, leave_type_id, start_date, end_date,
@@ -194,6 +215,9 @@ export class LeaveService {
   }
 
   async cancel(p: HrmsPrincipal, requestId: string) {
+    if (p.role === 'ceo') {
+      throw new ForbiddenException('CEOs only decide leave requests.');
+    }
     const tx = this.context.tx;
     const own = await tx.execute<{ status: string }>(sql`
       select r.status::text as status from leave_requests l join requests r on r.id = l.request_id

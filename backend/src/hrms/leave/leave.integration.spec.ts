@@ -26,7 +26,10 @@ suite('HRMS leave (integration)', () => {
     const c = await owner.connect();
     try {
       await c.query('begin');
-      await c.query("select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)", [ids.org]);
+      await c.query(
+        "select set_config('app.org_id', $1, true), set_config('app.member_id', '', true)",
+        [ids.org],
+      );
       const r = await fn(c);
       await c.query('commit');
       return r;
@@ -62,11 +65,13 @@ suite('HRMS leave (integration)', () => {
     }).compile();
     app = moduleRef.createNestApplication();
     app.use(cookieParser());
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+    );
     await app.init();
 
     const hash = await hashPassword(PASSWORD);
-    const names = ['ceo', 'lead', 'emp', 'loner'];
+    const names = ['ceo', 'coo', 'lead', 'emp', 'loner'];
     for (const n of names) {
       const { rows } = await owner.query(
         `insert into hrms.users (email, password_hash, full_name) values ($1, $2, $3) returning id`,
@@ -78,10 +83,16 @@ suite('HRMS leave (integration)', () => {
     try {
       await c.query('begin');
       ids.org = (
-        await c.query(`insert into hrms.orgs (name, plan_code) values ($1, 'premium') returning id`, [`req-${suffix}`])
+        await c.query(
+          `insert into hrms.orgs (name, plan_code) values ($1, 'premium') returning id`,
+          [`req-${suffix}`],
+        )
       ).rows[0].id;
       ids.m_ceo = (
-        await c.query(`insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'ceo') returning id`, [ids.org, ids.ceo])
+        await c.query(
+          `insert into hrms.org_members (org_id, user_id, role) values ($1, $2, 'ceo') returning id`,
+          [ids.org, ids.ceo],
+        )
       ).rows[0].id;
       await c.query('commit');
     } finally {
@@ -89,7 +100,10 @@ suite('HRMS leave (integration)', () => {
     }
     await orgTx(async (cl) => {
       const roles: Array<[string, string]> = [
-        ['lead', 'manager'], ['emp', 'employee'], ['loner', 'employee'],
+        ['coo', 'coo'],
+        ['lead', 'manager'],
+        ['emp', 'employee'],
+        ['loner', 'employee'],
       ];
       for (const [n, role] of roles) {
         ids[`m_${n}`] = (
@@ -103,7 +117,9 @@ suite('HRMS leave (integration)', () => {
 
     for (const n of names) {
       const agent = request.agent(app.getHttpServer());
-      expect((await agent.post('/api/auth/login').send({ email: email(n), password: PASSWORD })).status).toBe(200);
+      expect(
+        (await agent.post('/api/auth/login').send({ email: email(n), password: PASSWORD })).status,
+      ).toBe(200);
       agents[n] = agent;
     }
 
@@ -122,7 +138,10 @@ suite('HRMS leave (integration)', () => {
       ),
     );
     await orgTx(async (cl) => {
-      const t = await cl.query(`select id from hrms.leave_types where org_id = $1 and code = 'annual'`, [ids.org]);
+      const t = await cl.query(
+        `select id from hrms.leave_types where org_id = $1 and code = 'annual'`,
+        [ids.org],
+      );
       ids.type =
         t.rows[0]?.id ??
         (
@@ -132,7 +151,9 @@ suite('HRMS leave (integration)', () => {
             [ids.org],
           )
         ).rows[0].id;
-      await cl.query(`update hrms.leave_types set yearly_allowance_days = 10 where id = $1`, [ids.type]);
+      await cl.query(`update hrms.leave_types set yearly_allowance_days = 10 where id = $1`, [
+        ids.type,
+      ]);
     });
   });
 
@@ -140,7 +161,6 @@ suite('HRMS leave (integration)', () => {
     await app.close();
     await owner.end();
   });
-
 
   // The Monday that is at least two weeks away, in the current year when possible.
   const monday = new Date();
@@ -154,20 +174,25 @@ suite('HRMS leave (integration)', () => {
 
   const remaining = async (agent: ReturnType<typeof request.agent>) => {
     const res = await agent.get('/api/leave/balance');
-    return res.body.items.find((b: { leaveTypeId: string }) => b.leaveTypeId === ids.type).remaining as number;
+    return res.body.items.find((b: { leaveTypeId: string }) => b.leaveTypeId === ids.type)
+      .remaining as number;
   };
 
   it('counts working days only, with half days', async () => {
     await orgTx((cl) =>
-      cl.query(`insert into hrms.org_holidays (org_id, holiday_date, name) values ($1, $2, 'Test day')`, [
-        ids.org,
-        day(1),
-      ]),
+      cl.query(
+        `insert into hrms.org_holidays (org_id, holiday_date, name) values ($1, $2, 'Test day')`,
+        [ids.org, day(1)],
+      ),
     );
-    // Monday (half) to Sunday: Mon 0.5 + Wed Thu Fri; Tuesday is a holiday, the weekend is skipped
-    const res = await agents.loner
-      .post('/api/leave')
-      .send({ leaveTypeId: ids.type, startDate: day(0), endDate: day(6), startHalfDay: true, reason: 'Trip' });
+    // Monday (half) to Sunday: Mon 0.5 + Wed Thu Sun; Tuesday is a holiday, Friday/Saturday are skipped
+    const res = await agents.loner.post('/api/leave').send({
+      leaveTypeId: ids.type,
+      startDate: day(0),
+      endDate: day(6),
+      startHalfDay: true,
+      reason: 'Trip',
+    });
     expect(res.status).toBe(201);
     expect(res.body.days).toBe(3.5);
     ids.lonerLeave = res.body.requestId;
@@ -175,9 +200,35 @@ suite('HRMS leave (integration)', () => {
       (
         await agents.loner
           .post('/api/leave')
-          .send({ leaveTypeId: ids.type, startDate: day(5), endDate: day(6), reason: 'Weekend' })
+          .send({ leaveTypeId: ids.type, startDate: day(4), endDate: day(5), reason: 'Weekend' })
       ).status,
     ).toBe(400);
+  });
+
+  it('lets the COO request leave for the CEO and keeps CEO leave self-service disabled', async () => {
+    expect((await agents.ceo.get('/api/leave/balance')).status).toBe(403);
+    expect((await agents.ceo.get('/api/leave?scope=mine')).status).toBe(403);
+
+    const filed = await agents.coo
+      .post('/api/leave')
+      .send({ leaveTypeId: ids.type, startDate: day(21), endDate: day(21), reason: 'COO leave' });
+    expect(filed.status).toBe(201);
+    const id = filed.body.requestId as string;
+
+    expect(
+      (await agents.coo.get('/api/leave?scope=decide')).body.items.map(
+        (i: { requestId: string }) => i.requestId,
+      ),
+    ).not.toContain(id);
+    expect(
+      (await agents.ceo.get('/api/leave?scope=decide')).body.items.map(
+        (i: { requestId: string }) => i.requestId,
+      ),
+    ).toContain(id);
+    expect((await agents.coo.post(`/api/requests/${id}/approve`).send({})).status).toBe(409);
+    expect(
+      (await agents.ceo.post(`/api/requests/${id}/reject`).send({ reason: 'Noted' })).status,
+    ).toBe(200);
   });
 
   it('sends a no-project person only to the CEO or COO, and the balance drops after approval', async () => {
@@ -185,11 +236,17 @@ suite('HRMS leave (integration)', () => {
     const byLead = await agents.lead.post(`/api/requests/${ids.lonerLeave}/approve`).send({});
     expect(byLead.status).toBe(409);
     const decide = await agents.lead.get('/api/leave?scope=decide');
-    expect(decide.body.items.map((i: { requestId: string }) => i.requestId)).not.toContain(ids.lonerLeave);
+    expect(decide.body.items.map((i: { requestId: string }) => i.requestId)).not.toContain(
+      ids.lonerLeave,
+    );
     const ceoList = await agents.ceo.get('/api/leave?scope=decide');
-    expect(ceoList.body.items.map((i: { requestId: string }) => i.requestId)).toContain(ids.lonerLeave);
+    expect(ceoList.body.items.map((i: { requestId: string }) => i.requestId)).toContain(
+      ids.lonerLeave,
+    );
 
-    expect((await agents.ceo.post(`/api/requests/${ids.lonerLeave}/approve`).send({})).status).toBe(200);
+    expect((await agents.ceo.post(`/api/requests/${ids.lonerLeave}/approve`).send({})).status).toBe(
+      200,
+    );
     expect(await remaining(agents.loner)).toBe(before - 3.5);
   });
 

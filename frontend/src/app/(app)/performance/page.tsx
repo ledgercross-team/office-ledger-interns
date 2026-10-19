@@ -20,10 +20,10 @@ import { hrmsFetch } from '@/lib/hrms/api-client';
 import type { PerformanceRow } from '@/lib/hrms/types';
 
 const DEFAULT_SCORE_WEIGHTS = [
-  { label: 'Attendance', weight: 30 },
+  { label: 'Tasks done on time', weight: 50 },
+  { label: 'Leave requests', weight: 10 },
   { label: 'Ratings', weight: 10 },
-  { label: 'On-time tasks', weight: 50 },
-  { label: 'Leave', weight: 10 },
+  { label: 'Attendance', weight: 30 },
 ] as const;
 
 function formatDate(value: string) {
@@ -114,12 +114,13 @@ function Performance() {
   const rows = data.data?.items ?? [];
   const scoreWeights = org.data
     ? [
-        { label: 'Attendance', weight: org.data.settings.weightAttendance },
+        { label: 'Tasks done on time', weight: org.data.settings.weightOntime },
+        { label: 'Leave requests', weight: org.data.settings.weightLeave },
         { label: 'Ratings', weight: org.data.settings.weightRating },
-        { label: 'On-time tasks', weight: org.data.settings.weightOntime },
-        { label: 'Leave', weight: org.data.settings.weightLeave },
+        { label: 'Attendance', weight: org.data.settings.weightAttendance },
       ]
     : DEFAULT_SCORE_WEIGHTS;
+  const scoreWeightTotal = scoreWeights.reduce((total, item) => total + item.weight, 0);
   const isSelfView = session?.role === 'manager' || session?.role === 'employee';
   const scoredRows = rows.filter((row) => row.score !== null);
   const average = scoredRows.length
@@ -164,18 +165,26 @@ function Performance() {
           <Card className="bg-surface-raised">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="font-semibold text-fg">Scoring model</h2>
+                <h2 className="font-semibold text-fg">Performance matrix</h2>
                 <p className="mt-1 text-sm text-fg-muted">
-                  The final score is a weighted 0–100 result. A missing component is shown as not
-                  enough data rather than silently treated as zero.
+                  The total score is 100%, split across task completion, leave requests, ratings,
+                  and attendance.
                 </p>
               </div>
-              {average !== null && !isSelfView && (
-                <div className="shrink-0 rounded-control bg-primary-soft px-4 py-3 text-right">
-                  <p className="text-xs text-primary">Team average</p>
-                  <p className="text-2xl font-semibold tabular-nums text-primary">{average}/100</p>
+              <div className="flex shrink-0 items-center gap-4">
+                <div className="rounded-control bg-success-soft px-4 py-3 text-right">
+                  <p className="text-xs text-success-fg">Total weight</p>
+                  <p className="text-2xl font-semibold tabular-nums text-success-fg">
+                    {scoreWeightTotal}%
+                  </p>
                 </div>
-              )}
+                {average !== null && !isSelfView && (
+                  <div className="rounded-control bg-primary-soft px-4 py-3 text-right">
+                    <p className="text-xs text-primary">Team average</p>
+                    <p className="text-2xl font-semibold tabular-nums text-primary">{average}%</p>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-4">
               {scoreWeights.map((item) => (
@@ -184,7 +193,7 @@ function Performance() {
                   className="flex items-center justify-between gap-3 border-t border-border pt-3 sm:block sm:border-t-0 sm:pt-0"
                 >
                   <p className="text-sm text-fg-muted">{item.label}</p>
-                  <p className="font-semibold tabular-nums text-fg">{item.weight}%</p>
+                  <p className="font-semibold tabular-nums text-fg">{item.weight}% of total</p>
                 </div>
               ))}
             </div>

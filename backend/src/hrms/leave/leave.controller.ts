@@ -1,4 +1,14 @@
-import { Body, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { HrmsRoles } from '../auth/hrms-auth.decorators';
 import type { HrmsAuthedRequest } from '../auth/hrms-auth.guard';
 import type { HrmsPrincipal } from '../auth/hrms-auth.types';
@@ -12,13 +22,14 @@ function principalOf(req: HrmsAuthedRequest): HrmsPrincipal {
 }
 
 const ALL = ['ceo', 'coo', 'manager', 'employee'] as const;
+const LEAVE_REQUESTERS = ['coo', 'manager', 'employee'] as const;
 
 // Approving or rejecting leave goes through /requests/:id/approve and /reject.
 @HrmsController('leave')
 export class LeaveController {
   constructor(private readonly leave: LeaveService) {}
 
-  @HrmsRoles(...ALL)
+  @HrmsRoles(...LEAVE_REQUESTERS)
   @Get('balance')
   balance(@Req() req: HrmsAuthedRequest) {
     return this.leave.balance(principalOf(req));
@@ -30,16 +41,19 @@ export class LeaveController {
     return this.leave.list(principalOf(req), q);
   }
 
-  @HrmsRoles(...ALL)
+  @HrmsRoles(...LEAVE_REQUESTERS)
   @Post()
   create(@Req() req: HrmsAuthedRequest, @Body() dto: CreateLeaveDto) {
     return this.leave.create(principalOf(req), dto);
   }
 
-  @HrmsRoles(...ALL)
+  @HrmsRoles(...LEAVE_REQUESTERS)
   @HttpCode(HttpStatus.OK)
   @Post(':requestId/cancel')
-  cancel(@Req() req: HrmsAuthedRequest, @Param('requestId', new ParseUUIDPipe()) requestId: string) {
+  cancel(
+    @Req() req: HrmsAuthedRequest,
+    @Param('requestId', new ParseUUIDPipe()) requestId: string,
+  ) {
     return this.leave.cancel(principalOf(req), requestId);
   }
 }

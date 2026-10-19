@@ -77,7 +77,14 @@ export class CalendarService {
 
   // ---- calendar -------------------------------------------------------
   async calendar(p: HrmsPrincipal, q: CalendarQueryDto) {
-    const tz = await this.viewerZone(p);
+    const settings = await this.context.tx.execute<{ tz: string; weekend_days: number[] }>(sql`
+      select coalesce(u.timezone, 'UTC') as tz,
+             coalesce(s.weekend_days, '{5,6}'::smallint[]) as weekend_days
+        from users u
+        left join org_settings s on s.org_id = current_org_id()
+       where u.id = ${p.userId}`);
+    const tz = settings.rows[0]?.tz ?? 'UTC';
+    const weekendDays = settings.rows[0]?.weekend_days ?? [5, 6];
     const from = q.from ?? monthStart();
     const to =
       q.to ??
@@ -137,7 +144,7 @@ export class CalendarService {
         member: r.member_id ? { id: r.member_id, fullName: r.full_name } : null,
       }))
       .sort((a, b) => String(a.startsAt).localeCompare(String(b.startsAt)));
-    return { timezone: tz, from, to, items };
+    return { timezone: tz, weekendDays, from, to, items };
   }
 
   // ---- meetings -------------------------------------------------------

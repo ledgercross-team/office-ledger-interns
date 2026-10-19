@@ -178,7 +178,7 @@ export const orgSettingsInHrms = hrms.table(
     timezone: text().default('UTC').notNull(),
     workStartTime: time('work_start_time').default('09:00:00').notNull(),
     lateGraceMinutes: integer('late_grace_minutes').default(15).notNull(),
-    weekendDays: smallint('weekend_days').array().default([6, 7]).notNull(),
+    weekendDays: smallint('weekend_days').array().default([5, 6]).notNull(),
     requestExpiryWorkingDays: integer('request_expiry_working_days').default(3).notNull(),
     workloadAmberTasks: integer('workload_amber_tasks').default(6).notNull(),
     workloadAmberProjects: integer('workload_amber_projects').default(3).notNull(),

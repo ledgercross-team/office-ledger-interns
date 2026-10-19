@@ -105,7 +105,7 @@ export const NAV_ITEMS: NavItem[] = [
       employee: 'My leave',
       manager: 'Leave approvals',
       ceo: 'Leave approvals',
-      coo: 'Leave approvals',
+      coo: 'Leave & approvals',
     },
     icon: CalendarDays,
     roles: ['ceo', 'coo', 'manager', 'employee'],

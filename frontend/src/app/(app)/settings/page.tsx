@@ -35,7 +35,7 @@ const input =
   'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle outline-none transition-[border-color,box-shadow,background-color] duration-150 focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-surface-sunken disabled:text-fg-subtle';
 const card = 'space-y-4 rounded-card border border-border bg-surface p-5 text-fg';
 const inlineButton =
-  'inline-flex min-h-9 items-center justify-center rounded-full border border-primary bg-primary px-3 py-1.5 text-sm font-medium text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex min-h-10 items-center justify-center rounded-full border border-primary bg-primary px-4 py-2 text-sm font-medium text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50';
 
 function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
@@ -156,7 +156,7 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
 
   const disabled = !canEdit;
   return (
-    <form onSubmit={onSubmit} onChange={onChange} className={card}>
+    <form onSubmit={onSubmit} onChange={onChange} className={`${card} w-full`}>
       <div>
         <h2 className="text-lg font-semibold text-fg">Working time</h2>
         <p className="mt-1 text-sm text-fg-muted">
@@ -282,7 +282,7 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
         />
         <Num
           name="weightOntime"
-          label="On-time tasks"
+          label="Tasks done on time"
           value={settings.weightOntime}
           disabled={disabled}
           min={0}
@@ -290,7 +290,7 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
         />
         <Num
           name="weightLeave"
-          label="Leave"
+          label="Leave requests"
           value={settings.weightLeave}
           disabled={disabled}
           min={0}
@@ -355,7 +355,7 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
   });
 
   return (
-    <section className={card}>
+    <section className={`${card} flex h-full w-full min-w-0 flex-col`}>
       <div>
         <h2 className="text-lg font-semibold text-fg">Office IP addresses</h2>
         <p className="mt-1 text-sm text-fg-muted">
@@ -392,7 +392,7 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
       </ul>
       {canEdit && (
         <form
-          className="flex flex-wrap gap-2"
+          className="mt-auto flex flex-wrap items-center gap-2 pt-2"
           onSubmit={(event) => {
             event.preventDefault();
             const f = new FormData(event.currentTarget);
@@ -458,7 +458,7 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
   });
 
   return (
-    <section className={card}>
+    <section className={`${card} flex h-full min-w-0 flex-col`}>
       <div>
         <h2 className="text-lg font-semibold text-fg">Holidays</h2>
         <p className="mt-1 text-sm text-fg-muted">
@@ -498,7 +498,7 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
       </ul>
       {canEdit && (
         <form
-          className="flex flex-wrap gap-2"
+          className="mt-auto flex flex-wrap items-center gap-2 pt-2"
           onSubmit={(event) => {
             event.preventDefault();
             const f = new FormData(event.currentTarget);
@@ -569,18 +569,21 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
   });
 
   return (
-    <section className={card}>
+    <section className={`${card} flex h-full min-w-0 flex-col`}>
       <div>
         <h2 className="text-lg font-semibold text-fg">Leave types and yearly allowances</h2>
         <p className="mt-1 text-sm text-fg-muted">
           Maintain the leave options and yearly allowance available to people.
         </p>
       </div>
-      <ul className="space-y-2 text-sm">
+      <ul className="grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-3">
         {list.data?.items.map((t) => (
-          <li key={t.id} className="flex flex-wrap items-center gap-3">
+          <li
+            key={t.id}
+            className="flex min-w-0 flex-wrap items-center gap-3 rounded-control bg-surface-sunken px-3 py-2"
+          >
             <span
-              className={`min-w-24 font-medium ${t.isActive ? '' : 'text-fg-muted line-through'}`}
+              className={`min-w-24 flex-1 font-medium ${t.isActive ? '' : 'text-fg-muted line-through'}`}
             >
               {t.name}
             </span>
@@ -632,7 +635,7 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
       </ul>
       {canEdit && (
         <form
-          className="flex flex-wrap gap-2"
+          className="mt-auto grid w-full gap-3 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_8rem_auto_auto] xl:items-center"
           onSubmit={(event) => {
             event.preventDefault();
             const f = new FormData(event.currentTarget);
@@ -653,7 +656,7 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
             name="code"
             required
             placeholder="code (e.g. study)"
-            className={`${input} max-w-40`}
+            className={`${input} max-w-none`}
           />
           <label htmlFor="leave-type-name" className="sr-only">
             Leave type name
@@ -663,7 +666,7 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
             name="name"
             required
             placeholder="Name"
-            className={`${input} max-w-40`}
+            className={`${input} max-w-none`}
           />
           <input
             id="leave-type-days"
@@ -674,9 +677,9 @@ function LeaveTypesCard({ canEdit }: { canEdit: boolean }) {
             required
             placeholder="Days"
             aria-label="Yearly allowance in days"
-            className={`${input} w-24`}
+            className={`${input} w-full`}
           />
-          <label className="flex items-center gap-1 text-sm">
+          <label className="flex min-h-10 items-center gap-1 text-sm">
             <input id="leave-type-paid" type="checkbox" name="paid" defaultChecked /> Paid
           </label>
           <button type="submit" className={inlineButton}>
@@ -725,7 +728,7 @@ function RecoveryCard({ role }: { role: 'ceo' | 'coo' }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className={card}>
+    <form onSubmit={onSubmit} className={`${card} flex h-full min-w-0 flex-col`}>
       <h2 className="text-lg font-semibold text-fg">
         {role === 'coo' ? "Recover a CEO's access" : 'Hand over as CEO'}
       </h2>
@@ -766,9 +769,11 @@ function RecoveryCard({ role }: { role: 'ceo' | 'coo' }) {
           The platform team will review it.
         </Banner>
       )}
-      <button type="submit" className={inlineButton}>
-        Send request
-      </button>
+      <div className="mt-auto pt-2">
+        <button type="submit" className={inlineButton}>
+          Send request
+        </button>
+      </div>
     </form>
   );
 }
@@ -798,20 +803,22 @@ function ExportCard() {
   }
 
   return (
-    <section className={card}>
+    <section className={`${card} flex h-full min-w-0 flex-col`}>
       <h2 className="text-lg font-semibold text-fg">Export all data</h2>
       <p className="text-sm text-fg-muted">
         Downloads everything the organisation holds. It stays available for 15 days after a
         suspension.
       </p>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => void download()}
-        className={inlineButton}
-      >
-        {pending ? 'Preparing…' : 'Download export'}
-      </button>
+      <div className="mt-auto pt-2">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => void download()}
+          className={inlineButton}
+        >
+          {pending ? 'Preparing…' : 'Download export'}
+        </button>
+      </div>
       {error && (
         <Banner tone="danger" title="Could not export data">
           {error}
@@ -831,7 +838,7 @@ function SettingsContent() {
   });
 
   return (
-    <PageShell>
+    <PageShell className="w-full min-w-0">
       <PageHeader
         title="Organisation settings"
         description="Keep working rules, check-in networks, leave policy, and account controls in one place."
@@ -885,16 +892,28 @@ function SettingsContent() {
           />
 
           <div className="grid gap-5 xl:grid-cols-2">
-            <NetworksCard canEdit={canManageNetworks} />
-            <HolidaysCard canEdit={canEdit} />
-            <LeaveTypesCard canEdit={canEdit} />
+            <div className="min-w-0">
+              <NetworksCard canEdit={canManageNetworks} />
+            </div>
+            <div className="min-w-0">
+              <HolidaysCard canEdit={canEdit} />
+            </div>
+            <div className="w-full min-w-0 xl:col-span-2">
+              <LeaveTypesCard canEdit={canEdit} />
+            </div>
           </div>
 
           <div className="grid gap-5 xl:grid-cols-2">
             {(session?.role === 'ceo' || session?.role === 'coo') && (
-              <RecoveryCard role={session.role} />
+              <div className="min-w-0">
+                <RecoveryCard role={session.role} />
+              </div>
             )}
-            {session?.role === 'ceo' && <ExportCard />}
+            {session?.role === 'ceo' && (
+              <div className="min-w-0">
+                <ExportCard />
+              </div>
+            )}
           </div>
         </>
       )}

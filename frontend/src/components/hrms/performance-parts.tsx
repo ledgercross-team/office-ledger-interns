@@ -19,23 +19,20 @@ const ARROW = { up: '↑', down: '↓', flat: '→' } as const;
 export function ScoreBadge({
   row,
 }: {
-  row: Pick<PerformanceRow, 'score' | 'band' | 'trend' | 'isNew'> | undefined;
+  row: Pick<PerformanceRow, 'score' | 'band' | 'trend'> | undefined;
 }) {
   if (!row || row.score === null || row.band === null) {
-    return <Badge tone="neutral">{row?.isNew ? 'New score' : 'Not available'}</Badge>;
+    return <Badge tone="neutral">Not available</Badge>;
   }
   return (
     <span className="inline-flex flex-wrap items-center justify-end gap-2">
-      <span className="text-sm font-semibold tabular-nums text-fg">
-        {Math.round(row.score)}/100
-      </span>
+      <span className="text-sm font-semibold tabular-nums text-fg">{Math.round(row.score)}%</span>
       <StatusPill status={PERFORMANCE_BANDS[row.band]} />
       {row.trend && (
         <span className="text-sm text-fg-muted" aria-label={`trend ${row.trend}`}>
           {ARROW[row.trend]}
         </span>
       )}
-      {row.isNew && <Badge tone="neutral">New</Badge>}
     </span>
   );
 }
@@ -79,6 +76,12 @@ export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClo
   });
   const d = data.data;
   const band = d?.band as PerformanceBand | null | undefined;
+  const weightTotal = d
+    ? [d.attendance.weight, d.leave.weight, d.ratings.weight, d.onTime.weight].reduce<number>(
+        (total, weight) => total + (weight ?? 0),
+        0,
+      )
+    : 0;
 
   return (
     <Drawer
@@ -113,7 +116,7 @@ export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClo
                   Overall score
                 </p>
                 <p className="mt-1 text-3xl font-semibold tabular-nums text-fg">
-                  {d.score === null ? '—' : `${Math.round(d.score)}/100`}
+                  {d.score === null ? '—' : `${Math.round(d.score)}%`}
                 </p>
               </div>
               {band ? (
@@ -128,7 +131,10 @@ export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClo
           </div>
 
           <div className="rounded-control border border-border bg-surface p-3">
-            <p className="text-sm font-semibold text-fg">How the score is built</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-fg">Performance matrix</p>
+              <Badge tone="success">{weightTotal}% total</Badge>
+            </div>
             <p className="mt-1 text-xs leading-5 text-fg-muted">
               Each component is scored from 0 to 100, then multiplied by its weight. The weights
               shown below come from organisation settings and total 100%.
@@ -137,10 +143,16 @@ export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClo
 
           <div className="space-y-2">
             <Part
-              label="Attendance"
-              score={d.attendance.score}
-              detail={`${d.attendance.points ?? 0} points over ${d.attendance.workingDays ?? 0} working days`}
-              weight={d.attendance.weight}
+              label="Tasks done on time"
+              score={d.onTime.score}
+              detail={`${d.onTime.done} of ${d.onTime.total} on time`}
+              weight={d.onTime.weight}
+            />
+            <Part
+              label="Leave requests"
+              score={d.leave.score}
+              detail={`${d.leave.days ?? 0} unpaid or over-allowance day${d.leave.days === 1 ? '' : 's'}`}
+              weight={d.leave.weight}
             />
             <Part
               label="Ratings"
@@ -153,16 +165,10 @@ export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClo
               weight={d.ratings.weight}
             />
             <Part
-              label="Tasks on time"
-              score={d.onTime.score}
-              detail={`${d.onTime.done} of ${d.onTime.total} on time`}
-              weight={d.onTime.weight}
-            />
-            <Part
-              label="Leave"
-              score={d.leave.score}
-              detail={`${d.leave.days ?? 0} unpaid or over-allowance day${d.leave.days === 1 ? '' : 's'}`}
-              weight={d.leave.weight}
+              label="Attendance"
+              score={d.attendance.score}
+              detail={`${d.attendance.points ?? 0} points over ${d.attendance.workingDays ?? 0} working days`}
+              weight={d.attendance.weight}
             />
           </div>
 
@@ -182,7 +188,7 @@ export function BreakdownDrawer({ memberId, onClose }: { memberId: string; onClo
                   >
                     <span className="text-fg-muted">{formatDate(h.computedOn)}</span>
                     <span className="font-medium tabular-nums text-fg">
-                      {h.score === null ? '—' : Math.round(h.score)}
+                      {h.score === null ? '—' : `${Math.round(h.score)}%`}
                     </span>
                   </li>
                 ))}

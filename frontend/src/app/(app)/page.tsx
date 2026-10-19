@@ -125,6 +125,8 @@ export default function HrmsHomePage() {
   const { me, today, checkedIn, checkedOut, error, punch } = usePunch();
   const counts = useNavCounts();
   const canSeeSeats = session?.role === 'ceo' || session?.role === 'coo';
+  const canRequestLeave =
+    session?.role === 'coo' || session?.role === 'manager' || session?.role === 'employee';
 
   const org = useQuery({
     queryKey: ['hrms', 'org', session?.activeMemberId],
@@ -141,7 +143,7 @@ export default function HrmsHomePage() {
   const leave = useQuery({
     queryKey: ['hrms', 'leave', 'balance', session?.activeMemberId, 'dashboard'],
     queryFn: () => hrmsFetch<{ items: LeaveBalance[] }>('/leave/balance'),
-    enabled: Boolean(session?.activeMemberId),
+    enabled: Boolean(session?.activeMemberId) && canRequestLeave,
     retry: false,
   });
   const performance = useQuery({
@@ -462,62 +464,64 @@ export default function HrmsHomePage() {
         </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="flex items-center gap-2 text-lg font-bold">
-                <Plane aria-hidden className="size-5 text-primary" />
-                Leave balance
-              </h2>
-              <p className="mt-1 text-sm text-fg-muted">Your remaining allowance this year.</p>
-            </div>
-            <Button asChild variant="secondary" size="sm">
-              <Link href="/leave">View leave</Link>
-            </Button>
-          </div>
-          {leave.isLoading ? (
-            <div className="space-y-3" aria-label="Loading leave balance">
-              <Skeleton className="h-10 w-2/3" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : leave.error ? (
-            <ErrorState
-              title="Could not load leave balance"
-              message="Your leave balance is unavailable right now."
-              onRetry={() => void leave.refetch()}
-            />
-          ) : leaveItems.length === 0 ? (
-            <EmptyState
-              title="No leave types yet"
-              description="Your organisation has not configured any active leave types."
-            />
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-end gap-2">
-                <span className="text-3xl font-bold tabular-nums text-fg">
-                  {formatDays(leaveRemaining)}
-                </span>
-                <span className="pb-1 text-sm text-fg-muted">
-                  of {formatDays(leaveAllowance)} days remaining
-                </span>
+      <div className={cn('grid gap-4', canRequestLeave && 'lg:grid-cols-2')}>
+        {canRequestLeave && (
+          <Card className="space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="flex items-center gap-2 text-lg font-bold">
+                  <Plane aria-hidden className="size-5 text-primary" />
+                  Leave balance
+                </h2>
+                <p className="mt-1 text-sm text-fg-muted">Your remaining allowance this year.</p>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {leaveItems.slice(0, 4).map((item) => (
-                  <div
-                    key={item.leaveTypeId}
-                    className="flex items-center justify-between gap-3 rounded-control bg-surface-sunken px-3 py-2 text-sm"
-                  >
-                    <span className="min-w-0 truncate text-fg-muted">{item.name}</span>
-                    <span className="shrink-0 font-semibold tabular-nums text-fg">
-                      {formatDays(Math.max(0, item.remaining))}d
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/leave">View leave</Link>
+              </Button>
             </div>
-          )}
-        </Card>
+            {leave.isLoading ? (
+              <div className="space-y-3" aria-label="Loading leave balance">
+                <Skeleton className="h-10 w-2/3" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : leave.error ? (
+              <ErrorState
+                title="Could not load leave balance"
+                message="Your leave balance is unavailable right now."
+                onRetry={() => void leave.refetch()}
+              />
+            ) : leaveItems.length === 0 ? (
+              <EmptyState
+                title="No leave types yet"
+                description="Your organisation has not configured any active leave types."
+              />
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-end gap-2">
+                  <span className="text-3xl font-bold tabular-nums text-fg">
+                    {formatDays(leaveRemaining)}
+                  </span>
+                  <span className="pb-1 text-sm text-fg-muted">
+                    of {formatDays(leaveAllowance)} days remaining
+                  </span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {leaveItems.slice(0, 4).map((item) => (
+                    <div
+                      key={item.leaveTypeId}
+                      className="flex items-center justify-between gap-3 rounded-control bg-surface-sunken px-3 py-2 text-sm"
+                    >
+                      <span className="min-w-0 truncate text-fg-muted">{item.name}</span>
+                      <span className="shrink-0 font-semibold tabular-nums text-fg">
+                        {formatDays(Math.max(0, item.remaining))}d
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
 
         <Card className="space-y-4">
           <div className="flex items-start justify-between gap-3">
@@ -589,7 +593,6 @@ export default function HrmsHomePage() {
                   {myPerformance.band && (
                     <StatusPill status={PERFORMANCE_BANDS[myPerformance.band]} />
                   )}
-                  {myPerformance.isNew && <span className="text-sm text-fg-muted">New score</span>}
                 </div>
                 <p className="text-sm text-fg-muted">
                   {myPerformance.score === null

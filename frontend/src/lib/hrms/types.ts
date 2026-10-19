@@ -394,6 +394,7 @@ export interface CalendarItem {
 
 export interface CalendarFeed {
   timezone: string;
+  weekendDays: number[];
   from: string;
   to: string;
   items: CalendarItem[];

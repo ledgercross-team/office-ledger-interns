@@ -152,7 +152,7 @@ CREATE TABLE org_settings (
     timezone                     text     NOT NULL DEFAULT 'UTC',
     work_start_time              time     NOT NULL DEFAULT '09:00',
     late_grace_minutes           integer  NOT NULL DEFAULT 15 CHECK (late_grace_minutes BETWEEN 0 AND 240),
-    weekend_days                 smallint[] NOT NULL DEFAULT '{6,7}'          -- ISO day of week, 1 = Mon … 7 = Sun
+    weekend_days                 smallint[] NOT NULL DEFAULT '{5,6}'          -- ISO day of week, 1 = Mon … 7 = Sun; Friday + Saturday by default
                                  CHECK (weekend_days <@ '{1,2,3,4,5,6,7}'::smallint[]),
     request_expiry_working_days  integer  NOT NULL DEFAULT 3 CHECK (request_expiry_working_days > 0),
     -- workload colours (§7)
@@ -1376,7 +1376,9 @@ BEGIN
         IF v_role <> 'manager' OR NOT is_project_member(NEW.project_id, NEW.requested_by, 'manager') THEN
             RAISE EXCEPTION 'Only a manager on the project can make this request';
         END IF;
-    ELSIF NEW.type IN ('leave', 'leave_change', 'attendance_correction') AND v_role NOT IN ('manager', 'employee', 'coo', 'ceo') THEN
+    ELSIF NEW.type IN ('leave', 'leave_change') AND v_role NOT IN ('manager', 'employee', 'coo') THEN
+        RAISE EXCEPTION 'Only a COO, manager or employee can request leave';
+    ELSIF NEW.type = 'attendance_correction' AND v_role NOT IN ('manager', 'employee', 'coo', 'ceo') THEN
         RAISE EXCEPTION 'Invalid requester';
     END IF;
     RETURN NEW;
@@ -1402,6 +1404,10 @@ BEGIN
                 RETURN 'Only a lead of this project, the CEO or COO can decide this';
             END IF;
         WHEN 'leave', 'leave_change', 'attendance_correction' THEN
+            IF member_role_of(r.requested_by) = 'coo' THEN
+                IF v_role <> 'ceo' THEN RETURN 'Only the CEO can decide a COO leave request'; END IF;
+                RETURN NULL;
+            END IF;
             IF v_role IN ('ceo', 'coo') THEN RETURN NULL; END IF;
             IF is_lead_anywhere(r.requested_by) OR member_role_of(r.requested_by) IN ('ceo', 'coo') THEN
                 RETURN 'Requests from a project lead (or CEO/COO) go to the COO';
@@ -2028,16 +2034,15 @@ BEGIN
          WHERE ta.member_id = m.id AND ta.removed_at IS NULL;
         v_ont := CASE WHEN v_tot > 0 THEN round(100.0 * v_ok / v_tot, 2) END;
 
-        -- final: weights re-shared across the inputs that exist
-        v_wsum := (CASE WHEN v_att IS NOT NULL THEN s.weight_attendance ELSE 0 END)
-                + (CASE WHEN v_rat IS NOT NULL THEN s.weight_rating ELSE 0 END)
-                + (CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END)
-                + (CASE WHEN v_leave_score IS NOT NULL THEN s.weight_leave ELSE 0 END);
+        -- final: always measure against the full configured matrix. Missing
+        -- components contribute zero instead of making the remaining inputs
+        -- look like a complete 100% score.
+        v_wsum := s.weight_attendance + s.weight_rating + s.weight_ontime + s.weight_leave;
         IF v_wsum > 0 THEN
-            v_final := round(( coalesce(v_att, 0) * CASE WHEN v_att IS NOT NULL THEN s.weight_attendance ELSE 0 END
-                             + coalesce(v_rat, 0) * CASE WHEN v_rat IS NOT NULL THEN s.weight_rating ELSE 0 END
-                             + coalesce(v_ont, 0) * CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END
-                             + coalesce(v_leave_score, 0) * CASE WHEN v_leave_score IS NOT NULL THEN s.weight_leave ELSE 0 END) / v_wsum, 2);
+            v_final := round(( coalesce(v_att, 0) * s.weight_attendance
+                             + coalesce(v_rat, 0) * s.weight_rating
+                             + coalesce(v_ont, 0) * s.weight_ontime
+                             + coalesce(v_leave_score, 0) * s.weight_leave) / v_wsum, 2);
             v_band := CASE WHEN v_final >= 85 THEN 'excellent' WHEN v_final >= 70 THEN 'good'
                            WHEN v_final >= 50 THEN 'needs_attention' ELSE 'poor' END;
         ELSE
@@ -2425,6 +2430,84 @@ END $$;
 
 COMMIT;
 
+-- ===== BEGIN inline HRMS policy update: Friday/Saturday weekends + CEO leave role =====
+-- Existing organisations that still have the original Sat/Sun default are moved to
+-- Friday/Saturday. Organisations with a deliberate custom weekend remain unchanged.
+BEGIN;
+SET search_path = hrms, public;
+
+ALTER TABLE org_settings
+    ALTER COLUMN weekend_days SET DEFAULT '{5,6}'::smallint[];
+UPDATE org_settings
+   SET weekend_days = '{5,6}'::smallint[]
+ WHERE weekend_days = '{6,7}'::smallint[];
+
+CREATE OR REPLACE FUNCTION trg_request_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE v_role member_role := member_role_of(NEW.requested_by);
+BEGIN
+    IF NOT is_system() AND NEW.requested_by <> current_member_id() THEN
+        RAISE EXCEPTION 'Requests are made by the signed-in member only';
+    END IF;
+    IF v_role IS NULL THEN RAISE EXCEPTION 'Requester is not active'; END IF;
+    NEW.status := 'pending';
+    NEW.expires_at := add_working_days(NEW.org_id, now(),
+        (SELECT request_expiry_working_days FROM org_settings WHERE org_id = NEW.org_id));
+
+    IF NEW.type = 'create_user' AND v_role <> 'manager' THEN
+        RAISE EXCEPTION 'CEO/COO create users directly; only managers request it';
+    ELSIF NEW.type = 'create_project' AND v_role <> 'coo' THEN
+        RAISE EXCEPTION 'Only a COO requests a project (a CEO creates it directly)';
+    ELSIF NEW.type IN ('add_to_project', 'create_task', 'assign_task', 'add_and_assign') THEN
+        IF v_role <> 'manager' OR NOT is_project_member(NEW.project_id, NEW.requested_by, 'manager') THEN
+            RAISE EXCEPTION 'Only a manager on the project can make this request';
+        END IF;
+    ELSIF NEW.type IN ('leave', 'leave_change') AND v_role NOT IN ('manager', 'employee', 'coo') THEN
+        RAISE EXCEPTION 'Only a COO, manager or employee can request leave';
+    ELSIF NEW.type = 'attendance_correction' AND v_role NOT IN ('manager', 'employee', 'coo', 'ceo') THEN
+        RAISE EXCEPTION 'Invalid requester';
+    END IF;
+    RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION request_decider_error(r requests, p_decider uuid) RETURNS text
+LANGUAGE plpgsql STABLE AS $$
+DECLARE v_role member_role := member_role_of(p_decider);
+BEGIN
+    IF v_role IS NULL THEN RETURN 'Decider is not an active member'; END IF;
+    IF p_decider = r.requested_by AND v_role <> 'ceo' THEN
+        RETURN 'Nobody approves their own request, except a CEO';
+    END IF;
+    CASE r.type
+        WHEN 'create_user' THEN
+            IF v_role NOT IN ('ceo', 'coo') THEN RETURN 'Only a CEO or COO approves new accounts'; END IF;
+        WHEN 'create_project' THEN
+            IF v_role <> 'ceo' THEN RETURN 'Only a CEO approves a COO''s project'; END IF;
+        WHEN 'add_to_project', 'create_task', 'assign_task', 'add_and_assign' THEN
+            IF v_role NOT IN ('ceo', 'coo') AND NOT is_project_lead(r.project_id, p_decider) THEN
+                RETURN 'Only a lead of this project, the CEO or COO can decide this';
+            END IF;
+        WHEN 'leave', 'leave_change', 'attendance_correction' THEN
+            IF member_role_of(r.requested_by) = 'coo' THEN
+                IF v_role <> 'ceo' THEN RETURN 'Only the CEO can decide a COO leave request'; END IF;
+                RETURN NULL;
+            END IF;
+            IF v_role IN ('ceo', 'coo') THEN RETURN NULL; END IF;
+            IF is_lead_anywhere(r.requested_by) OR member_role_of(r.requested_by) IN ('ceo', 'coo') THEN
+                RETURN 'Requests from a project lead (or CEO/COO) go to the COO';
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM project_members a JOIN project_members b ON a.project_id = b.project_id
+                             JOIN projects p ON p.id = a.project_id
+                            WHERE a.member_id = p_decider AND a.is_lead AND a.removed_at IS NULL
+                              AND b.member_id = r.requested_by AND b.removed_at IS NULL
+                              AND p.status IN ('active', 'pending_lead_approval')) THEN
+                RETURN 'Only a lead on one of the requester''s active projects, or the COO, can decide this';
+            END IF;
+    END CASE;
+    RETURN NULL;
+END $$;
+
+COMMIT;
+
 -- ===== BEGIN docs/hrms/0007_mfa_backup_codes.sql =====
 -- =====================================================================
 -- 0007: authenticator sign-in is opt-in per person (Profile → Security).
@@ -2710,16 +2793,15 @@ BEGIN
            AND t.status = 'done' AND t.completed_at::date BETWEEN v_start AND p_as_of
            AND t.completed_at < t.due_at;
 
-        -- final: weights re-shared across the inputs that exist
-        v_wsum := (CASE WHEN v_att IS NOT NULL THEN s.weight_attendance ELSE 0 END)
-                + (CASE WHEN v_rat IS NOT NULL THEN s.weight_rating ELSE 0 END)
-                + (CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END)
-                + (CASE WHEN v_leave_score IS NOT NULL THEN s.weight_leave ELSE 0 END);
+        -- final: always measure against the full configured matrix. Missing
+        -- components contribute zero instead of making the remaining inputs
+        -- look like a complete 100% score.
+        v_wsum := s.weight_attendance + s.weight_rating + s.weight_ontime + s.weight_leave;
         IF v_wsum > 0 THEN
-            v_final := round(( coalesce(v_att, 0) * CASE WHEN v_att IS NOT NULL THEN s.weight_attendance ELSE 0 END
-                             + coalesce(v_rat, 0) * CASE WHEN v_rat IS NOT NULL THEN s.weight_rating ELSE 0 END
-                             + coalesce(v_ont, 0) * CASE WHEN v_ont IS NOT NULL THEN s.weight_ontime ELSE 0 END
-                             + coalesce(v_leave_score, 0) * CASE WHEN v_leave_score IS NOT NULL THEN s.weight_leave ELSE 0 END) / v_wsum, 2);
+            v_final := round(( coalesce(v_att, 0) * s.weight_attendance
+                             + coalesce(v_rat, 0) * s.weight_rating
+                             + coalesce(v_ont, 0) * s.weight_ontime
+                             + coalesce(v_leave_score, 0) * s.weight_leave) / v_wsum, 2);
             v_band := CASE WHEN v_final >= 85 THEN 'excellent' WHEN v_final >= 70 THEN 'good'
                            WHEN v_final >= 50 THEN 'needs_attention' ELSE 'poor' END;
         ELSE

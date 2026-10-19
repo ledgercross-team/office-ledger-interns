@@ -69,7 +69,7 @@ function PeoplePicker({
           onClear={() => setPicked(null)}
         />
       </div>
-      <Button type="submit" loading={pending} disabled={!picked}>
+      <Button type="submit" size="sm" loading={pending} disabled={!picked} className="w-28">
         {action}
       </Button>
     </form>
@@ -138,10 +138,44 @@ export default function ProjectDetailPage() {
         <Link href="/projects" className={`text-sm ${linkClass}`}>
           ← Projects
         </Link>
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-fg">{p.name}</h1>
-          <ProjectStatusBadge status={p.status} />
-          <ProjectFlags flags={p.flags} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-fg">{p.name}</h1>
+            <ProjectStatusBadge status={p.status} />
+            <ProjectFlags flags={p.flags} />
+          </div>
+          {isCeo && p.status !== 'archived' && (
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {confirmArchive ? (
+                <>
+                  <Button
+                    variant="danger"
+                    onClick={() =>
+                      void run(
+                        () =>
+                          hrmsFetch<HrmsProjectDetail>(`/projects/${p.id}/archive`, {
+                            method: 'POST',
+                          }),
+                        (data) => {
+                          setConfirmArchive(false);
+                          apply(data);
+                        },
+                      )
+                    }
+                  >
+                    Yes, archive
+                  </Button>
+                  <Button variant="secondary" onClick={() => setConfirmArchive(false)}>
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button variant="danger" onClick={() => setConfirmArchive(true)}>
+                  Archive project
+                </Button>
+              )}
+            </div>
+          )}
         </div>
         {p.description && <p className="text-sm text-fg">{p.description}</p>}
         <p className="text-xs text-fg-muted">
@@ -349,41 +383,6 @@ export default function ProjectDetailPage() {
           </div>
           <Button type="submit">Save</Button>
         </form>
-      )}
-
-      {isCeo && p.status !== 'archived' && (
-        <section className="w-full space-y-2 rounded-card border border-danger/30 bg-danger-soft p-5">
-          <h2 className="font-semibold text-danger-fg">Archive</h2>
-          <p className="text-sm text-fg">
-            The project becomes read-only and its open tasks are cancelled automatically.
-          </p>
-          {confirmArchive ? (
-            <div className="flex gap-2">
-              <Button
-                variant="danger"
-                onClick={() =>
-                  void run(
-                    () =>
-                      hrmsFetch<HrmsProjectDetail>(`/projects/${p.id}/archive`, { method: 'POST' }),
-                    (data) => {
-                      setConfirmArchive(false);
-                      apply(data);
-                    },
-                  )
-                }
-              >
-                Yes, archive
-              </Button>
-              <Button variant="secondary" onClick={() => setConfirmArchive(false)}>
-                Cancel
-              </Button>
-            </div>
-          ) : (
-            <Button variant="danger" onClick={() => setConfirmArchive(true)}>
-              Archive project
-            </Button>
-          )}
-        </section>
       )}
     </PageShell>
   );

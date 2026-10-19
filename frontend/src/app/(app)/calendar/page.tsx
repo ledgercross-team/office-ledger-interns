@@ -33,6 +33,16 @@ const KIND_CLASS: Record<CalendarItem['kind'], string> = {
   holiday: 'bg-surface-sunken text-fg-muted',
 };
 
+const WEEKDAYS = [
+  { iso: 1, label: 'Mon' },
+  { iso: 2, label: 'Tue' },
+  { iso: 3, label: 'Wed' },
+  { iso: 4, label: 'Thu' },
+  { iso: 5, label: 'Fri' },
+  { iso: 6, label: 'Sat' },
+  { iso: 7, label: 'Sun' },
+] as const;
+
 function message(error: unknown): string {
   return error instanceof HrmsApiError ? error.message : 'Something went wrong. Please try again.';
 }
@@ -41,6 +51,11 @@ function addDays(date: string, n: number): string {
   const d = new Date(`${date}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
+}
+
+function isoDay(date: string): number {
+  const day = new Date(`${date}T00:00:00Z`).getUTCDay();
+  return day === 0 ? 7 : day;
 }
 
 /** The calendar days an item covers, in the viewer's own zone (the API sends it already). */
@@ -285,7 +300,7 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
   return (
     <form
       onSubmit={onSubmit}
-      className="w-full max-w-2xl space-y-4 rounded-card border border-border bg-surface p-5"
+      className="w-full min-w-0 space-y-5 rounded-card border border-border bg-surface p-5 sm:p-6 lg:p-7"
     >
       <div>
         <h2 className="text-lg font-semibold text-fg">New meeting</h2>
@@ -293,18 +308,21 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
           Schedule a meeting and invite the people who need to attend.
         </p>
       </div>
-      <label htmlFor="meeting-title" className="block space-y-1.5 text-sm font-medium text-fg">
-        Title
-        <input
-          id="meeting-title"
-          name="title"
-          required
-          maxLength={200}
-          placeholder="Title"
-          className={input}
-        />
-      </label>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <label
+          htmlFor="meeting-title"
+          className="block space-y-1.5 text-sm font-medium text-fg lg:col-span-2"
+        >
+          Title
+          <input
+            id="meeting-title"
+            name="title"
+            required
+            maxLength={200}
+            placeholder="Title"
+            className={input}
+          />
+        </label>
         <label htmlFor="meeting-start" className="block space-y-1.5 text-sm font-medium text-fg">
           Starts
           <input id="meeting-start" name="start" type="datetime-local" required className={input} />
@@ -313,67 +331,67 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
           Ends
           <input id="meeting-end" name="end" type="datetime-local" required className={input} />
         </label>
+        <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-fg">
+          <legend className="sr-only">Meeting format</legend>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="meeting-format"
+              value="online"
+              checked={where === 'link'}
+              onChange={() => setWhere('link')}
+            />{' '}
+            Online
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="meeting-format"
+              value="in-person"
+              checked={where === 'location'}
+              onChange={() => setWhere('location')}
+            />{' '}
+            In person
+          </label>
+        </fieldset>
+        <label htmlFor="meeting-place" className="block space-y-1.5 text-sm font-medium text-fg">
+          {where === 'link' ? 'Meeting link' : 'Room or address'}
+          <input
+            id="meeting-place"
+            name="place"
+            required
+            type={where === 'link' ? 'url' : 'text'}
+            placeholder={where === 'link' ? 'https://…' : 'Room or address'}
+            className={input}
+          />
+        </label>
+        <label
+          htmlFor="meeting-description"
+          className="block space-y-1.5 text-sm font-medium text-fg lg:col-span-2"
+        >
+          Notes <span className="text-fg-muted">(optional)</span>
+          <textarea
+            id="meeting-description"
+            name="description"
+            rows={2}
+            placeholder="Notes"
+            className={input}
+          />
+        </label>
+        <fieldset className="space-y-2 lg:col-span-2">
+          <legend className="text-sm font-medium text-fg">Invite</legend>
+          <MemberSearch
+            label="Add people"
+            excludeIds={[...invitees, ...(session?.activeMemberId ? [session.activeMemberId] : [])]}
+            onSelect={(m) => setChosen((list) => [...list, m])}
+          />
+          <MemberChips
+            members={chosen}
+            onRemove={(id) => setChosen((list) => list.filter((m) => m.id !== id))}
+            emptyText="Nobody invited yet."
+          />
+        </fieldset>
       </div>
-      <fieldset className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-fg">
-        <legend className="sr-only">Meeting format</legend>
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name="meeting-format"
-            value="online"
-            checked={where === 'link'}
-            onChange={() => setWhere('link')}
-          />{' '}
-          Online
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name="meeting-format"
-            value="in-person"
-            checked={where === 'location'}
-            onChange={() => setWhere('location')}
-          />{' '}
-          In person
-        </label>
-      </fieldset>
-      <label htmlFor="meeting-place" className="block space-y-1.5 text-sm font-medium text-fg">
-        {where === 'link' ? 'Meeting link' : 'Room or address'}
-        <input
-          id="meeting-place"
-          name="place"
-          required
-          type={where === 'link' ? 'url' : 'text'}
-          placeholder={where === 'link' ? 'https://…' : 'Room or address'}
-          className={input}
-        />
-      </label>
-      <label
-        htmlFor="meeting-description"
-        className="block space-y-1.5 text-sm font-medium text-fg"
-      >
-        Notes <span className="text-fg-muted">(optional)</span>
-        <textarea
-          id="meeting-description"
-          name="description"
-          rows={2}
-          placeholder="Notes"
-          className={input}
-        />
-      </label>
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-fg">Invite</legend>
-        <MemberSearch
-          label="Add people"
-          excludeIds={[...invitees, ...(session?.activeMemberId ? [session.activeMemberId] : [])]}
-          onSelect={(m) => setChosen((list) => [...list, m])}
-        />
-        <MemberChips
-          members={chosen}
-          onRemove={(id) => setChosen((list) => list.filter((m) => m.id !== id))}
-          emptyText="Nobody invited yet."
-        />
-      </fieldset>
       {error && (
         <Banner tone="danger" title="Could not create meeting">
           {error}
@@ -425,6 +443,7 @@ export default function CalendarPage() {
   const days: string[] = [];
   for (let d = from; d < to; d = addDays(d, 1)) days.push(d);
   const lead = view === 'month' ? (new Date(`${from}T00:00:00Z`).getUTCDay() + 6) % 7 : 0;
+  const weekendDays = feed.data?.weekendDays ?? [5, 6];
 
   const step = (n: number) => {
     if (view === 'week') return setAnchor(addDays(anchor, 7 * n));
@@ -434,7 +453,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <PageShell>
+    <PageShell className="w-full min-w-0">
       <PageHeader
         title={canTeam ? 'Team calendar' : 'My calendar'}
         description={
@@ -504,51 +523,102 @@ export default function CalendarPage() {
       {view === 'month' ? (
         <>
           <div className="hidden sm:grid sm:grid-cols-7 sm:gap-1">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
-              <div key={d} className="px-1 text-center text-xs font-medium text-fg-muted">
-                {d}
-              </div>
-            ))}
+            {WEEKDAYS.map(({ iso, label: weekday }) => {
+              const weekend = weekendDays.includes(iso);
+              return (
+                <div
+                  key={weekday}
+                  className={`rounded-control px-1 py-1 text-center text-xs font-medium ${weekend ? 'bg-surface-sunken text-fg' : 'text-fg-muted'}`}
+                >
+                  {weekday}
+                  {weekend && (
+                    <span className="ml-1 text-[10px] font-normal text-fg-muted">Off</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div className="hidden sm:grid sm:grid-cols-7 sm:gap-1">
             {Array.from({ length: lead }).map((_, i) => (
               <div key={`pad-${i}`} />
             ))}
-            {days.map((d) => (
-              <div
-                key={d}
-                className="min-h-24 rounded-control border border-border bg-surface p-2 lg:min-h-28"
-              >
-                <p className="text-xs font-medium tabular-nums text-fg-muted">
-                  {Number(d.slice(8))}
-                </p>
-                <ul className="mt-1 space-y-1">
-                  {(byDay.get(d) ?? []).map((item, i) => (
-                    <li key={`${item.kind}-${item.refId}-${i}`}>
-                      <EventButton item={item} onOpen={setOpen} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {days.map((d) => {
+              const weekend = weekendDays.includes(isoDay(d));
+              return (
+                <div
+                  key={d}
+                  className={`min-h-24 rounded-control border border-border p-2 lg:min-h-28 ${weekend ? 'bg-surface-sunken' : 'bg-surface'}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium tabular-nums text-fg-muted">
+                      {Number(d.slice(8))}
+                    </p>
+                    {weekend && (
+                      <span className="text-[10px] font-medium text-fg-muted">Weekend</span>
+                    )}
+                  </div>
+                  <ul className="mt-1 space-y-1">
+                    {(byDay.get(d) ?? []).map((item, i) => (
+                      <li key={`${item.kind}-${item.refId}-${i}`}>
+                        <EventButton item={item} onOpen={setOpen} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
           <div className="space-y-2 sm:hidden">
-            {days.map((d) => (
+            {days.map((d) => {
+              const weekend = weekendDays.includes(isoDay(d));
+              return (
+                <div
+                  key={d}
+                  className={`flex min-w-0 gap-3 rounded-card border border-border p-3 ${weekend ? 'bg-surface-sunken' : 'bg-surface'}`}
+                >
+                  <div className="w-20 shrink-0 border-r border-border pr-3">
+                    <p className="text-xs font-medium text-fg-muted">{dayLabel(d).split(',')[0]}</p>
+                    <p className="mt-1 text-lg font-semibold tabular-nums text-fg">
+                      {Number(d.slice(8))}
+                    </p>
+                    {weekend && (
+                      <p className="mt-1 text-[10px] font-medium text-fg-muted">Weekend</p>
+                    )}
+                  </div>
+                  <ul className="min-w-0 flex-1 space-y-1">
+                    {(byDay.get(d) ?? []).length > 0 ? (
+                      (byDay.get(d) ?? []).map((item, i) => (
+                        <li key={`${item.kind}-${item.refId}-${i}`}>
+                          <EventButton item={item} compact onOpen={setOpen} />
+                        </li>
+                      ))
+                    ) : (
+                      <li className="py-1 text-sm text-fg-muted">No events</li>
+                    )}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <div className="space-y-2">
+          {days.map((d) => {
+            const weekend = weekendDays.includes(isoDay(d));
+            return (
               <div
                 key={d}
-                className="flex min-w-0 gap-3 rounded-card border border-border bg-surface p-3"
+                className={`flex min-w-0 gap-3 rounded-card border border-border p-3 sm:p-4 ${weekend ? 'bg-surface-sunken' : 'bg-surface'}`}
               >
-                <div className="w-16 shrink-0 border-r border-border pr-3">
-                  <p className="text-xs font-medium text-fg-muted">{dayLabel(d).split(',')[0]}</p>
-                  <p className="mt-1 text-lg font-semibold tabular-nums text-fg">
-                    {Number(d.slice(8))}
-                  </p>
+                <div className="w-28 shrink-0 border-r border-border pr-3 sm:w-36">
+                  <p className="text-sm font-semibold text-fg">{dayLabel(d)}</p>
+                  {weekend && <p className="mt-1 text-xs font-medium text-fg-muted">Weekend</p>}
                 </div>
                 <ul className="min-w-0 flex-1 space-y-1">
                   {(byDay.get(d) ?? []).length > 0 ? (
                     (byDay.get(d) ?? []).map((item, i) => (
                       <li key={`${item.kind}-${item.refId}-${i}`}>
-                        <EventButton item={item} compact onOpen={setOpen} />
+                        <EventButton item={item} onOpen={setOpen} />
                       </li>
                     ))
                   ) : (
@@ -556,32 +626,8 @@ export default function CalendarPage() {
                   )}
                 </ul>
               </div>
-            ))}
-          </div>
-        </>
-      ) : (
-        <div className="space-y-2">
-          {days.map((d) => (
-            <div
-              key={d}
-              className="flex min-w-0 gap-3 rounded-card border border-border bg-surface p-3 sm:p-4"
-            >
-              <div className="w-24 shrink-0 border-r border-border pr-3 sm:w-32">
-                <p className="text-sm font-semibold text-fg">{dayLabel(d)}</p>
-              </div>
-              <ul className="min-w-0 flex-1 space-y-1">
-                {(byDay.get(d) ?? []).length > 0 ? (
-                  (byDay.get(d) ?? []).map((item, i) => (
-                    <li key={`${item.kind}-${item.refId}-${i}`}>
-                      <EventButton item={item} onOpen={setOpen} />
-                    </li>
-                  ))
-                ) : (
-                  <li className="py-1 text-sm text-fg-muted">No events</li>
-                )}
-              </ul>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
