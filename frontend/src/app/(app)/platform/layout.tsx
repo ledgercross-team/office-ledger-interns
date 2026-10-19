@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn';
 import { Button, Skeleton, ToastProvider } from '@/components/ui';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
+import { UserMenu } from '@/components/hrms/user-menu';
 
 const ITEMS = [
   { href: '/platform', label: 'Organisations', icon: Building2 },
@@ -71,57 +72,66 @@ export default function PlatformLayout({ children }: { children: ReactNode }) {
         </a>
         <div className="flex min-h-screen">
           <aside className="sticky top-0 hidden h-screen w-60 shrink-0 border-r border-border bg-surface p-3 md:block">
-            <nav aria-label="Platform" className="h-full rounded-card bg-rail p-3 text-rail-fg">
-              <p className="px-2 pb-3 text-sm font-bold text-rail-fg">Platform console</p>
-              <ul className="space-y-1">
-                {ITEMS.map((item) => {
-                  const active =
-                    item.href === '/platform'
-                      ? pathname === '/platform'
-                      : pathname.startsWith(item.href);
-                  const Icon = item.icon;
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        aria-current={active ? 'page' : undefined}
-                        className={cn(
-                          'flex min-h-10 items-center gap-3 rounded-full px-3 py-2 text-sm font-medium',
-                          active
-                            ? 'bg-surface font-bold text-fg shadow-sm'
-                            : 'text-rail-fg hover:bg-surface/50',
-                        )}
-                      >
-                        <Icon aria-hidden className="size-5 shrink-0" />
-                        {item.label}
-                        {item.href === '/platform/messages' && unreadCount > 0 && (
-                          <span
-                            aria-label={`${unreadCount} unread`}
-                            className="rounded-full bg-primary px-1.5 text-xs tabular-nums text-primary-fg"
-                          >
-                            {unreadCount}
-                          </span>
-                        )}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+            <nav
+              aria-label="Platform"
+              className="flex h-full flex-col rounded-card bg-rail p-3 text-rail-fg"
+            >
+              <div>
+                <p className="px-2 pb-3 text-sm font-bold text-rail-fg">Platform console</p>
+                <ul className="space-y-1">
+                  {ITEMS.map((item) => {
+                    const active =
+                      item.href === '/platform'
+                        ? pathname === '/platform'
+                        : pathname.startsWith(item.href);
+                    const Icon = item.icon;
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          aria-current={active ? 'page' : undefined}
+                          className={cn(
+                            'flex min-h-10 items-center gap-3 rounded-full px-3 py-2 text-sm font-medium',
+                            active
+                              ? 'bg-surface font-bold text-fg shadow-sm'
+                              : 'text-rail-fg hover:bg-surface/50',
+                          )}
+                        >
+                          <Icon aria-hidden className="size-5 shrink-0" />
+                          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                          {item.href === '/platform/messages' && unreadCount > 0 && (
+                            <span
+                              aria-label={`${unreadCount} unread`}
+                              className="rounded-full bg-primary px-1.5 text-xs tabular-nums text-primary-fg"
+                            >
+                              {unreadCount}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+              <div className="mt-auto border-t border-rail-fg/20 pt-3">
+                <p className="truncate px-2 text-xs text-rail-fg/75">{session.user.email}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void logout()}
+                  className="mt-2 w-full justify-start text-rail-fg hover:bg-surface/50 hover:text-fg"
+                >
+                  <LogOut aria-hidden className="size-4" />
+                  Sign out
+                </Button>
+              </div>
             </nav>
           </aside>
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="sticky top-0 z-20 border-b border-border bg-surface">
               <div className="mx-auto flex min-h-14 w-full max-w-[1280px] items-center gap-2 px-3 sm:px-6">
-                <p className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">
-                  Platform console
-                </p>
-                <p className="hidden truncate text-sm text-fg-muted sm:block">
-                  {session.user.email}
-                </p>
-                <Button variant="secondary" size="sm" onClick={() => void logout()}>
-                  <LogOut aria-hidden className="size-4" />
-                  Sign out
-                </Button>
+                <div className="min-w-0 flex-1" />
+                <UserMenu />
               </div>
             </header>
             <nav

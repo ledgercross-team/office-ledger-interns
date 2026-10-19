@@ -180,8 +180,8 @@ function ThreadView({ mode, id, onBack }: { mode: Mode; id: string; onBack: () =
   }
   const t = thread.data;
   return (
-    <div className="flex h-full min-h-[24rem] flex-col gap-3">
-      <div className="flex items-center gap-2">
+    <div className="flex min-h-[30rem] min-w-0 flex-col gap-4 rounded-card border border-border bg-surface-raised p-4 sm:p-5">
+      <div className="flex items-center gap-3 border-b border-border pb-4">
         <Button
           variant="ghost"
           size="sm"
@@ -201,7 +201,7 @@ function ThreadView({ mode, id, onBack }: { mode: Mode; id: string; onBack: () =
         </div>
       </div>
       <ul
-        className="flex-1 space-y-2 overflow-y-auto rounded-card border border-border bg-surface-sunken p-3"
+        className="min-h-0 flex-1 space-y-2 overflow-y-auto rounded-card border border-border bg-surface-sunken p-3 sm:p-4"
         aria-live="polite"
         aria-label="Messages"
       >
@@ -228,20 +228,22 @@ function ThreadView({ mode, id, onBack }: { mode: Mode; id: string; onBack: () =
         ))}
         <div ref={endRef} />
       </ul>
-      {t.closed ? (
-        <Banner tone="info" title="This conversation is closed.">
-          The other person is no longer active in this organisation.
-        </Banner>
-      ) : (
-        <Composer
-          pending={send.isPending}
-          onSend={async (body) => {
-            await send.mutateAsync(body);
-          }}
-          disabled={mode === 'org' && readOnly.readOnly && t.otherRole !== 'gameMaster'}
-          disabledReason={readOnly.reason ?? undefined}
-        />
-      )}
+      <div className="border-t border-border pt-4">
+        {t.closed ? (
+          <Banner tone="info" title="This conversation is closed.">
+            The other person is no longer active in this organisation.
+          </Banner>
+        ) : (
+          <Composer
+            pending={send.isPending}
+            onSend={async (body) => {
+              await send.mutateAsync(body);
+            }}
+            disabled={mode === 'org' && readOnly.readOnly && t.otherRole !== 'gameMaster'}
+            disabledReason={readOnly.reason ?? undefined}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -306,8 +308,13 @@ function NewMessage({
   });
 
   return (
-    <Card className="space-y-3">
-      <h2 className="text-lg font-semibold text-fg">New message</h2>
+    <Card className="min-h-[30rem] space-y-4">
+      <div className="border-b border-border pb-4">
+        <h2 className="text-lg font-semibold text-fg">New message</h2>
+        <p className="mt-1 text-sm text-fg-muted">
+          Start a focused conversation with a platform contact.
+        </p>
+      </div>
       <MemberSearch
         label="To"
         required
@@ -346,7 +353,21 @@ function Conversations({ mode }: { mode: Mode }) {
   });
 
   const list = (
-    <div className={cn('space-y-2', selected || composing ? 'hidden md:block' : '')}>
+    <div
+      className={cn(
+        'min-w-0 rounded-card border border-border bg-surface-raised p-3',
+        selected || composing ? 'hidden lg:block' : '',
+      )}
+    >
+      <div className="mb-3 flex items-start justify-between gap-3 px-1">
+        <div>
+          <h2 className="text-sm font-semibold text-fg">
+            {mode === 'platform' ? 'Platform inbox' : 'Inbox'}
+          </h2>
+          <p className="mt-0.5 text-xs text-fg-muted">Your active conversations</p>
+        </div>
+        <MessageSquarePlus aria-hidden className="mt-0.5 size-4 text-primary" />
+      </div>
       <Button
         onClick={() => {
           setComposing(true);
@@ -354,7 +375,6 @@ function Conversations({ mode }: { mode: Mode }) {
         }}
         className="w-full"
       >
-        <MessageSquarePlus aria-hidden className="size-4" />
         New message
       </Button>
       {threads.isLoading && <Skeleton className="h-16 w-full" />}
@@ -364,7 +384,7 @@ function Conversations({ mode }: { mode: Mode }) {
       {threads.data && threads.data.items.length === 0 && (
         <EmptyState title="No conversations yet" description="Start one with New message." />
       )}
-      <ul className="space-y-1">
+      <ul className="mt-3 space-y-2">
         {threads.data?.items.map((t) => (
           <li key={t.id}>
             <button
@@ -407,9 +427,9 @@ function Conversations({ mode }: { mode: Mode }) {
   );
 
   return (
-    <div className="grid gap-4 md:grid-cols-[320px_1fr]">
+    <div className="grid min-h-[30rem] gap-4 lg:grid-cols-[minmax(250px,320px)_minmax(0,1fr)]">
       {list}
-      <div className={cn(!selected && !composing ? 'hidden md:block' : '')}>
+      <div className={cn('min-w-0', !selected && !composing ? 'hidden lg:block' : '')}>
         {composing ? (
           <NewMessage
             mode={mode}
@@ -422,10 +442,12 @@ function Conversations({ mode }: { mode: Mode }) {
         ) : selected ? (
           <ThreadView mode={mode} id={selected} onBack={() => setSelected(null)} />
         ) : (
-          <EmptyState
-            title="Pick a conversation"
-            description="Choose one on the left, or start a new message."
-          />
+          <div className="flex min-h-[30rem] items-center justify-center rounded-card border border-dashed border-border bg-surface-raised p-6">
+            <EmptyState
+              title="Pick a conversation"
+              description="Choose one on the left, or start a new message."
+            />
+          </div>
         )}
       </div>
     </div>
@@ -461,8 +483,8 @@ function ReportThread({ id, asCeo, onBack }: { id: string; asCeo: boolean; onBac
     return <ErrorState message={fail(detail.error)} onRetry={() => void detail.refetch()} />;
   const d = detail.data;
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
+    <div className="min-h-[30rem] space-y-4 rounded-card border border-border bg-surface-raised p-4 sm:p-5">
+      <div className="flex items-center gap-3 border-b border-border pb-4">
         <Button
           variant="ghost"
           size="sm"
@@ -487,7 +509,7 @@ function ReportThread({ id, asCeo, onBack }: { id: string; asCeo: boolean; onBac
         </div>
       </div>
       <ul
-        className="max-h-[50vh] space-y-2 overflow-y-auto rounded-card border border-border bg-surface-sunken p-3"
+        className="max-h-[50vh] space-y-2 overflow-y-auto rounded-card border border-border bg-surface-sunken p-3 sm:p-4"
         aria-live="polite"
       >
         {d.messages.map((m) => (
@@ -583,7 +605,7 @@ function NewReport({ onDone, onCancel }: { onDone: (id: string) => void; onCance
           value={body}
           onChange={(event) => setBody(event.target.value)}
         />
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-control border border-border bg-surface-sunken px-3 py-2.5">
           <button
             type="button"
             role="switch"
@@ -635,8 +657,19 @@ function Reports({ asCeo }: { asCeo: boolean }) {
   });
 
   return (
-    <div className="grid gap-4 md:grid-cols-[320px_1fr]">
-      <div className={cn('space-y-2', selected || composing ? 'hidden md:block' : '')}>
+    <div className="grid min-h-[30rem] gap-4 lg:grid-cols-[minmax(250px,320px)_minmax(0,1fr)]">
+      <div
+        className={cn(
+          'min-w-0 rounded-card border border-border bg-surface-raised p-3',
+          selected || composing ? 'hidden lg:block' : '',
+        )}
+      >
+        <div className="mb-3 px-1">
+          <h2 className="text-sm font-semibold text-fg">Reports</h2>
+          <p className="mt-0.5 text-xs text-fg-muted">
+            {asCeo ? 'Private reports from your team' : 'Private notes to your CEO'}
+          </p>
+        </div>
         {!asCeo && (
           <Button
             onClick={() => {
@@ -663,7 +696,7 @@ function Reports({ asCeo }: { asCeo: boolean }) {
             }
           />
         )}
-        <ul className="space-y-1">
+        <ul className="mt-3 space-y-2">
           {list.data?.items.map((r) => (
             <li key={r.id}>
               <button
@@ -700,7 +733,7 @@ function Reports({ asCeo }: { asCeo: boolean }) {
           ))}
         </ul>
       </div>
-      <div className={cn(!selected && !composing ? 'hidden md:block' : '')}>
+      <div className={cn('min-w-0', !selected && !composing ? 'hidden lg:block' : '')}>
         {composing ? (
           <NewReport
             onCancel={() => setComposing(false)}
@@ -712,7 +745,9 @@ function Reports({ asCeo }: { asCeo: boolean }) {
         ) : selected ? (
           <ReportThread id={selected} asCeo={asCeo} onBack={() => setSelected(null)} />
         ) : (
-          <EmptyState title="Pick a report" description="Choose one on the left." />
+          <div className="flex min-h-[30rem] items-center justify-center rounded-card border border-dashed border-border bg-surface-raised p-6">
+            <EmptyState title="Pick a report" description="Choose one on the left." />
+          </div>
         )}
       </div>
     </div>

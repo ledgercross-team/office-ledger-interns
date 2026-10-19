@@ -40,17 +40,20 @@ function downloadCodes(email: string, codes: string[]): void {
  * code instead of the password. Turning it off needs a current code.
  */
 export function SecurityCard() {
-  const { session } = useHrmsAuth();
+  const { session, setSession } = useHrmsAuth();
   const queryClient = useQueryClient();
-  const enabled = session?.user.mfaEnabled === true;
+  const [enabledOverride, setEnabledOverride] = useState<boolean | null>(null);
+  const enabled = enabledOverride ?? session?.user.mfaEnabled === true;
   const [step, setStep] = useState<Step>('idle');
   const [setup, setSetup] = useState<{ secret: string; otpauthUrl: string } | null>(null);
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function run(action: () => Promise<void>) {
     setError(null);
+    setNotice(null);
     setPending(true);
     try {
       await action();
@@ -82,6 +85,10 @@ export function SecurityCard() {
       });
       setBackupCodes(result.backupCodes);
       setSetup(null);
+      setEnabledOverride(true);
+      if (session && typeof setSession === 'function') {
+        setSession({ ...session, user: { ...session.user, mfaEnabled: true } });
+      }
       setStep('codes');
       await refresh();
     });
@@ -105,6 +112,11 @@ export function SecurityCard() {
     const code = String(new FormData(event.currentTarget).get('code')).trim();
     void run(async () => {
       await hrmsFetch('/auth/mfa/disable', { method: 'POST', body: { code } });
+      setEnabledOverride(false);
+      setNotice('Authenticator turned off. You can turn it on again whenever you are ready.');
+      if (session && typeof setSession === 'function') {
+        setSession({ ...session, user: { ...session.user, mfaEnabled: false } });
+      }
       setStep('idle');
       await refresh();
     });
@@ -128,7 +140,7 @@ export function SecurityCard() {
         </Banner>
       )}
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           role="switch"
@@ -136,21 +148,28 @@ export function SecurityCard() {
           aria-label="Authenticator app"
           disabled={step !== 'idle'}
           onClick={() => setStep(enabled ? 'disable' : 'password')}
-          className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-            enabled ? 'border-primary bg-primary' : 'border-border-strong bg-surface-sunken'
+          className={`inline-flex min-h-10 items-center justify-center rounded-control border px-4 py-2 text-sm font-semibold transition-[background-color,border-color,color,box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60 ${
+            enabled
+              ? 'border-border-strong bg-surface-raised text-fg hover:bg-surface-sunken'
+              : 'border-primary bg-primary text-primary-fg hover:bg-primary-hover'
           }`}
         >
-          <span
-            aria-hidden
-            className={`absolute left-0 top-0.5 size-5 rounded-full bg-white shadow transition-transform duration-200 ease-out ${
-              enabled ? 'translate-x-6' : 'translate-x-0.5'
-            }`}
-          />
+          {enabled ? 'Turn authenticator off' : 'Turn authenticator on'}
         </button>
-        <span className={`text-sm font-medium ${enabled ? 'text-success-fg' : 'text-fg-muted'}`}>
+        <span
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+            enabled ? 'bg-success-soft text-success-fg' : 'bg-surface-sunken text-fg-muted'
+          }`}
+        >
           {enabled ? 'On' : 'Off'}
         </span>
       </div>
+
+      {notice && (
+        <Banner tone="success" title="Security setting updated">
+          {notice}
+        </Banner>
+      )}
 
       {step === 'idle' && (
         <div className="flex flex-wrap gap-2">

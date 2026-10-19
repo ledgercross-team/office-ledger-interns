@@ -241,53 +241,70 @@ export function Orgs() {
           <OrgRow key={o.id} org={o} plans={planCodes} onDone={refresh} />
         ))}
       </ul>
-      <form onSubmit={onCreate} className={`${card} max-w-lg`}>
-        <h3 className="text-sm font-medium text-fg">New organisation</h3>
-        <label htmlFor="new-org-name" className={labelClass}>
-          Organisation name
-          <input
-            id="new-org-name"
-            name="name"
-            required
-            placeholder="Organisation name"
-            className={input}
-          />
-        </label>
-        <label htmlFor="new-org-plan" className={labelClass}>
-          Plan
-          <select id="new-org-plan" name="plan" required className={input}>
-            {planCodes.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label htmlFor="new-org-ceo-name" className={labelClass}>
-          CEO full name
-          <input
-            id="new-org-ceo-name"
-            name="ceoName"
-            required
-            placeholder="CEO full name"
-            className={input}
-          />
-        </label>
-        <label htmlFor="new-org-email" className={labelClass}>
-          CEO email
-          <input
-            id="new-org-email"
-            name="email"
-            type="email"
-            required
-            placeholder="CEO email"
-            className={input}
-          />
-        </label>
+      <form onSubmit={onCreate} className={`${card} max-w-none`}>
+        <div className="flex flex-col gap-1 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div>
+            <h3 className="text-base font-semibold text-fg">New organisation</h3>
+            <p className="mt-1 text-sm text-fg-muted">
+              Provision the organisation and its first CEO in one step.
+            </p>
+          </div>
+          <span className="w-fit rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">
+            Platform setup
+          </span>
+        </div>
+        <div className="grid gap-4 pt-1 md:grid-cols-2">
+          <label htmlFor="new-org-name" className={labelClass}>
+            Organisation name
+            <input
+              id="new-org-name"
+              name="name"
+              required
+              placeholder="Organisation name"
+              className={input}
+            />
+          </label>
+          <label htmlFor="new-org-plan" className={labelClass}>
+            Plan
+            <select id="new-org-plan" name="plan" required className={input}>
+              {planCodes.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label htmlFor="new-org-ceo-name" className={labelClass}>
+            CEO full name
+            <input
+              id="new-org-ceo-name"
+              name="ceoName"
+              required
+              placeholder="CEO full name"
+              className={input}
+            />
+          </label>
+          <label htmlFor="new-org-email" className={labelClass}>
+            CEO email
+            <input
+              id="new-org-email"
+              name="email"
+              type="email"
+              required
+              placeholder="CEO email"
+              className={input}
+            />
+          </label>
+        </div>
         <Error text={error} />
-        <button type="submit" disabled={mutation.isPending} className={primary}>
-          Create
-        </button>
+        <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-fg-muted">
+            The CEO receives access after the organisation is created.
+          </p>
+          <button type="submit" disabled={mutation.isPending} className={primary}>
+            Create organisation
+          </button>
+        </div>
       </form>
     </section>
   );
@@ -387,35 +404,40 @@ export function GameMasters() {
       <h2 className="font-medium text-fg">GameMasters</h2>
       <ul className="space-y-2">
         {list.data?.items.map((g) => (
-          <li
-            key={g.userId}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-border bg-surface p-3"
-          >
-            <span className="text-sm text-fg">
-              {g.fullName}{' '}
-              <span className="text-xs text-fg-muted">
-                {g.email} · {g.status.replace('_', ' ')}
-              </span>
-            </span>
-            {g.status === 'pending_confirmation' && g.userId !== session?.user.id && (
-              <button
-                type="button"
-                disabled={mutation.isPending}
-                onClick={() =>
-                  mutation.mutate({ path: `/platform/game-masters/${g.userId}/confirm` })
-                }
-                className={primary}
-              >
-                Confirm
-              </button>
-            )}
+          <li key={g.userId} className="space-y-3 rounded-card border border-border bg-surface p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-fg">{g.fullName}</p>
+                <p className="mt-1 truncate text-xs text-fg-muted">
+                  {g.email} · {g.status.replace('_', ' ')}
+                </p>
+              </div>
+              {g.status === 'pending_confirmation' && (
+                <span className="w-fit rounded-full bg-warning-soft px-2.5 py-1 text-xs font-semibold text-warning-fg">
+                  Awaiting confirmation
+                </span>
+              )}
+            </div>
             {g.status !== 'removed' && (
-              <div className="w-full">
+              <div className="flex flex-wrap items-start gap-2 border-t border-border pt-3">
+                {g.status === 'pending_confirmation' && g.userId !== session?.user.id && (
+                  <button
+                    type="button"
+                    disabled={mutation.isPending}
+                    onClick={() =>
+                      mutation.mutate({ path: `/platform/game-masters/${g.userId}/confirm` })
+                    }
+                    className={primary}
+                  >
+                    Confirm
+                  </button>
+                )}
                 <PersonManager
                   base={`/platform/game-masters/${g.userId}`}
                   fullName={g.fullName}
                   email={g.email}
                   canRemove={g.userId !== session?.user.id}
+                  removeLabel={g.status === 'pending_confirmation' ? 'Remove pending' : 'Remove'}
                   onChanged={() =>
                     void queryClient.invalidateQueries({ queryKey: ['hrms', 'platform'] })
                   }
@@ -438,36 +460,50 @@ export function GameMasters() {
           </button>
         </div>
       )}
-      <form onSubmit={onCreate} className={`${card} max-w-lg`}>
-        <h3 className="text-sm font-medium text-fg">Add a gameMaster</h3>
-        <p className="text-xs text-fg-muted">
-          An active gameMaster other than them must confirm them before they can sign in.
-        </p>
-        <label htmlFor="new-gamemaster-name" className={labelClass}>
-          Full name
-          <input
-            id="new-gamemaster-name"
-            name="name"
-            required
-            placeholder="Full name"
-            className={input}
-          />
-        </label>
-        <label htmlFor="new-gamemaster-email" className={labelClass}>
-          Email
-          <input
-            id="new-gamemaster-email"
-            name="email"
-            type="email"
-            required
-            placeholder="Email"
-            className={input}
-          />
-        </label>
+      <form onSubmit={onCreate} className={`${card} max-w-none`}>
+        <div className="flex flex-col gap-1 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div>
+            <h3 className="text-base font-semibold text-fg">Add a game master</h3>
+            <p className="mt-1 text-sm text-fg-muted">
+              An active game master other than them must confirm access before they can sign in.
+            </p>
+          </div>
+          <span className="w-fit rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">
+            Access control
+          </span>
+        </div>
+        <div className="grid gap-4 pt-1 md:grid-cols-2">
+          <label htmlFor="new-gamemaster-name" className={labelClass}>
+            Full name
+            <input
+              id="new-gamemaster-name"
+              name="name"
+              required
+              placeholder="Full name"
+              className={input}
+            />
+          </label>
+          <label htmlFor="new-gamemaster-email" className={labelClass}>
+            Email
+            <input
+              id="new-gamemaster-email"
+              name="email"
+              type="email"
+              required
+              placeholder="Email"
+              className={input}
+            />
+          </label>
+        </div>
         <Error text={error} />
-        <button type="submit" disabled={mutation.isPending} className={primary}>
-          Add
-        </button>
+        <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-fg-muted">
+            A temporary password is shown once after creation.
+          </p>
+          <button type="submit" disabled={mutation.isPending} className={primary}>
+            Add game master
+          </button>
+        </div>
       </form>
     </section>
   );
