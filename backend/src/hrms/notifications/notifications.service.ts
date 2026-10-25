@@ -30,12 +30,14 @@ export class NotificationsService {
 
   /** Inside a request or job transaction: the org comes from app.org_id. */
   async notify(recipientIds: string[], n: NewNotification): Promise<void> {
-    for (const recipient of new Set(recipientIds)) {
+    const recipients = new Set(recipientIds);
+    for (const recipient of recipients) {
       await this.context.tx.execute(sql`
         insert into notifications (org_id, recipient_id, kind, needs_decision, entity_table, entity_id, title, body)
         values (current_org_id(), ${recipient}, ${n.kind}, ${n.needsDecision === true},
                 ${n.entityTable ?? null}, ${n.entityId ?? null}, ${n.title}, ${n.body ?? null})`);
     }
+    if (recipients.size) await this.context.publishRealtime();
   }
 
   /** Active members the database lets decide this request (never the requester themselves). */
@@ -47,7 +49,14 @@ export class NotificationsService {
          and request_decider_error(r, m.id) is null`);
     await this.notify(
       rows.rows.map((r) => r.id),
-      { kind: 'request_needs_decision', needsDecision: true, entityTable: 'requests', entityId: requestId, title, body },
+      {
+        kind: 'request_needs_decision',
+        needsDecision: true,
+        entityTable: 'requests',
+        entityId: requestId,
+        title,
+        body,
+      },
     );
   }
 
@@ -98,6 +107,7 @@ export class NotificationsService {
        where id = ${id}::bigint and recipient_id = ${p.memberId} and org_id = current_org_id()
       returning id`);
     if (r.rows.length === 0) throw new NotFoundException('Notification not found.');
+    await this.context.publishRealtime();
     return { ok: true };
   }
 
@@ -105,6 +115,7 @@ export class NotificationsService {
     const r = await this.context.tx.execute(sql`
       update notifications set read_at = now()
        where recipient_id = ${p.memberId} and org_id = current_org_id() and read_at is null returning id`);
+    if (r.rows.length) await this.context.publishRealtime();
     return { updated: r.rows.length };
   }
 

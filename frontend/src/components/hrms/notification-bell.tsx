@@ -31,7 +31,6 @@ export function NotificationBell() {
     queryKey: ['hrms', 'notifications', 'bell', session?.activeMemberId],
     queryFn: () => hrmsFetch<NotificationsPage>('/notifications?pageSize=8'),
     enabled: Boolean(session?.activeMemberId),
-    refetchInterval: 60_000,
   });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ['hrms', 'notifications'] });
   const read = useMutation({

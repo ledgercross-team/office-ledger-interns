@@ -193,13 +193,16 @@ export class MessagesService {
     const r = await this.context.tx.execute<{ id: string }>(sql`
       insert into messages (conversation_id, org_id, sender_user, body)
       values (${conversationId}::uuid, current_org_id(), ${sender}::uuid, ${body}) returning id::text as id`);
+    await this.context.publishRealtime();
     return r.rows[0].id;
   }
 
   async markRead(p: HrmsPrincipal, conversationId: string): Promise<void> {
-    await this.context.tx.execute(sql`
+    const r = await this.context.tx.execute(sql`
       update messages set read_at = now()
-       where conversation_id = ${conversationId}::uuid and sender_user <> ${p.userId}::uuid and read_at is null`);
+       where conversation_id = ${conversationId}::uuid and sender_user <> ${p.userId}::uuid and read_at is null
+      returning id`);
+    if (r.rows.length) await this.context.publishRealtime();
   }
 
   async hide(p: HrmsPrincipal, messageId: string): Promise<void> {
@@ -210,6 +213,7 @@ export class MessagesService {
     await this.context.tx.execute(sql`
       insert into message_hidden (message_id, user_id) values (${messageId}::bigint, ${p.userId}::uuid)
       on conflict do nothing`);
+    await this.context.publishRealtime();
   }
 
   /** Unread messages plus unread report replies, for the nav badge. */
@@ -372,10 +376,12 @@ export class MessagesService {
   async replyToReport(p: HrmsPrincipal, id: string, body: string): Promise<void> {
     const fn = p.role === 'ceo' ? sql`report_reply_as_ceo` : sql`report_reply_as_reporter`;
     await this.context.tx.execute(sql`select ${fn}(${id}::uuid, ${body})`);
+    await this.context.publishRealtime();
   }
 
   async markReportRead(id: string): Promise<void> {
     await this.context.tx.execute(sql`select report_mark_read(${id}::uuid)`);
+    await this.context.publishRealtime();
   }
 
   // ---- gameMaster (no organisation: every call is a database function) -------
@@ -436,16 +442,28 @@ export class MessagesService {
   async gmStart(dto: GmStartThreadDto) {
     const r = await this.context.tx.execute<{ id: string }>(sql`
       select gm_message_start(${dto.orgId}::uuid, ${dto.toUserId}::uuid, ${dto.body}) as id`);
+    await this.context.publishRealtimeTo(dto.orgId);
+    await this.context.publishPlatformRealtime();
     return { conversationId: r.rows[0].id };
   }
 
   async gmReply(id: string, body: string) {
     await this.context.tx.execute(sql`select gm_message_send(${id}::uuid, ${body})`);
+    const thread = await this.context.tx.execute<{ org_id: string }>(sql`
+      select org_id from gm_message_threads() where conversation_id = ${id}::uuid`);
+    const orgId = thread.rows[0]?.org_id;
+    if (orgId) await this.context.publishRealtimeTo(orgId);
+    await this.context.publishPlatformRealtime();
     return { conversationId: id };
   }
 
   async gmMarkRead(id: string): Promise<void> {
     await this.context.tx.execute(sql`select gm_message_mark_read(${id}::uuid)`);
+    const thread = await this.context.tx.execute<{ org_id: string }>(sql`
+      select org_id from gm_message_threads() where conversation_id = ${id}::uuid`);
+    const orgId = thread.rows[0]?.org_id;
+    if (orgId) await this.context.publishRealtimeTo(orgId);
+    await this.context.publishPlatformRealtime();
   }
 
   async gmUnread(): Promise<{ messages: number }> {

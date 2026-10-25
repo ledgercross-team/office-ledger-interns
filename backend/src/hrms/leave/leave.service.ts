@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { sql, type SQL } from 'drizzle-orm';
 import type { HrmsPrincipal } from '../auth/hrms-auth.types';
@@ -152,18 +153,22 @@ export class LeaveService {
       throw new ForbiddenException('CEOs only decide leave requests.');
     }
     const tx = this.context.tx;
-    if (dto.endDate < dto.startDate)
-      throw new BadRequestException('The end date is before the start date.');
+    if (dto.endDate < dto.startDate) {
+      const message = 'End date must be on or after the start date.';
+      throw new UnprocessableEntityException({ message, errors: { endDate: [message] } });
+    }
     if (dto.startDate === dto.endDate && dto.startHalfDay && dto.endHalfDay) {
-      throw new BadRequestException(
-        'A single day cannot be half a day at both ends. Use one half day.',
-      );
+      const message = 'A single day cannot be half a day at both ends. Use one half day.';
+      throw new BadRequestException({ message, errors: { endHalfDay: [message] } });
     }
 
     const type = await tx.execute(
       sql`select 1 from leave_types where id = ${dto.leaveTypeId} and org_id = current_org_id() and is_active`,
     );
-    if (type.rows.length === 0) throw new NotFoundException('Leave type not found.');
+    if (type.rows.length === 0) {
+      const message = 'Choose an active leave type.';
+      throw new NotFoundException({ message, errors: { leaveTypeId: [message] } });
+    }
 
     // Working days only: weekends and org holidays do not count; a half day at either end is 0.5.
     const counted = await tx.execute<{ days: string }>(sql`
@@ -183,9 +188,8 @@ export class LeaveService {
         from d`);
     const days = Number(counted.rows[0]?.days ?? 0);
     if (!(days > 0)) {
-      throw new BadRequestException(
-        'These dates have no working days (weekends and holidays are not counted).',
-      );
+      const message = 'Choose a date range that includes at least one working day.';
+      throw new BadRequestException({ message, errors: { endDate: [message] } });
     }
 
     const bal = await tx.execute<{ remaining: string }>(sql`
@@ -201,8 +205,10 @@ export class LeaveService {
       on conflict (org_id, dedupe_key) where status = 'pending' and dedupe_key is not null do nothing
       returning id`);
     const id = created.rows[0]?.id;
-    if (!id)
-      throw new ConflictException('You already have a pending leave request for these dates.');
+    if (!id) {
+      const message = 'You already have a pending leave request for these dates.';
+      throw new ConflictException({ message, errors: { endDate: [message] } });
+    }
 
     await tx.execute(sql`
       insert into leave_requests (request_id, org_id, member_id, leave_type_id, start_date, end_date,

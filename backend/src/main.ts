@@ -3,9 +3,21 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
+import type { ValidationError } from 'class-validator';
 import { AppModule } from './app.module';
 import { isEnabled } from './common/utils/env';
+
+function validationFields(errors: ValidationError[], parent = ''): Array<[string, string[]]> {
+  return errors.flatMap((error) => {
+    const field = parent ? `${parent}.${error.property}` : error.property;
+    const constraints = Object.values(error.constraints ?? {});
+    return [
+      ...(constraints.length ? [[field, constraints] as [string, string[]]] : []),
+      ...validationFields(error.children ?? [], field),
+    ];
+  });
+}
 
 function positiveInteger(value: string | undefined, fallback: number): number {
   const parsed = value === undefined ? fallback : Number(value);
@@ -68,6 +80,11 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      exceptionFactory: (errors) =>
+        new BadRequestException({
+          message: 'Check the highlighted fields.',
+          errors: Object.fromEntries(validationFields(errors)),
+        }),
     }),
   );
   app.enableShutdownHooks();

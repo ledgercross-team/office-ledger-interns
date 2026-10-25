@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { hrmsFetch, HrmsApiError } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
+import { monthInTimeZone } from '@/lib/hrms/time';
 import type { AttendanceMe } from '@/lib/hrms/types';
 
 /**
@@ -16,9 +17,9 @@ export function usePunch() {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
-  const month = new Date().toISOString().slice(0, 7);
+  const month = monthInTimeZone(session?.org?.timezone);
   const me = useQuery({
-    queryKey: ['hrms', 'attendance', 'today', session?.activeMemberId],
+    queryKey: ['hrms', 'attendance', 'today', session?.activeMemberId, month],
     queryFn: () => hrmsFetch<AttendanceMe>(`/attendance/me?month=${month}`),
     enabled: session?.activeMemberId != null,
     retry: false,

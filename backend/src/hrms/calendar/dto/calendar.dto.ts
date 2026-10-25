@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -28,10 +29,20 @@ export class CreateMeetingDto {
   @IsOptional() @IsString() @MaxLength(5000) description?: string;
   @IsDateString() startsAt!: string;
   @IsDateString() endsAt!: string;
-  @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(500) meetingLink?: string | null;
+  @IsOptional()
+  @Transform(emptyToNull)
+  @IsString()
+  @Matches(/^https?:\/\/\S+\.\S+/i, { message: 'meetingLink must be a valid http(s) URL' })
+  @MaxLength(500)
+  meetingLink?: string | null;
   @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(300) location?: string | null;
   @IsOptional() @IsUUID() projectId?: string;
-  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(200) @ArrayUnique() @IsUUID('all', { each: true }) inviteeIds!: string[];
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200)
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
+  inviteeIds!: string[];
 }
 
 export class UpdateMeetingDto {
@@ -39,9 +50,19 @@ export class UpdateMeetingDto {
   @IsOptional() @IsString() @MaxLength(5000) description?: string;
   @IsOptional() @IsDateString() startsAt?: string;
   @IsOptional() @IsDateString() endsAt?: string;
-  @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(500) meetingLink?: string | null;
+  @IsOptional()
+  @Transform(emptyToNull)
+  @IsString()
+  @Matches(/^https?:\/\/\S+\.\S+/i, { message: 'meetingLink must be a valid http(s) URL' })
+  @MaxLength(500)
+  meetingLink?: string | null;
   @IsOptional() @Transform(emptyToNull) @IsString() @MaxLength(300) location?: string | null;
-  @IsOptional() @IsArray() @ArrayMinSize(1) @ArrayMaxSize(200) @ArrayUnique() @IsUUID('all', { each: true })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(200)
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
   inviteeIds?: string[];
 }
 

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { sql, type SQL } from 'drizzle-orm';
+import { isIP } from 'node:net';
 import { HrmsContextService } from '../db/hrms-context';
 import { iso } from '../hrms-rows';
 import type {
@@ -9,6 +10,16 @@ import type {
   UpdateLeaveTypeDto,
   UpdateOrgSettingsDto,
 } from './dto/org.dto';
+
+function invalidCidr(error: unknown): boolean {
+  let cause = error;
+  for (let depth = 0; depth < 5 && cause && typeof cause === 'object'; depth += 1) {
+    const pg = cause as { code?: string; message?: string; cause?: unknown };
+    if (pg.code === '22P02' && /cidr/i.test(pg.message ?? '')) return true;
+    cause = pg.cause;
+  }
+  return false;
+}
 
 // camelCase DTO field -> org_settings column. This is the whole list of what a CEO may change.
 const SETTINGS_COLUMNS: Record<keyof UpdateOrgSettingsDto, string> = {
@@ -129,7 +140,55 @@ export class OrgService {
       .map((key) => [key, dto[key]] as const);
     if (entries.length === 0) throw new BadRequestException('Nothing to change.');
     if (dto.timezone !== undefined && !isValidTimeZone(dto.timezone)) {
-      throw new BadRequestException('timezone is not a valid IANA time zone.');
+      const message = 'Choose a valid IANA time zone.';
+      throw new BadRequestException({ message, errors: { timezone: [message] } });
+    }
+
+    const constraintKeys = [
+      'workloadAmberTasks',
+      'workloadAmberProjects',
+      'workloadRedTasks',
+      'workloadRedProjects',
+      'weightAttendance',
+      'weightRating',
+      'weightOntime',
+      'weightLeave',
+    ] as const;
+    if (constraintKeys.some((key) => dto[key] !== undefined)) {
+      const current = await this.readSettings();
+      const amberTasks = dto.workloadAmberTasks ?? current.workloadAmberTasks;
+      const amberProjects = dto.workloadAmberProjects ?? current.workloadAmberProjects;
+      if ((dto.workloadRedTasks ?? current.workloadRedTasks) <= amberTasks) {
+        const message = 'Red task threshold must be greater than the amber task threshold.';
+        const field =
+          dto.workloadRedTasks !== undefined ? 'workloadRedTasks' : 'workloadAmberTasks';
+        throw new BadRequestException({ message, errors: { [field]: [message] } });
+      }
+      if ((dto.workloadRedProjects ?? current.workloadRedProjects) <= amberProjects) {
+        const message = 'Red project threshold must be greater than the amber project threshold.';
+        const field =
+          dto.workloadRedProjects !== undefined ? 'workloadRedProjects' : 'workloadAmberProjects';
+        throw new BadRequestException({ message, errors: { [field]: [message] } });
+      }
+
+      const weights = [
+        dto.weightAttendance ?? current.weightAttendance,
+        dto.weightRating ?? current.weightRating,
+        dto.weightOntime ?? current.weightOntime,
+        dto.weightLeave ?? current.weightLeave,
+      ];
+      if (weights.reduce((sum, value) => sum + value, 0) !== 100) {
+        const message = 'Performance score weights must total exactly 100%.';
+        throw new BadRequestException({
+          message,
+          errors: {
+            weightAttendance: [message],
+            weightRating: [message],
+            weightOntime: [message],
+            weightLeave: [message],
+          },
+        });
+      }
     }
 
     const assignments: SQL[] = entries.map(([key, value]) => {
@@ -197,16 +256,36 @@ export class OrgService {
   }
 
   async addNetwork(dto: CreateOfficeNetworkDto) {
-    const r = await this.context.tx.execute<{
-      id: string;
-      network: string;
-      label: string | null;
-      created_at: string;
-    }>(
-      sql`insert into org_office_networks (org_id, network, label)
+    const [address, prefix, ...extra] = dto.network.split('/');
+    const version = isIP(address);
+    const prefixNumber = prefix === undefined ? null : Number(prefix);
+    if (
+      version === 0 ||
+      extra.length > 0 ||
+      (prefix !== undefined &&
+        (!/^\d+$/.test(prefix) || prefixNumber! > (version === 4 ? 32 : 128)))
+    ) {
+      const message = 'Enter a valid IP address and CIDR prefix.';
+      throw new BadRequestException({ message, errors: { network: [message] } });
+    }
+
+    let r;
+    try {
+      r = await this.context.tx.execute<{
+        id: string;
+        network: string;
+        label: string | null;
+        created_at: string;
+      }>(sql`insert into org_office_networks (org_id, network, label)
           values (current_org_id(), ${dto.network}::cidr, ${dto.label ?? null})
-          returning id, network::text, label, created_at`,
-    );
+          returning id, network::text, label, created_at`);
+    } catch (error) {
+      if (invalidCidr(error)) {
+        const message = 'Enter a network address that matches its CIDR prefix.';
+        throw new BadRequestException({ message, errors: { network: [message] } });
+      }
+      throw error;
+    }
     const n = r.rows[0];
     return { id: n.id, network: n.network, label: n.label, createdAt: iso(n.created_at) };
   }

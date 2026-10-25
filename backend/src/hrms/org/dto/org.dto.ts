@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayUnique,
@@ -72,7 +72,11 @@ export class CreateHolidayDto {
   @IsDateString({ strict: true })
   date!: string;
 
-  @IsString() @MinLength(1) @MaxLength(100) name!: string;
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  name!: string;
 }
 
 export class CreateLeaveTypeDto {

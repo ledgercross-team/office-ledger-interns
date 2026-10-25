@@ -72,7 +72,6 @@ export function useNavCounts(): NavCounts {
     queryFn: () => hrmsFetch<{ messages: number; reports: number }>('/messages/unread-count'),
     enabled: orgMember && memberId !== null,
     staleTime: 5_000,
-    refetchInterval: 10_000,
     retry: false,
   });
 

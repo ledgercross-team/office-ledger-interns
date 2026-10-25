@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type Query } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 import { hrmsFetch } from './api-client';
@@ -49,12 +49,13 @@ export function HrmsAuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         body: { memberId },
       });
-      // Publish the new session first so observers never see a gap, then
-      // drop everything cached for the previous org.
+      const previousOrgQueries = {
+        predicate: (query: Query) =>
+          query.queryKey[0] === 'hrms' && query.queryKey[1] !== 'session',
+      };
+      await queryClient.cancelQueries(previousOrgQueries);
+      queryClient.removeQueries(previousOrgQueries);
       queryClient.setQueryData(HRMS_SESSION_KEY, session);
-      await queryClient.invalidateQueries({
-        predicate: (query) => query.queryKey[0] === 'hrms' && query.queryKey[1] !== 'session',
-      });
     },
     [queryClient],
   );

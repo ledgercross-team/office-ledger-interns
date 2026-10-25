@@ -24,6 +24,15 @@ export function displayTimeZone(): string | undefined {
   return validZone(profileZone);
 }
 
+export function monthInTimeZone(timeZone = 'UTC', date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(date);
+  return `${parts.find((part) => part.type === 'year')?.value}-${parts.find((part) => part.type === 'month')?.value}`;
+}
+
 function format(iso: string | null | undefined, options: Intl.DateTimeFormatOptions): string {
   if (!iso) return '—';
   const date = new Date(iso);

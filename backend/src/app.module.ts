@@ -7,10 +7,9 @@ import { OriginCheckMiddleware } from './common/middleware/origin-check.middlewa
 import { validateEnvironment } from './config/env.validation';
 import { HrmsModule } from './hrms/hrms.module';
 
-// Only credential endpoints count against the strict auth limit. /auth/me runs on every
-// page load, so counting it would lock people out after a few refreshes.
+// Login has its own per-IP/email route limit. Other credential endpoints use the strict limit;
+// /auth/me runs on page loads and is deliberately excluded.
 const STRICT_AUTH_PATHS = [
-  '/api/auth/login',
   '/api/auth/refresh',
   '/api/auth/switch-org',
   '/api/auth/mfa/setup',
