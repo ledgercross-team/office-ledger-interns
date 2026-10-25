@@ -54,10 +54,6 @@ function monthStart(): string {
 export class CalendarService {
   constructor(private readonly context: HrmsContextService) {}
 
-  private invalidField(field: string, message: string): never {
-    throw new BadRequestException({ message, errors: { [field]: [message] } });
-  }
-
   /** Who the caller may see: CEO/COO everyone, a manager people on projects they manage. */
   private visibleTo(p: HrmsPrincipal, alias = 'm'): SQL {
     const m = sql.raw(alias);
@@ -168,24 +164,24 @@ export class CalendarService {
   private checkPlace(link: string | null | undefined, location: string | null | undefined): void {
     const n = [link, location].filter((x) => x !== null && x !== undefined && x !== '').length;
     if (n !== 1) {
-      this.invalidField(
-        link ? 'location' : 'meetingLink',
-        'Provide exactly one meeting link or location.',
+      throw new BadRequestException(
+        'A meeting needs either a meeting link or a location, not both and not neither.',
       );
     }
   }
 
   async createMeeting(p: HrmsPrincipal, dto: CreateMeetingDto) {
-    if (!dto.title.trim()) this.invalidField('title', 'Enter a meeting title.');
     this.checkPlace(dto.meetingLink, dto.location);
     const start = new Date(dto.startsAt).getTime();
     const end = new Date(dto.endsAt).getTime();
-    if (end <= start) this.invalidField('endsAt', 'End time must be after the start time.');
+    if (end <= start) throw new BadRequestException('The meeting must end after it starts.');
     if (start < Date.now() - 5 * 60_000) {
-      this.invalidField('startsAt', 'Choose a start time from now on.');
+      throw new BadRequestException('The start time is in the past. Choose a time from now on.');
     }
     if (end - start > 24 * 3_600_000) {
-      this.invalidField('endsAt', 'A meeting cannot be longer than 24 hours.');
+      throw new BadRequestException(
+        'A meeting cannot be longer than 24 hours. Check the start and end dates.',
+      );
     }
     const tx = this.context.tx;
     const created = await tx.execute<{ id: string }>(sql`
@@ -213,12 +209,8 @@ export class CalendarService {
     this.checkPlace(link, location);
     const startsAt = dto.startsAt ?? cur.starts_at;
     const endsAt = dto.endsAt ?? cur.ends_at;
-    if (dto.startsAt !== undefined || dto.endsAt !== undefined) {
-      if (new Date(endsAt) <= new Date(startsAt))
-        this.invalidField('endsAt', 'End time must be after the start time.');
-      if (new Date(endsAt).getTime() - new Date(startsAt).getTime() > 24 * 3_600_000)
-        this.invalidField('endsAt', 'A meeting cannot be longer than 24 hours.');
-    }
+    if (new Date(endsAt) <= new Date(startsAt))
+      throw new BadRequestException('The meeting must end after it starts.');
 
     await tx.execute(sql`
       update meetings

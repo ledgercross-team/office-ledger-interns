@@ -7,19 +7,18 @@ import {
   Button,
   EmptyState,
   ErrorState,
-  Input,
   PageHeader,
   PageShell,
   SectionHeading,
   Skeleton,
-  Select,
-  Textarea,
   useToast,
 } from '@/components/ui';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { HrmsLeave, LeaveBalance, RequestStatus } from '@/lib/hrms/types';
 
+const input =
+  'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary';
 const STATUS_CHIP: Record<RequestStatus, string> = {
   pending: 'bg-warning-soft text-warning-fg',
   approved: 'bg-success-soft text-success-fg',
@@ -138,13 +137,12 @@ function LeaveItem({
       )}
       {rejecting && (
         <div className="space-y-2">
-          <Textarea
-            label="Reason for rejecting"
-            required
+          <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={2}
-            placeholder="Explain why you are rejecting this request"
+            placeholder="Reason for rejecting (required)"
+            className={input}
           />
           <div className={actionRow}>
             <Button
@@ -182,7 +180,6 @@ export default function LeavePage() {
   const canSeeTeam = session?.role === 'coo' || session?.role === 'manager';
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
   const balance = useQuery({
     queryKey: ['hrms', 'leave', 'balance', session?.activeMemberId],
@@ -216,11 +213,6 @@ export default function LeavePage() {
     const form = event.currentTarget;
     const f = new FormData(form);
     setError(null);
-    setFieldErrors({});
-    if (String(f.get('end')) < String(f.get('start'))) {
-      setFieldErrors({ endDate: ['End date must be on or after the start date.'] });
-      return;
-    }
     setPending(true);
     try {
       await hrmsFetch('/leave', {
@@ -243,7 +235,6 @@ export default function LeavePage() {
       });
     } catch (err) {
       setError(message(err));
-      if (err instanceof HrmsApiError) setFieldErrors(err.fieldErrors ?? {});
     } finally {
       setPending(false);
     }
@@ -289,14 +280,6 @@ export default function LeavePage() {
 
       {canRequest && (
         <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-          {balance.data?.items.length === 0 && (
-            <div className="col-span-full">
-              <EmptyState
-                title="No leave types are configured"
-                description="Ask an organisation administrator to add a leave type before submitting a request."
-              />
-            </div>
-          )}
           {balance.data?.items.map((b) => (
             <div
               key={b.leaveTypeId}
@@ -331,74 +314,47 @@ export default function LeavePage() {
               title="Ask for leave"
               description="Choose the dates and explain what you need."
             />
-            <Select
-              id="leave-type"
-              name="type"
-              label="Leave type"
-              required
-              disabled={balance.isLoading || balance.data?.items.length === 0}
-              error={fieldErrors.leaveTypeId?.[0]}
-              onChange={() => setFieldErrors((current) => ({ ...current, leaveTypeId: [] }))}
-            >
-              <option value="">Choose a leave type</option>
-              {balance.data?.items.map((b) => (
-                <option key={b.leaveTypeId} value={b.leaveTypeId}>
-                  {b.name}
-                </option>
-              ))}
-            </Select>
+            <label htmlFor="leave-type" className="block space-y-1 text-sm text-fg">
+              Leave type
+              <select id="leave-type" name="type" required className={input}>
+                <option value="">Choose a leave type</option>
+                {balance.data?.items.map((b) => (
+                  <option key={b.leaveTypeId} value={b.leaveTypeId}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Input
-                name="start"
-                type="date"
-                label="From"
-                required
-                error={fieldErrors.startDate?.[0]}
-                onChange={() => setFieldErrors((current) => ({ ...current, startDate: [] }))}
-              />
-              <Input
-                name="end"
-                type="date"
-                label="To"
-                required
-                error={fieldErrors.endDate?.[0]}
-                onChange={() => setFieldErrors((current) => ({ ...current, endDate: [] }))}
-              />
+              <label className="block min-w-0 space-y-1 text-sm text-fg">
+                From
+                <input name="start" type="date" required className={input} />
+              </label>
+              <label className="block min-w-0 space-y-1 text-sm text-fg">
+                To
+                <input name="end" type="date" required className={input} />
+              </label>
             </div>
             <div className="space-y-2 text-sm text-fg">
               <label className="flex items-center gap-2">
-                <input
-                  name="startHalf"
-                  type="checkbox"
-                  onChange={() => setFieldErrors((current) => ({ ...current, endHalfDay: [] }))}
-                />{' '}
-                First day is a half day
+                <input name="startHalf" type="checkbox" /> First day is a half day
               </label>
               <label className="flex items-center gap-2">
-                <input
-                  name="endHalf"
-                  type="checkbox"
-                  onChange={() => setFieldErrors((current) => ({ ...current, endHalfDay: [] }))}
-                />{' '}
-                Last day is a half day
+                <input name="endHalf" type="checkbox" /> Last day is a half day
               </label>
-              {fieldErrors.endHalfDay?.[0] && (
-                <p role="alert" className="text-xs text-danger-fg">
-                  {fieldErrors.endHalfDay[0]}
-                </p>
-              )}
             </div>
-            <Textarea
-              id="leave-reason"
-              name="reason"
-              label="Reason"
-              required
-              rows={3}
-              maxLength={1000}
-              placeholder="Explain why you need leave"
-              error={fieldErrors.reason?.[0]}
-              onChange={() => setFieldErrors((current) => ({ ...current, reason: [] }))}
-            />
+            <label htmlFor="leave-reason" className="block space-y-1 text-sm text-fg">
+              Reason
+              <textarea
+                id="leave-reason"
+                name="reason"
+                required
+                rows={3}
+                maxLength={1000}
+                placeholder="Explain why you need leave"
+                className={input}
+              />
+            </label>
             <p className="text-xs text-fg-muted">
               Friday and Saturday plus holidays are not counted.{' '}
               {session?.role === 'coo'
@@ -414,9 +370,6 @@ export default function LeavePage() {
               type="submit"
               loading={pending}
               loadingLabel="Sending…"
-              disabled={
-                balance.isLoading || balance.error !== null || balance.data?.items.length === 0
-              }
               className="w-full sm:w-auto"
             >
               Send request
@@ -435,7 +388,6 @@ export default function LeavePage() {
                   onRetry={() => void toDecide.refetch()}
                 />
               )}
-              {toDecide.isLoading && <Skeleton className="h-24 w-full" />}
               {toDecide.data && toDecide.data.items.length === 0 && (
                 <EmptyState
                   title="Nothing to decide"
@@ -460,7 +412,6 @@ export default function LeavePage() {
                   onRetry={() => void mine.refetch()}
                 />
               )}
-              {mine.isLoading && <Skeleton className="h-24 w-full" />}
               {mine.data && mine.data.items.length === 0 && (
                 <EmptyState
                   title="No leave requests yet"
@@ -475,23 +426,9 @@ export default function LeavePage() {
             </section>
           )}
 
-          {canSeeTeam && (
+          {canSeeTeam && teamRest.length > 0 && (
             <section className="space-y-3">
               <SectionHeading title="Team leave" description="Approved leave across your team." />
-              {team.error && (
-                <ErrorState
-                  title="Could not load team leave"
-                  message={message(team.error)}
-                  onRetry={() => void team.refetch()}
-                />
-              )}
-              {team.isLoading && <Skeleton className="h-24 w-full" />}
-              {team.data && teamRest.length === 0 && (
-                <EmptyState
-                  title="No approved team leave"
-                  description="Approved leave will appear here."
-                />
-              )}
               <ul className="space-y-3">
                 {teamRest.map((l) => (
                   <LeaveItem key={l.requestId} leave={l} showPerson onChanged={changed} />

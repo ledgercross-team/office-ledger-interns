@@ -17,8 +17,8 @@ import { HrmsAuthService, type SessionView } from './hrms-auth.service';
 import type { HrmsPrincipal } from './hrms-auth.types';
 import { HrmsTokenService } from './hrms-token.service';
 
-// Login uses a short IP/email pair limit; the separate strict auth cap applies to the other
-// credential endpoints, avoiding an accidental second block on sign-in.
+// 2-minute windows, per IP (login: per IP and email). The strict "auth" limit also applies
+// to these paths (STRICT_AUTH_PATHS in app.module.ts).
 const LOGIN_RATE = { limit: 10, ttl: 2 * 60 * 1000 };
 const REFRESH_RATE = { limit: 30, ttl: 2 * 60 * 1000 };
 const SENSITIVE_RATE = { limit: 5, ttl: 2 * 60 * 1000 };

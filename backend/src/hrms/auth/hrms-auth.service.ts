@@ -67,7 +67,7 @@ export interface SessionView {
   activeMemberId: string | null;
   /** gameMaster, the active membership's role, or null before an org is chosen. */
   role: HrmsRole | null;
-  org: { id: string; name: string; status: OrgStatus; timezone: string } | null;
+  org: { id: string; name: string; status: OrgStatus } | null;
   needsOrgSelection: boolean;
 }
 
@@ -451,23 +451,13 @@ export class HrmsAuthService {
     );
   }
 
-  private async toView(
+  private toView(
     user: UserRow,
     isGameMaster: boolean,
     memberships: MembershipView[],
     activeMemberId: string | null,
-  ): Promise<SessionView> {
+  ): SessionView {
     const active = memberships.find((m) => m.memberId === activeMemberId) ?? null;
-    const timezone = active
-      ? await this.context.runSystem(
-          async (tx) => {
-            const row = await tx.execute<{ timezone: string }>(sql`
-            select timezone from org_settings where org_id = current_org_id()`);
-            return row.rows[0]?.timezone ?? 'UTC';
-          },
-          { userId: user.id, orgId: active.orgId },
-        )
-      : null;
     return {
       user: {
         id: user.id,
@@ -482,14 +472,7 @@ export class HrmsAuthService {
       memberships,
       activeMemberId,
       role: active ? active.role : isGameMaster ? 'gameMaster' : null,
-      org: active
-        ? {
-            id: active.orgId,
-            name: active.orgName,
-            status: active.orgStatus,
-            timezone: timezone ?? 'UTC',
-          }
-        : null,
+      org: active ? { id: active.orgId, name: active.orgName, status: active.orgStatus } : null,
       needsOrgSelection: !isGameMaster && activeMemberId === null,
     };
   }

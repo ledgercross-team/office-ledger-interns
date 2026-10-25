@@ -50,6 +50,10 @@ const ROLE_LABELS: Record<string, string> = {
   gameMaster: 'Platform team',
 };
 
+// No push channel: an open conversation is asked again every 5 seconds, lists every 10.
+const THREAD_REFRESH_MS = 5_000;
+const LIST_REFRESH_MS = 10_000;
+
 const fail = (err: unknown) =>
   err instanceof HrmsApiError ? err.message : 'Something went wrong. Please try again.';
 
@@ -156,7 +160,7 @@ function ThreadView({ mode, id, onBack }: { mode: Mode; id: string; onBack: () =
   const thread = useQuery({
     queryKey: ['hrms', 'messages', 'thread', mode, id],
     queryFn: () => hrmsFetch<MessageThreadDetail>(`${base}/threads/${id}`),
-    refetchInterval: false,
+    refetchInterval: THREAD_REFRESH_MS,
   });
 
   const unreadFromOther = (thread.data?.messages ?? []).some((m) => !m.mine && m.readAt === null);
@@ -366,7 +370,7 @@ function Conversations({ mode }: { mode: Mode }) {
   const threads = useQuery({
     queryKey: ['hrms', 'messages', 'threads', mode],
     queryFn: () => hrmsFetch<{ items: MessageThreadSummary[] }>(`${base}/threads`),
-    refetchInterval: false,
+    refetchInterval: LIST_REFRESH_MS,
   });
 
   const list = (
@@ -477,7 +481,7 @@ function ReportThread({ id, asCeo, onBack }: { id: string; asCeo: boolean; onBac
   const detail = useQuery({
     queryKey: ['hrms', 'messages', 'report', id],
     queryFn: () => hrmsFetch<ReportDetail>(`/reports/${id}`),
-    refetchInterval: false,
+    refetchInterval: THREAD_REFRESH_MS,
   });
   const unread = (detail.data?.messages ?? []).some((m) => !m.mine && m.readAt === null);
   const read = useMutation({
@@ -670,7 +674,7 @@ function Reports({ asCeo }: { asCeo: boolean }) {
   const list = useQuery({
     queryKey: ['hrms', 'messages', 'reports', asCeo ? 'inbox' : 'mine'],
     queryFn: () => hrmsFetch<{ items: ReportSummary[] }>(asCeo ? '/reports' : '/reports/mine'),
-    refetchInterval: false,
+    refetchInterval: LIST_REFRESH_MS,
   });
 
   return (

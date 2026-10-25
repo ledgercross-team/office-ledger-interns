@@ -55,16 +55,4 @@ export class HrmsContextService {
     if (!tx) throw new Error('No HRMS transaction: this code ran outside a request context.');
     return tx;
   }
-
-  publishRealtime(): Promise<unknown> {
-    return this.tx.execute(sql`select pg_notify('hrms_realtime', current_org_id()::text)`);
-  }
-
-  publishRealtimeTo(orgId: string): Promise<unknown> {
-    return this.tx.execute(sql`select pg_notify('hrms_realtime', ${orgId})`);
-  }
-
-  publishPlatformRealtime(): Promise<unknown> {
-    return this.tx.execute(sql`select pg_notify('hrms_realtime', 'platform')`);
-  }
 }

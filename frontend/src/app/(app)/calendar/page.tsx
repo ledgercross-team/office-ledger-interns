@@ -8,13 +8,10 @@ import {
   Button,
   Dialog,
   ErrorState,
-  Input,
   PageHeader,
   PageShell,
-  Radio,
   SegmentedControl,
   Skeleton,
-  Textarea,
   useToast,
 } from '@/components/ui';
 import { StepperField } from '@/components/hrms/stepper-field';
@@ -24,6 +21,11 @@ import { meetingProblem } from '@/lib/hrms/meeting';
 import { to12Hour } from '@/lib/hrms/time';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
 import type { CalendarFeed, CalendarItem, HrmsMeeting } from '@/lib/hrms/types';
+
+const input =
+  'min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle outline-none transition-[border-color,box-shadow] focus:border-primary focus:ring-4 focus:ring-primary/10';
+const primary =
+  'inline-flex min-h-10 items-center justify-center rounded-full border border-primary bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50';
 
 const KIND_CLASS: Record<CalendarItem['kind'], string> = {
   task_due: 'bg-warning-soft text-warning-fg',
@@ -159,13 +161,10 @@ function MeetingDialog({
       description="Review the meeting details and invitee responses."
     >
       <div className="space-y-3">
-        {meeting.isLoading && <Skeleton className="h-48 w-full" />}
-        {meeting.error && (
-          <ErrorState
-            title="Could not load meeting details"
-            message={message(meeting.error)}
-            onRetry={() => void meeting.refetch()}
-          />
+        {!m && (
+          <p className="text-sm text-fg-muted" role="status">
+            Loading meeting details…
+          </p>
         )}
         {m && (
           <>
@@ -248,7 +247,6 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
   const [chosen, setChosen] = useState<MemberOption[]>([]);
   const invitees = chosen.map((m) => m.id);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [pending, setPending] = useState(false);
   const { session } = useHrmsAuth();
   const toast = useToast();
@@ -264,14 +262,13 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
       end,
       where === 'link' ? String(f.get('place')).trim() : null,
     );
-    setError(null);
-    setFieldErrors({});
     if (problem) {
-      setFieldErrors({ [problem.field]: [problem.message] });
+      setError(problem);
       return;
     }
     // Typed in the browser's zone, sent as an exact instant.
     const at = (k: string) => new Date(String(f.get(k))).toISOString();
+    setError(null);
     setPending(true);
     try {
       await hrmsFetch('/meetings', {
@@ -296,17 +293,6 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
       });
     } catch (err) {
       setError(message(err));
-      if (err instanceof HrmsApiError) {
-        const serverErrors = err.fieldErrors ?? {};
-        setFieldErrors({
-          title: serverErrors.title ?? [],
-          start: serverErrors.startsAt ?? [],
-          end: serverErrors.endsAt ?? [],
-          description: serverErrors.description ?? [],
-          place: serverErrors.meetingLink ?? serverErrors.location ?? [],
-          invite: serverErrors.inviteeIds ?? [],
-        });
-      }
     } finally {
       setPending(false);
     }
@@ -324,67 +310,75 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
         </p>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="lg:col-span-2">
-          <Input
+        <label
+          htmlFor="meeting-title"
+          className="block space-y-1.5 text-sm font-medium text-fg lg:col-span-2"
+        >
+          Title
+          <input
             id="meeting-title"
             name="title"
             required
             maxLength={200}
             placeholder="Title"
-            label="Title"
-            error={fieldErrors.title?.[0]}
-            onChange={() => setFieldErrors((current) => ({ ...current, title: [] }))}
+            className={input}
           />
-        </div>
-        <Input
-          id="meeting-start"
-          name="start"
-          type="datetime-local"
-          required
-          label="Starts"
-          error={fieldErrors.start?.[0]}
-          onChange={() => setFieldErrors((current) => ({ ...current, start: [] }))}
-        />
-        <Input
-          id="meeting-end"
-          name="end"
-          type="datetime-local"
-          required
-          label="Ends"
-          error={fieldErrors.end?.[0]}
-          onChange={() => setFieldErrors((current) => ({ ...current, end: [] }))}
-        />
-        <Radio
-          label="Meeting format"
-          value={where === 'link' ? 'online' : 'in-person'}
-          onValueChange={(value) => setWhere(value === 'online' ? 'link' : 'location')}
-          options={[
-            { value: 'online', label: 'Online' },
-            { value: 'in-person', label: 'In person' },
-          ]}
-        />
-        <Input
-          id="meeting-place"
-          name="place"
-          required
-          type="text"
-          placeholder={where === 'link' ? 'https://…' : 'Room or address'}
-          label={where === 'link' ? 'Meeting link' : 'Room or address'}
-          error={fieldErrors.place?.[0]}
-          onChange={() => setFieldErrors((current) => ({ ...current, place: [] }))}
-        />
-        <div className="lg:col-span-2">
-          <Textarea
+        </label>
+        <label htmlFor="meeting-start" className="block space-y-1.5 text-sm font-medium text-fg">
+          Starts
+          <input id="meeting-start" name="start" type="datetime-local" required className={input} />
+        </label>
+        <label htmlFor="meeting-end" className="block space-y-1.5 text-sm font-medium text-fg">
+          Ends
+          <input id="meeting-end" name="end" type="datetime-local" required className={input} />
+        </label>
+        <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-fg">
+          <legend className="sr-only">Meeting format</legend>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="meeting-format"
+              value="online"
+              checked={where === 'link'}
+              onChange={() => setWhere('link')}
+            />{' '}
+            Online
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="meeting-format"
+              value="in-person"
+              checked={where === 'location'}
+              onChange={() => setWhere('location')}
+            />{' '}
+            In person
+          </label>
+        </fieldset>
+        <label htmlFor="meeting-place" className="block space-y-1.5 text-sm font-medium text-fg">
+          {where === 'link' ? 'Meeting link' : 'Room or address'}
+          <input
+            id="meeting-place"
+            name="place"
+            required
+            type={where === 'link' ? 'url' : 'text'}
+            placeholder={where === 'link' ? 'https://…' : 'Room or address'}
+            className={input}
+          />
+        </label>
+        <label
+          htmlFor="meeting-description"
+          className="block space-y-1.5 text-sm font-medium text-fg lg:col-span-2"
+        >
+          Notes <span className="text-fg-muted">(optional)</span>
+          <textarea
             id="meeting-description"
             name="description"
             rows={2}
-            maxLength={5000}
             placeholder="Notes"
-            label="Notes (optional)"
-            error={fieldErrors.description?.[0]}
-            onChange={() => setFieldErrors((current) => ({ ...current, description: [] }))}
+            className={input}
           />
-        </div>
+        </label>
         <fieldset className="space-y-2 lg:col-span-2">
           <legend className="text-sm font-medium text-fg">Invite</legend>
           <MemberSearch
@@ -397,11 +391,6 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
             onRemove={(id) => setChosen((list) => list.filter((m) => m.id !== id))}
             emptyText="Nobody invited yet."
           />
-          {fieldErrors.invite?.[0] && (
-            <p role="alert" className="text-xs text-danger-fg">
-              {fieldErrors.invite[0]}
-            </p>
-          )}
         </fieldset>
       </div>
       {error && (
@@ -409,9 +398,9 @@ function NewMeeting({ onDone }: { onDone: () => void }) {
           {error}
         </Banner>
       )}
-      <Button type="submit" loading={pending} disabled={invitees.length === 0}>
-        Create meeting
-      </Button>
+      <button type="submit" disabled={pending || invitees.length === 0} className={primary}>
+        {pending ? 'Saving…' : 'Create meeting'}
+      </button>
     </form>
   );
 }
@@ -594,108 +583,76 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {feed.data &&
-        (view === 'month' ? (
-          <>
-            <div className="hidden sm:grid sm:grid-cols-7 sm:gap-1">
-              {WEEKDAYS.map(({ iso, label: weekday }) => {
-                const weekend = weekendDays.includes(iso);
-                return (
-                  <div
-                    key={weekday}
-                    className={`rounded-control px-1 py-1 text-center text-xs font-medium ${weekend ? 'bg-surface-sunken text-fg' : 'text-fg-muted'}`}
-                  >
-                    {weekday}
-                    {weekend && (
-                      <span className="ml-1 text-[10px] font-normal text-fg-muted">Off</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="hidden sm:grid sm:grid-cols-7 sm:gap-1">
-              {Array.from({ length: lead }).map((_, i) => (
-                <div key={`pad-${i}`} />
-              ))}
-              {days.map((d) => {
-                const weekend = weekendDays.includes(isoDay(d));
-                return (
-                  <div
-                    key={d}
-                    className={`min-h-24 rounded-control border border-border p-2 lg:min-h-28 ${weekend ? 'bg-surface-sunken' : 'bg-surface'}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-medium tabular-nums text-fg-muted">
-                        {Number(d.slice(8))}
-                      </p>
-                      {weekend && (
-                        <span className="text-[10px] font-medium text-fg-muted">Weekend</span>
-                      )}
-                    </div>
-                    <ul className="mt-1 space-y-1">
-                      {(byDay.get(d) ?? []).map((item, i) => (
-                        <li key={`${item.kind}-${item.refId}-${i}`}>
-                          <EventButton item={item} onOpen={setOpen} />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="space-y-2 sm:hidden">
-              {days.map((d) => {
-                const weekend = weekendDays.includes(isoDay(d));
-                return (
-                  <div
-                    key={d}
-                    className={`flex min-w-0 gap-3 rounded-card border border-border p-3 ${weekend ? 'bg-surface-sunken' : 'bg-surface'}`}
-                  >
-                    <div className="w-20 shrink-0 border-r border-border pr-3">
-                      <p className="text-xs font-medium text-fg-muted">
-                        {dayLabel(d).split(',')[0]}
-                      </p>
-                      <p className="mt-1 text-lg font-semibold tabular-nums text-fg">
-                        {Number(d.slice(8))}
-                      </p>
-                      {weekend && (
-                        <p className="mt-1 text-[10px] font-medium text-fg-muted">Weekend</p>
-                      )}
-                    </div>
-                    <ul className="min-w-0 flex-1 space-y-1">
-                      {(byDay.get(d) ?? []).length > 0 ? (
-                        (byDay.get(d) ?? []).map((item, i) => (
-                          <li key={`${item.kind}-${item.refId}-${i}`}>
-                            <EventButton item={item} compact onOpen={setOpen} />
-                          </li>
-                        ))
-                      ) : (
-                        <li className="py-1 text-sm text-fg-muted">No events</li>
-                      )}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          <div className="space-y-2">
+      {view === 'month' ? (
+        <>
+          <div className="hidden sm:grid sm:grid-cols-7 sm:gap-1">
+            {WEEKDAYS.map(({ iso, label: weekday }) => {
+              const weekend = weekendDays.includes(iso);
+              return (
+                <div
+                  key={weekday}
+                  className={`rounded-control px-1 py-1 text-center text-xs font-medium ${weekend ? 'bg-surface-sunken text-fg' : 'text-fg-muted'}`}
+                >
+                  {weekday}
+                  {weekend && (
+                    <span className="ml-1 text-[10px] font-normal text-fg-muted">Off</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="hidden sm:grid sm:grid-cols-7 sm:gap-1">
+            {Array.from({ length: lead }).map((_, i) => (
+              <div key={`pad-${i}`} />
+            ))}
             {days.map((d) => {
               const weekend = weekendDays.includes(isoDay(d));
               return (
                 <div
                   key={d}
-                  className={`flex min-w-0 gap-3 rounded-card border border-border p-3 sm:p-4 ${weekend ? 'bg-surface-sunken' : 'bg-surface'}`}
+                  className={`min-h-24 rounded-control border border-border p-2 lg:min-h-28 ${weekend ? 'bg-surface-sunken' : 'bg-surface'}`}
                 >
-                  <div className="w-28 shrink-0 border-r border-border pr-3 sm:w-36">
-                    <p className="text-sm font-semibold text-fg">{dayLabel(d)}</p>
-                    {weekend && <p className="mt-1 text-xs font-medium text-fg-muted">Weekend</p>}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium tabular-nums text-fg-muted">
+                      {Number(d.slice(8))}
+                    </p>
+                    {weekend && (
+                      <span className="text-[10px] font-medium text-fg-muted">Weekend</span>
+                    )}
+                  </div>
+                  <ul className="mt-1 space-y-1">
+                    {(byDay.get(d) ?? []).map((item, i) => (
+                      <li key={`${item.kind}-${item.refId}-${i}`}>
+                        <EventButton item={item} onOpen={setOpen} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+          <div className="space-y-2 sm:hidden">
+            {days.map((d) => {
+              const weekend = weekendDays.includes(isoDay(d));
+              return (
+                <div
+                  key={d}
+                  className={`flex min-w-0 gap-3 rounded-card border border-border p-3 ${weekend ? 'bg-surface-sunken' : 'bg-surface'}`}
+                >
+                  <div className="w-20 shrink-0 border-r border-border pr-3">
+                    <p className="text-xs font-medium text-fg-muted">{dayLabel(d).split(',')[0]}</p>
+                    <p className="mt-1 text-lg font-semibold tabular-nums text-fg">
+                      {Number(d.slice(8))}
+                    </p>
+                    {weekend && (
+                      <p className="mt-1 text-[10px] font-medium text-fg-muted">Weekend</p>
+                    )}
                   </div>
                   <ul className="min-w-0 flex-1 space-y-1">
                     {(byDay.get(d) ?? []).length > 0 ? (
                       (byDay.get(d) ?? []).map((item, i) => (
                         <li key={`${item.kind}-${item.refId}-${i}`}>
-                          <EventButton item={item} onOpen={setOpen} />
+                          <EventButton item={item} compact onOpen={setOpen} />
                         </li>
                       ))
                     ) : (
@@ -706,7 +663,36 @@ export default function CalendarPage() {
               );
             })}
           </div>
-        ))}
+        </>
+      ) : (
+        <div className="space-y-2">
+          {days.map((d) => {
+            const weekend = weekendDays.includes(isoDay(d));
+            return (
+              <div
+                key={d}
+                className={`flex min-w-0 gap-3 rounded-card border border-border p-3 sm:p-4 ${weekend ? 'bg-surface-sunken' : 'bg-surface'}`}
+              >
+                <div className="w-28 shrink-0 border-r border-border pr-3 sm:w-36">
+                  <p className="text-sm font-semibold text-fg">{dayLabel(d)}</p>
+                  {weekend && <p className="mt-1 text-xs font-medium text-fg-muted">Weekend</p>}
+                </div>
+                <ul className="min-w-0 flex-1 space-y-1">
+                  {(byDay.get(d) ?? []).length > 0 ? (
+                    (byDay.get(d) ?? []).map((item, i) => (
+                      <li key={`${item.kind}-${item.refId}-${i}`}>
+                        <EventButton item={item} onOpen={setOpen} />
+                      </li>
+                    ))
+                  ) : (
+                    <li className="py-1 text-sm text-fg-muted">No events</li>
+                  )}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {canMeet && (
         <NewMeeting

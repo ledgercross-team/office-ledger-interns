@@ -12,7 +12,6 @@ export interface MappedError {
   status: number;
   message: string;
   code?: string;
-  errors?: Record<string, string[]>;
 }
 
 interface PgError {
@@ -64,41 +63,11 @@ export function mapDatabaseError(error: unknown): MappedError | null {
     case 'P0001': // a rule written for people: show it as is
       return { status: HttpStatus.CONFLICT, message: pg.message ?? GENERIC_MESSAGE, code: 'RULE' };
     case '23514':
-      if (pg.constraint === 'org_settings_weights_check') {
-        const message = 'Performance score weights must total exactly 100%.';
-        return {
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          message,
-          code: pg.constraint,
-          errors: Object.fromEntries(
-            ['weightAttendance', 'weightRating', 'weightOntime', 'weightLeave'].map((field) => [
-              field,
-              [message],
-            ]),
-          ),
-        };
-      }
-      if (pg.constraint === 'org_settings_check') {
-        const message = 'Red workload thresholds must be greater than the amber thresholds.';
-        return {
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          message,
-          code: pg.constraint,
-          errors: {
-            workloadRedTasks: [message],
-            workloadRedProjects: [message],
-          },
-        };
-      }
       // A trigger can RAISE with check_violation (the seat limit does): there is no
       // constraint name, and the message was written for people. A real CHECK constraint
       // has a name and gets the generic message.
       if (!pg.constraint) {
-        return {
-          status: HttpStatus.CONFLICT,
-          message: pg.message ?? GENERIC_MESSAGE,
-          code: 'RULE',
-        };
+        return { status: HttpStatus.CONFLICT, message: pg.message ?? GENERIC_MESSAGE, code: 'RULE' };
       }
       return {
         status: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -106,24 +75,6 @@ export function mapDatabaseError(error: unknown): MappedError | null {
         code: pg.constraint,
       };
     case '23505':
-      if (pg.constraint === 'org_holidays_pkey') {
-        const message = 'A holiday already exists on this date.';
-        return {
-          status: HttpStatus.CONFLICT,
-          message,
-          code: 'DUPLICATE',
-          errors: { date: [message] },
-        };
-      }
-      if (pg.constraint === 'org_office_networks_org_id_network_key') {
-        const message = 'This office network is already listed.';
-        return {
-          status: HttpStatus.CONFLICT,
-          message,
-          code: 'DUPLICATE',
-          errors: { network: [message] },
-        };
-      }
       return { status: HttpStatus.CONFLICT, message: 'This already exists.', code: 'DUPLICATE' };
     case '23503':
       return {
@@ -132,11 +83,7 @@ export function mapDatabaseError(error: unknown): MappedError | null {
         code: 'MISSING_REFERENCE',
       };
     case '42501':
-      return {
-        status: HttpStatus.FORBIDDEN,
-        message: 'You are not allowed to do this.',
-        code: 'NOT_ALLOWED',
-      };
+      return { status: HttpStatus.FORBIDDEN, message: 'You are not allowed to do this.', code: 'NOT_ALLOWED' };
     default:
       return { status: HttpStatus.INTERNAL_SERVER_ERROR, message: GENERIC_MESSAGE };
   }
@@ -154,9 +101,7 @@ export class HrmsErrorFilter implements ExceptionFilter {
       const body = exception.getResponse();
       response
         .status(exception.getStatus())
-        .json(
-          typeof body === 'string' ? { statusCode: exception.getStatus(), message: body } : body,
-        );
+        .json(typeof body === 'string' ? { statusCode: exception.getStatus(), message: body } : body);
       return;
     }
 
@@ -171,7 +116,6 @@ export class HrmsErrorFilter implements ExceptionFilter {
       statusCode: status,
       message: mapped?.message ?? GENERIC_MESSAGE,
       ...(mapped?.code ? { code: mapped.code } : {}),
-      ...(mapped?.errors ? { errors: mapped.errors } : {}),
     });
   }
 }

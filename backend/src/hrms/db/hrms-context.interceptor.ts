@@ -21,11 +21,8 @@ export class HrmsContextInterceptor implements NestInterceptor {
 
   intercept(executionContext: ExecutionContext, next: CallHandler): Observable<unknown> {
     const req = executionContext.switchToHttp().getRequest<HrmsRequest>();
-    if (req.path === '/api/events' || req.path === '/events') return next.handle();
     const ctx: HrmsRequestContext = { ...req.hrmsContext, ip: req.ip ?? null };
 
-    return from(
-      this.context.run(ctx, () => lastValueFrom(next.handle(), { defaultValue: undefined })),
-    );
+    return from(this.context.run(ctx, () => lastValueFrom(next.handle(), { defaultValue: undefined })));
   }
 }

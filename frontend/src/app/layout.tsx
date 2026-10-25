@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import { Rubik, Roboto_Mono } from 'next/font/google';
 import { QueryProvider } from '@/lib/query-provider';
 import { HrmsAuthProvider } from '@/lib/hrms/auth-context';
-import { HrmsRealtimeSync } from '@/lib/hrms/realtime-sync';
 import './globals.css';
 
 const rubik = Rubik({
@@ -31,10 +30,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html lang="en" className={`${rubik.variable} ${robotoMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <QueryProvider>
-          <HrmsAuthProvider>
-            <HrmsRealtimeSync />
-            {children}
-          </HrmsAuthProvider>
+          <HrmsAuthProvider>{children}</HrmsAuthProvider>
         </QueryProvider>
       </body>
     </html>

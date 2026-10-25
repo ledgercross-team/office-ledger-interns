@@ -41,8 +41,6 @@ import {
 import { MessagesService } from './messages/messages.service';
 import { OrgController } from './org/org.controller';
 import { OrgService } from './org/org.service';
-import { HrmsRealtimeController } from './realtime.controller';
-import { HrmsRealtimeService } from './realtime.service';
 
 @Module({
   imports: [HrmsDbModule, JwtModule.register({})],
@@ -67,14 +65,12 @@ import { HrmsRealtimeService } from './realtime.service';
     MessagesController,
     ReportsController,
     PlatformMessagesController,
-    HrmsRealtimeController,
   ],
   providers: [
     HrmsTokenService,
     HrmsAuthService,
     HrmsAuthGuard,
     OrgService,
-    HrmsRealtimeService,
     MembersService,
     ProjectsService,
     InvitesService,

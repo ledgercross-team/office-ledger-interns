@@ -36,6 +36,10 @@ interface CorrectionRow extends Record<string, unknown> {
   created_at: string;
 }
 
+function currentMonth(): string {
+  return new Date().toISOString().slice(0, 7);
+}
+
 /** The address the database compares with the office networks (IPv4-mapped form unwrapped). */
 function cleanIp(ip: string | null | undefined): string | null {
   if (!ip) return null;
@@ -111,14 +115,14 @@ export class AttendanceService {
   async me(p: HrmsPrincipal, month?: string) {
     return {
       today: await this.today(p),
-      ...(await this.monthFor(p.memberId as string, month)),
+      ...(await this.monthFor(p.memberId as string, month ?? currentMonth())),
     };
   }
 
   /** CEO/COO anyone; a manager only people on a project they manage. */
   async forMember(p: HrmsPrincipal, memberId: string, month?: string) {
     await this.assertVisible(p, memberId);
-    return this.monthFor(memberId, month);
+    return this.monthFor(memberId, month ?? currentMonth());
   }
 
   /** One day across the people the caller may see. */
@@ -246,7 +250,7 @@ export class AttendanceService {
   }
 
   async reportCsv(p: HrmsPrincipal, month?: string): Promise<string> {
-    const m = month ?? (await this.currentOrgMonth());
+    const m = month ?? currentMonth();
     const rows = await this.context.tx.execute<{
       full_name: string;
       email: string;
@@ -307,9 +311,8 @@ export class AttendanceService {
     if (r.rows.length === 0) throw new NotFoundException('Person not found.');
   }
 
-  private async monthFor(memberId: string, month?: string) {
+  private async monthFor(memberId: string, month: string) {
     const tx = this.context.tx;
-    month ??= await this.currentOrgMonth();
     const days = await tx.execute<DayRow>(sql`
       with s as (select * from org_settings where org_id = current_org_id()),
            m1 as (select (${month}::text || '-01')::date as d)
@@ -382,13 +385,5 @@ export class AttendanceService {
         createdAt: iso(c.created_at),
       })),
     };
-  }
-
-  private async currentOrgMonth(): Promise<string> {
-    const r = await this.context.tx.execute<{ month: string }>(sql`
-      select to_char(now() at time zone timezone, 'YYYY-MM') as month
-        from org_settings where org_id = current_org_id()`);
-    if (!r.rows[0]) throw new NotFoundException('Organisation settings not found.');
-    return r.rows[0].month;
   }
 }

@@ -15,32 +15,24 @@ import {
   Card,
   EmptyState,
   ErrorState,
-  Input,
   PageHeader,
   PageShell,
   Skeleton,
+  controlClass,
+  labelClass,
   secondaryActionClass,
 } from '@/components/ui';
 import { HoldButton } from '@/components/hrms/hold-button';
 import { useReadOnly } from '@/components/hrms/read-only';
 import { hrmsFetch } from '@/lib/hrms/api-client';
 import { useHrmsAuth } from '@/lib/hrms/auth-context';
-import { monthInTimeZone } from '@/lib/hrms/time';
 import type { AttendanceDayEntry, AttendanceMe, AttendanceToday } from '@/lib/hrms/types';
 
 export default function AttendancePage() {
   const { session } = useHrmsAuth();
   const readOnly = useReadOnly();
   const queryClient = useQueryClient();
-  const monthScope = `${session?.org?.id}:${session?.org?.timezone}`;
-  const [monthSelection, setMonthSelection] = useState(() => ({
-    scope: monthScope,
-    month: monthInTimeZone(session?.org?.timezone),
-  }));
-  const month =
-    monthSelection.scope === monthScope
-      ? monthSelection.month
-      : monthInTimeZone(session?.org?.timezone);
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [correcting, setCorrecting] = useState<AttendanceDayEntry | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -125,14 +117,15 @@ export default function AttendancePage() {
         )}
       </Card>
 
-      <Input
-        label="Month"
-        type="month"
-        value={month}
-        onChange={(e) =>
-          e.target.value && setMonthSelection({ scope: monthScope, month: e.target.value })
-        }
-      />
+      <label className={labelClass}>
+        Month
+        <input
+          type="month"
+          value={month}
+          onChange={(e) => e.target.value && setMonth(e.target.value)}
+          className={controlClass}
+        />
+      </label>
       {data.isLoading && (
         <div className="space-y-2" aria-label="Loading attendance">
           <Skeleton className="h-8 w-32" />

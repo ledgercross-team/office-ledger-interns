@@ -5,38 +5,18 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { message, MonthTable, StatusPill, time } from '@/components/hrms/attendance-parts';
 import { RoleGate } from '@/components/hrms/role-gate';
-import {
-  Button,
-  EmptyState,
-  ErrorState,
-  Input,
-  PageHeader,
-  PageShell,
-  Skeleton,
-} from '@/components/ui';
+import { EmptyState, ErrorState, PageHeader, PageShell, Skeleton } from '@/components/ui';
 import { hrmsFetch, hrmsFetchText } from '@/lib/hrms/api-client';
 import type { AttendanceMonth, TeamAttendanceDay } from '@/lib/hrms/types';
-import { useHrmsAuth } from '@/lib/hrms/auth-context';
-import { monthInTimeZone } from '@/lib/hrms/time';
 
 const secondary =
   'inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-surface px-3 py-2 text-sm font-medium text-fg hover:bg-surface-sunken';
 
 function TeamAttendance() {
-  const { session } = useHrmsAuth();
   const [date, setDate] = useState('');
-  const monthScope = `${session?.org?.id}:${session?.org?.timezone}`;
-  const [monthSelection, setMonthSelection] = useState(() => ({
-    scope: monthScope,
-    month: monthInTimeZone(session?.org?.timezone),
-  }));
-  const month =
-    monthSelection.scope === monthScope
-      ? monthSelection.month
-      : monthInTimeZone(session?.org?.timezone);
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [memberId, setMemberId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
 
   const day = useQuery({
     queryKey: ['hrms', 'attendance', 'team', date],
@@ -50,7 +30,6 @@ function TeamAttendance() {
 
   async function download() {
     setError(null);
-    setDownloading(true);
     try {
       const text = await hrmsFetchText(`/attendance/report?month=${month}`);
       const url = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
@@ -61,8 +40,6 @@ function TeamAttendance() {
       URL.revokeObjectURL(url);
     } catch (err) {
       setError(message(err));
-    } finally {
-      setDownloading(false);
     }
   }
 
@@ -79,25 +56,27 @@ function TeamAttendance() {
       />
 
       <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-end">
-        <Input
-          label="Day"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="sm:w-auto"
-        />
-        <Input
-          label="Month"
-          type="month"
-          value={month}
-          onChange={(e) =>
-            e.target.value && setMonthSelection({ scope: monthScope, month: e.target.value })
-          }
-          className="sm:w-auto"
-        />
-        <Button type="button" variant="secondary" loading={downloading} onClick={download}>
+        <label className="space-y-1.5 text-sm font-medium text-fg">
+          Day
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="block min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg sm:w-auto"
+          />
+        </label>
+        <label className="space-y-1.5 text-sm font-medium text-fg">
+          Month
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => e.target.value && setMonth(e.target.value)}
+            className="block min-h-10 w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg sm:w-auto"
+          />
+        </label>
+        <button type="button" onClick={download} className={secondary}>
           Download CSV
-        </Button>
+        </button>
       </div>
       {error && <ErrorState title="Could not download attendance" message={error} />}
 

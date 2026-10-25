@@ -27,7 +27,7 @@ export interface HrmsSession {
   memberships: HrmsMembership[];
   activeMemberId: string | null;
   role: HrmsRole | null;
-  org: { id: string; name: string; status: OrgStatus; timezone: string } | null;
+  org: { id: string; name: string; status: OrgStatus } | null;
   needsOrgSelection: boolean;
 }
 

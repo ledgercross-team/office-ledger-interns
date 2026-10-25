@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { RoleGate } from '@/components/hrms/role-gate';
 import { SeatBar } from '@/components/hrms/seat-bar';
 import {
@@ -11,24 +11,15 @@ import {
   ConfirmDialog,
   EmptyState,
   ErrorState,
-  Input,
   PageHeader,
   PageShell,
   Skeleton,
   TimezoneSelect,
-  useToast,
 } from '@/components/ui';
 import { MemberSearch, type MemberOption } from '@/components/hrms/member-search';
 import { HrmsApiError, hrmsFetch } from '@/lib/hrms/api-client';
-import { HRMS_SESSION_KEY, useHrmsAuth } from '@/lib/hrms/auth-context';
-import type {
-  Holiday,
-  HrmsOrg,
-  HrmsSession,
-  LeaveType,
-  OfficeNetwork,
-  OrgSettings,
-} from '@/lib/hrms/types';
+import { useHrmsAuth } from '@/lib/hrms/auth-context';
+import type { Holiday, HrmsOrg, LeaveType, OfficeNetwork, OrgSettings } from '@/lib/hrms/types';
 
 const DAYS = [
   [1, 'Mon'],
@@ -58,7 +49,6 @@ function Num({
   step,
   min,
   max,
-  error,
 }: {
   name: string;
   label: string;
@@ -67,28 +57,28 @@ function Num({
   step?: string;
   min?: number;
   max?: number;
-  error?: string;
 }) {
   return (
-    <Input
-      id={`org-${name}`}
-      name={name}
-      type="number"
-      step={step ?? '1'}
-      min={min}
-      max={max}
-      defaultValue={value}
-      disabled={disabled}
-      label={label}
-      error={error}
-    />
+    <label htmlFor={`org-${name}`} className="block space-y-1.5 text-sm font-medium text-fg">
+      {label}
+      <input
+        id={`org-${name}`}
+        name={name}
+        type="number"
+        step={step ?? '1'}
+        min={min}
+        max={max}
+        defaultValue={value}
+        disabled={disabled}
+        className={input}
+      />
+    </label>
   );
 }
 
 function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: boolean }) {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [saved, setSaved] = useState(false);
   const [weightTotal, setWeightTotal] = useState(
     settings.weightAttendance +
@@ -101,21 +91,14 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
   const save = useMutation({
     mutationFn: (body: Record<string, unknown>) =>
       hrmsFetch<OrgSettings>('/org/settings', { method: 'PATCH', body }),
-    onSuccess: (updated) => {
+    onSuccess: () => {
       setError(null);
-      setFieldErrors({});
       setSaved(true);
-      queryClient.setQueryData(HRMS_SESSION_KEY, (current: HrmsSession | undefined) =>
-        current?.org
-          ? { ...current, org: { ...current.org, timezone: updated.timezone } }
-          : current,
-      );
       void queryClient.invalidateQueries({ queryKey: ['hrms', 'org'] });
     },
     onError: (err) => {
       setSaved(false);
       setError(message(err));
-      setFieldErrors(err instanceof HrmsApiError ? (err.fieldErrors ?? {}) : {});
     },
   });
 
@@ -127,23 +110,6 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
   }
 
   function onChange(event: FormEvent<HTMLFormElement>) {
-    const field = (event.target as HTMLInputElement | HTMLSelectElement).name;
-    if (field) {
-      const related = field.startsWith('weight')
-        ? ['weightAttendance', 'weightRating', 'weightOntime', 'weightLeave']
-        : field.includes('Tasks')
-          ? ['workloadAmberTasks', 'workloadRedTasks']
-          : field.includes('Projects')
-            ? ['workloadAmberProjects', 'workloadRedProjects']
-            : field.startsWith('day')
-              ? ['weekendDays']
-              : [field];
-      setFieldErrors((current) => ({
-        ...current,
-        ...Object.fromEntries(related.map((name) => [name, []])),
-      }));
-      setError(null);
-    }
     const { values, total } = readWeights(event.currentTarget);
     setWeightTotal(total);
     setSaved(false);
@@ -161,22 +127,6 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
     const f = new FormData(event.currentTarget);
     const n = (key: string) => Number(f.get(key));
     const weights = readWeights(event.currentTarget);
-    setFieldErrors({});
-    const workloadErrors: Record<string, string[]> = {};
-    if (n('workloadRedTasks') <= n('workloadAmberTasks')) {
-      workloadErrors.workloadRedTasks = [
-        'Red task threshold must be greater than the amber task threshold.',
-      ];
-    }
-    if (n('workloadRedProjects') <= n('workloadAmberProjects')) {
-      workloadErrors.workloadRedProjects = [
-        'Red project threshold must be greater than the amber project threshold.',
-      ];
-    }
-    if (Object.keys(workloadErrors).length) {
-      setFieldErrors(workloadErrors);
-      return;
-    }
     if (weights.values.some((value) => value < 0) || weights.total !== 100) {
       setWeightTotal(weights.total);
       setWeightError(
@@ -222,26 +172,24 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
             helperText="Decides what counts as today and when someone is late. Set it to where your office is."
             defaultValue={settings.timezone}
             disabled={disabled}
-            error={fieldErrors.timezone?.[0]}
-            onChange={() => setFieldErrors((current) => ({ ...current, timezone: [] }))}
           />
         </div>
-        <Input
-          id="work-start-time"
-          name="workStartTime"
-          type="time"
-          defaultValue={settings.workStartTime}
-          disabled={disabled}
-          label="Work starts"
-          error={fieldErrors.workStartTime?.[0]}
-          onChange={() => setFieldErrors((current) => ({ ...current, workStartTime: [] }))}
-        />
+        <label htmlFor="work-start-time" className="block space-y-1.5 text-sm font-medium text-fg">
+          Work starts
+          <input
+            id="work-start-time"
+            name="workStartTime"
+            type="time"
+            defaultValue={settings.workStartTime}
+            disabled={disabled}
+            className={input}
+          />
+        </label>
         <Num
           name="lateGraceMinutes"
           label="Late after (minutes)"
           value={settings.lateGraceMinutes}
           disabled={disabled}
-          error={fieldErrors.lateGraceMinutes?.[0]}
         />
       </div>
       <fieldset className="space-y-1">
@@ -259,11 +207,6 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
             </label>
           ))}
         </div>
-        {fieldErrors.weekendDays?.[0] && (
-          <p role="alert" className="text-xs text-danger-fg">
-            {fieldErrors.weekendDays[0]}
-          </p>
-        )}
       </fieldset>
 
       <div className="border-t border-border pt-5">
@@ -278,28 +221,24 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
           label="Amber: open tasks from"
           value={settings.workloadAmberTasks}
           disabled={disabled}
-          error={fieldErrors.workloadAmberTasks?.[0]}
         />
         <Num
           name="workloadAmberProjects"
           label="Amber: projects from"
           value={settings.workloadAmberProjects}
           disabled={disabled}
-          error={fieldErrors.workloadAmberProjects?.[0]}
         />
         <Num
           name="workloadRedTasks"
           label="Red: open tasks from"
           value={settings.workloadRedTasks}
           disabled={disabled}
-          error={fieldErrors.workloadRedTasks?.[0]}
         />
         <Num
           name="workloadRedProjects"
           label="Red: projects from"
           value={settings.workloadRedProjects}
           disabled={disabled}
-          error={fieldErrors.workloadRedProjects?.[0]}
         />
       </div>
 
@@ -332,7 +271,6 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
           disabled={disabled}
           min={0}
           max={100}
-          error={fieldErrors.weightAttendance?.[0]}
         />
         <Num
           name="weightRating"
@@ -341,7 +279,6 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
           disabled={disabled}
           min={0}
           max={100}
-          error={fieldErrors.weightRating?.[0]}
         />
         <Num
           name="weightOntime"
@@ -350,7 +287,6 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
           disabled={disabled}
           min={0}
           max={100}
-          error={fieldErrors.weightOntime?.[0]}
         />
         <Num
           name="weightLeave"
@@ -359,7 +295,6 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
           disabled={disabled}
           min={0}
           max={100}
-          error={fieldErrors.weightLeave?.[0]}
         />
       </div>
 
@@ -397,10 +332,7 @@ function SettingsForm({ settings, canEdit }: { settings: OrgSettings; canEdit: b
 
 function NetworksCard({ canEdit }: { canEdit: boolean }) {
   const queryClient = useQueryClient();
-  const toast = useToast();
-  const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const key = ['hrms', 'org', 'networks'];
   const list = useQuery({
     queryKey: key,
@@ -412,15 +344,9 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
       hrmsFetch('/org/office-networks', { method: 'POST', body }),
     onSuccess: () => {
       setError(null);
-      setFieldErrors({});
-      formRef.current?.reset();
       void done();
-      toast({ title: 'Office network added', tone: 'success' });
     },
-    onError: (err) => {
-      setError(message(err));
-      setFieldErrors(err instanceof HrmsApiError ? (err.fieldErrors ?? {}) : {});
-    },
+    onError: (err) => setError(message(err)),
   });
   const remove = useMutation({
     mutationFn: (id: string) => hrmsFetch(`/org/office-networks/${id}`, { method: 'DELETE' }),
@@ -438,20 +364,6 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
         </p>
       </div>
       <ul className="space-y-1 text-sm">
-        {list.isLoading && (
-          <li>
-            <Skeleton className="h-12 w-full" />
-          </li>
-        )}
-        {list.error && (
-          <li>
-            <ErrorState
-              title="Could not load office networks"
-              message={message(list.error)}
-              onRetry={() => void list.refetch()}
-            />
-          </li>
-        )}
         {list.data?.items.map((n) => (
           <li key={n.id} className="flex items-center justify-between gap-2">
             <span>
@@ -461,9 +373,9 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
             {canEdit && (
               <ConfirmDialog
                 trigger={
-                  <Button type="button" size="sm" variant="danger">
+                  <button type="button" className="text-sm text-danger-fg hover:underline">
                     Remove
-                  </Button>
+                  </button>
                 }
                 title={`Remove ${n.network}?`}
                 description="People will no longer be able to check in from this address."
@@ -475,50 +387,42 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
           </li>
         ))}
         {list.data?.items.length === 0 && (
-          <li>
-            <EmptyState
-              title="No office networks"
-              description="Check-in is disabled until an office network is added."
-            />
-          </li>
+          <li className="text-sm text-fg-muted">None set: check-in is currently disabled.</li>
         )}
       </ul>
       {canEdit && (
         <form
-          ref={formRef}
           className="mt-auto flex flex-wrap items-center gap-2 pt-2"
           onSubmit={(event) => {
             event.preventDefault();
             const f = new FormData(event.currentTarget);
-            setFieldErrors({});
             add.mutate({
               network: String(f.get('network')).trim(),
               label: String(f.get('label')).trim() || undefined,
             });
+            event.currentTarget.reset();
           }}
         >
-          <Input
+          <input
             id="office-network"
             name="network"
             required
             placeholder="203.0.113.0/24"
-            label="Office IP address or network"
-            error={fieldErrors.network?.[0]}
-            className="max-w-48"
-            onChange={() => setFieldErrors((current) => ({ ...current, network: [] }))}
+            aria-label="Office IP address or network"
+            className={`${input} max-w-48`}
           />
-          <Input
+          <label htmlFor="office-network-label" className="sr-only">
+            Network label (optional)
+          </label>
+          <input
             id="office-network-label"
             name="label"
             placeholder="Label (optional)"
-            label="Network label (optional)"
-            error={fieldErrors.label?.[0]}
-            className="max-w-48"
-            onChange={() => setFieldErrors((current) => ({ ...current, label: [] }))}
+            className={`${input} max-w-48`}
           />
-          <Button type="submit" loading={add.isPending}>
+          <button type="submit" className={inlineButton}>
             Add
-          </Button>
+          </button>
         </form>
       )}
       {error && (
@@ -532,10 +436,7 @@ function NetworksCard({ canEdit }: { canEdit: boolean }) {
 
 function HolidaysCard({ canEdit }: { canEdit: boolean }) {
   const queryClient = useQueryClient();
-  const toast = useToast();
-  const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const key = ['hrms', 'org', 'holidays'];
   const list = useQuery({
     queryKey: key,
@@ -546,15 +447,9 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
     mutationFn: (body: Holiday) => hrmsFetch('/org/holidays', { method: 'POST', body }),
     onSuccess: () => {
       setError(null);
-      setFieldErrors({});
-      formRef.current?.reset();
       void done();
-      toast({ title: 'Holiday added', tone: 'success' });
     },
-    onError: (err) => {
-      setError(message(err));
-      setFieldErrors(err instanceof HrmsApiError ? (err.fieldErrors ?? {}) : {});
-    },
+    onError: (err) => setError(message(err)),
   });
   const remove = useMutation({
     mutationFn: (date: string) => hrmsFetch(`/org/holidays/${date}`, { method: 'DELETE' }),
@@ -571,20 +466,6 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
         </p>
       </div>
       <ul className="space-y-1 text-sm">
-        {list.isLoading && (
-          <li>
-            <Skeleton className="h-12 w-full" />
-          </li>
-        )}
-        {list.error && (
-          <li>
-            <ErrorState
-              title="Could not load holidays"
-              message={message(list.error)}
-              onRetry={() => void list.refetch()}
-            />
-          </li>
-        )}
         {list.data?.items.map((h) => (
           <li key={h.date} className="flex items-center justify-between gap-2">
             <span>
@@ -593,9 +474,9 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
             {canEdit && (
               <ConfirmDialog
                 trigger={
-                  <Button type="button" size="sm" variant="danger">
+                  <button type="button" className="text-sm text-danger-fg hover:underline">
                     Remove
-                  </Button>
+                  </button>
                 }
                 title={`Remove ${h.name}?`}
                 description={`The ${h.date} holiday will no longer be excluded from attendance calculations.`}
@@ -617,38 +498,37 @@ function HolidaysCard({ canEdit }: { canEdit: boolean }) {
       </ul>
       {canEdit && (
         <form
-          ref={formRef}
           className="mt-auto flex flex-wrap items-center gap-2 pt-2"
           onSubmit={(event) => {
             event.preventDefault();
             const f = new FormData(event.currentTarget);
-            setFieldErrors({});
             add.mutate({ date: String(f.get('date')), name: String(f.get('name')).trim() });
+            event.currentTarget.reset();
           }}
         >
-          <Input
+          <label htmlFor="holiday-date" className="sr-only">
+            Holiday date
+          </label>
+          <input
             id="holiday-date"
             name="date"
             type="date"
             required
-            label="Holiday date"
-            error={fieldErrors.date?.[0]}
-            className="max-w-48"
-            onChange={() => setFieldErrors((current) => ({ ...current, date: [] }))}
+            className={`${input} max-w-48`}
           />
-          <Input
+          <label htmlFor="holiday-name" className="sr-only">
+            Holiday name
+          </label>
+          <input
             id="holiday-name"
             name="name"
             required
             placeholder="Name"
-            label="Holiday name"
-            error={fieldErrors.name?.[0]}
-            className="max-w-48"
-            onChange={() => setFieldErrors((current) => ({ ...current, name: [] }))}
+            className={`${input} max-w-48`}
           />
-          <Button type="submit" loading={add.isPending}>
+          <button type="submit" className={inlineButton}>
             Add
-          </Button>
+          </button>
         </form>
       )}
       {error && (

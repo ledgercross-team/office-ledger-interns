@@ -37,7 +37,7 @@ function session(overrides: Partial<HrmsSession> = {}): HrmsSession {
     memberships: [],
     activeMemberId: 'm1',
     role: 'ceo',
-    org: { id: 'o1', name: 'Acme Demo', status: 'active', timezone: 'Asia/Dhaka' },
+    org: { id: 'o1', name: 'Acme Demo', status: 'active' },
     needsOrgSelection: false,
     ...overrides,
   };
@@ -109,9 +109,7 @@ describe('role navigation', () => {
 describe('org banners', () => {
   it('warns in read-only mode', () => {
     mockAuth({
-      session: session({
-        org: { id: 'o1', name: 'Acme', status: 'read_only', timezone: 'Asia/Dhaka' },
-      }),
+      session: session({ org: { id: 'o1', name: 'Acme', status: 'read_only' } }),
       isAuthenticated: true,
     });
     render(<OrgBanners />, { wrapper });
